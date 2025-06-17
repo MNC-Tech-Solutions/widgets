@@ -125,6 +125,162 @@
       font-weight: bold;
       margin-bottom: 20px;
     }
+
+    /* Modal styles */
+    .stage-breakdown-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+
+    .modal-content {
+      position: relative;
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 600px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .close-modal {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .close-modal:hover {
+      color: #333;
+    }
+
+    .stage-breakdown-table {
+      width: 100%;
+      margin-top: 15px;
+      border-collapse: collapse;
+    }
+
+    .stage-breakdown-table th,
+    .stage-breakdown-table td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .stage-breakdown-table th {
+      background-color: #f5f6fa;
+    }
+
+    /* Clickable aging cells */
+    .aging-cell {
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .aging-cell:hover {
+      background-color: #e6e9f0 !important;
+    }
+
+    /* Lead Names Modal Styles */
+    .lead-names-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1100;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .lead-names-content {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .lead-names-list {
+      margin: 10px 0;
+    }
+
+    .lead-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .lead-item:last-child {
+      border-bottom: none;
+    }
+
+    .view-leads-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .view-leads-btn:hover {
+      background-color: #0056b3;
+    }
+
+    .close-lead-names {
+      margin-top: 15px;
+      padding: 8px 16px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .close-lead-names:hover {
+      background-color: #5a6268;
+    }
+
+    .lead-contact-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    /* Add CSS to ensure proper modal layering */
+    .lead-names-modal {
+      z-index: 1200;
+    }
+    .stage-breakdown-modal {
+      z-index: 1100;
+    }
+
+    /* Add CSS for stage status */
+    .stage-status {
+      color: #666;
+      font-size: 0.8em;
+      font-style: italic;
+      display: block;
+      margin-top: 4px;
+    }
+    
+    td > div {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
   </style>
 </head>
 <body>
@@ -138,8 +294,8 @@
       <select>
         <option>Select Pipeline</option>
       </select>
-      <input type="date" value="2024-03-25" />
-      <input type="date" value="2024-04-25" />
+      <input type="date" />
+      <input type="date" />
       <button class="apply">Apply</button>
       <button class="print">Print</button>
     </div>
@@ -147,12 +303,10 @@
       <thead>
         <tr>
           <th rowspan="2">SALES REP</th>
-          <th rowspan="2">TOTAL DEALS</th>
+          <th rowspan="2">TOTAL LEADS</th>
           <th rowspan="2">TOTAL ATTENDED LEADS</th>
           <th rowspan="2">TOTAL UNATTENDED LEADS</th>
-          <th colspan="5" class="parent-header">PENDING AGING</th>
-          <th rowspan="2">AVG CALL TIME (s)</th>
-          <th rowspan="2">CALLS PER MONTH</th>
+          <th colspan="5" class="parent-header">UNATTENDED LEADS AGING</th>
         </tr>
         <tr>
           <th class="sub-header">5 DAYS</th>
@@ -168,131 +322,788 @@
     </table>
   </div>
 
+  <!-- Add Modal for Stage Breakdown -->
+  <div id="stageBreakdownModal" class="stage-breakdown-modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2 id="modalTitle">Stage Breakdown</h2>
+      <table class="stage-breakdown-table">
+        <thead>
+          <tr>
+            <th>Stage Name</th>
+            <th>Count</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="stageBreakdownBody">
+        </tbody>
+      </table>
+      
+      <!-- Add Lead Names Dropdown Modal -->
+      <div id="leadNamesModal" class="lead-names-modal">
+        <div class="lead-names-content">
+          <h3 id="leadNamesTitle"></h3>
+          <div id="leadNamesList" class="lead-names-list"></div>
+          <button class="close-lead-names">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Sample lead data (replace with actual GHL API data)
-    const leadsData = [
-      {
-        salesRep: "Amirul Aqmar Bin Hashilah",
-        totalDeals: 12,
-        totalAttendedLeads: 11,
-        totalUnattendedLeads: 1,
-        initialResponse: "2024-04-01T10:00:00Z",
-        opportunityCreated: "2024-04-15T10:00:00Z",
-        phoneNumber: "+1234567890"
-      },
-      {
-        salesRep: "Audrey Yap",
-        totalDeals: 116,
-        totalAttendedLeads: 117,
-        totalUnattendedLeads: 1,
-        initialResponse: "2024-04-01T10:00:00Z",
-        opportunityCreated: "2024-04-10T10:00:00Z",
-        phoneNumber: "+9876543210"
-      }
-      // Add more lead data as needed
-    ];
+    let CONFIG = {};
+    let locationId = 'jH41Z47TXtote3u6rh92';
+    let pipelines = [];
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let PIPELINE_STAGES = {};  // Will be populated dynamically
 
-    // Function to calculate time difference between initial response and opportunity created
-    function calculateTimeDifference(initialResponse, opportunityCreated) {
-      const initial = new Date(initialResponse);
-      const opportunity = new Date(opportunityCreated);
-      const diffInMs = opportunity - initial;
-      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-      return diffInDays;
+    function getLocationId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('locationId') || locationId;
     }
 
-    // Function to categorize aging
-    function categorizeAging(days) {
-      if (days <= 5) return { "5Days": 1, "10Days": 0, "15Days": 0, "30Days": 0, "gt30Days": 0 };
-      if (days <= 10) return { "5Days": 0, "10Days": 1, "15Days": 0, "30Days": 0, "gt30Days": 0 };
-      if (days <= 15) return { "5Days": 0, "10Days": 0, "15Days": 1, "30Days": 0, "gt30Days": 0 };
-      if (days <= 30) return { "5Days": 0, "10Days": 0, "15Days": 0, "30Days": 1, "gt30Days": 0 };
-      return { "5Days": 0, "10Days": 0, "15Days": 0, "30Days": 0, "gt30Days": 1 };
-    }
-
-    // Function to fetch Avanser Telco API call data
-    async function fetchAvanserCallData(phoneNumber) {
+    // Function to load configuration
+    async function loadConfig() {
       try {
-        // Define the date range for the last 30 days
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 30);
+        console.log('Loading configuration...');
+        const response = await fetch('./config.json');
+        const configs = await response.json();
+        locationId = getLocationId();
+        CONFIG = configs.find(config => config.defaultLocationId === locationId) || {};
+        
+        console.log('Location ID:', locationId);
+        console.log('Found config:', CONFIG ? 'Yes' : 'No');
+        if (CONFIG) {
+          console.log('API Key exists:', !!CONFIG.apiKey);
+          console.log('Access Token exists:', !!CONFIG.accessToken);
+        }
+      } catch (error) {
+        console.error('Error loading config:', error);
+        alert('Failed to load configuration. Please check the console for details.');
+      }
+    }
 
-        // Format dates as YYYY-MM-DD
-        const startDateStr = startDate.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
+    // Function to fetch pipelines
+    async function fetchPipelines() {
+      try {
+        const response = await fetch('https://rest.gohighlevel.com/v1/pipelines/', {
+          headers: { 'Authorization': `Bearer ${CONFIG.apiKey}` }
+        });
+        const data = await response.json();
+        
+        console.log('Raw pipeline data:', data);
+        
+        pipelines = data.pipelines || [];
+        
+        // Log the processed pipelines
+        console.log('Processed pipelines:', pipelines.map(p => ({
+          id: p.id,
+          name: p.name
+        })));
+        
+        updatePipelineDropdown();
 
-        // Fetch call data from Avanser Telco API
-        const response = await fetch(
-          `https://avansertapi.docs.apiary.io/calls?phone_number=${phoneNumber}&start_date=${startDateStr}&end_date=${endDateStr}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: "Basic Y2hsb2Uub29pQG1uY3RlY2hzb2x1dGlvbnMuY29tOmNobG9lb29pMjAwNA==", 
-            },
+        // If there are pipelines, fetch stages for the first one
+        if (pipelines.length > 0) {
+          await fetchPipelineStages(pipelines[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching pipelines:', error);
+        alert('Failed to fetch pipelines. Please check the console for details.');
+      }
+    }
+
+    // Function to fetch users (sales reps)
+    async function fetchUsers() {
+      try {
+        const response = await fetch('https://rest.gohighlevel.com/v1/users/', {
+          headers: { 'Authorization': `Bearer ${CONFIG.apiKey}` }
+        });
+        const data = await response.json();
+        console.log('Users data:', data);
+        return data.users || [];
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
+    }
+
+    // Function to fetch pipeline stages
+    async function fetchPipelineStages(pipelineId) {
+      try {
+        console.log('Fetching stages for pipeline ID:', pipelineId);
+        const response = await fetch(`https://rest.gohighlevel.com/v1/pipelines/${pipelineId}`, {
+          headers: { 
+            'Authorization': `Bearer ${CONFIG.apiKey}`
           }
-        );
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch pipeline: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Raw pipeline data:', data);
+        
+        if (!data.pipeline || !data.pipeline.stages || !Array.isArray(data.pipeline.stages)) {
+          console.error('Invalid pipeline data format:', data);
+          throw new Error('Invalid pipeline data format');
+        }
+        
+        // Update the PIPELINE_STAGES object with the new stages
+        PIPELINE_STAGES = {}; // Reset stages for new pipeline
+        
+        // Store stages with their IDs
+        data.pipeline.stages.forEach((stage, index) => {
+          if (stage.id) {
+            PIPELINE_STAGES[stage.id] = {
+              name: stage.name,
+              status: 'open',
+              order: index
+            };
+            console.log(`Mapped stage: ${stage.id} -> "${stage.name}" (order: ${index})`);
+          }
+        });
+        
+        return data.pipeline.stages;
+      } catch (error) {
+        console.error('Error fetching pipeline stages:', error);
+        return [];
+      }
+    }
+
+    // Function to fetch all opportunities with pagination
+    async function fetchAllOpportunities(pipelineId, sourceCategory) {
+      let allOpportunities = [];
+      let startAfter = null;
+      let startAfterId = null;
+      let hasMore = true;
+
+      // Specific stage ID for unattended leads
+      const UNATTENDED_STAGE_ID = '92b91a6e-dd2a-4d92-894c-804d7a01ddc4';
+      
+      // Track unique stage IDs
+      const stageStats = new Map();
+
+      try {
+        console.log('Starting to fetch opportunities...');
+        console.log('Location ID:', locationId);
+        console.log('Pipeline ID to filter:', pipelineId);
+
+        // Fetch users first to get sales rep names
+        const users = await fetchUsers();
+        console.log('Fetched users:', users);
+        
+        // Create a map of user IDs to names for quick lookup
+        const userMap = new Map(users.map(user => [user.id, user.name]));
+        
+        while (hasMore) {
+          let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=100`;
+          if (startAfter && startAfterId) {
+            url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
+          }
+        
+          console.log('Fetching opportunities from URL:', url);
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${CONFIG.accessToken}`,
+              'Version': '2021-07-28'
+            }
+        });
 
         if (!response.ok) {
-          throw new Error(`Avanser API request failed with status ${response.status}`);
+          const errorText = await response.text();
+          console.error('API Error Response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.opportunities || !Array.isArray(data.opportunities)) {
+          console.error('Invalid response format:', data);
+            break;
         }
 
-        const data = await response.json();
+        // Function to check if a lead is unattended based on stage ID
+        function isUnattendedStage(stageId) {
+          const unattendedStages = [
+            '94e23266-878e-4117-8ef4-a787bab18e07', // Prequalified
+            '66898896-0059-40d7-86f0-bc4f88ca38fb'  // Hot Leads (Uncontacted)
+          ];
+          return unattendedStages.includes(stageId);
+        }
 
-        // Calculate average call time and total calls
-        // Assuming the response is an array of call objects with 'duration' (in seconds) and 'created_at'
-        const calls = data.calls || []; // Adjust based on actual response structure
-        const totalCalls = calls.length;
-        const totalDuration = calls.reduce((sum, call) => sum + (call.duration || 0), 0);
-        const averageCallTime = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0;
+        // Filter opportunities and enrich with stage and user information
+        const filteredOpportunities = data.opportunities.filter(opp => {
+          // If no pipeline filter is selected, include all opportunities
+          if (!pipelineId) return true;
 
-        return {
-          averageCallTime, // In seconds
-          callsPerMonth: totalCalls, // Calls in the last 30 days
-        };
-      } catch (error) {  
-        console.error("Error fetching Avanser call data:", error);
-        return {
-          averageCallTime: 0,
-          callsPerMonth: 0,
-        };
+          // Check if the opportunity's pipeline matches the selected pipeline
+          const pipelineMatches = opp.pipelineId === pipelineId;
+          
+          if (pipelineMatches) {
+            // Track stage statistics
+            if (!stageStats.has(opp.pipelineStageId)) {
+              // Find the matching stage from PIPELINE_STAGES
+              const pipelineStageInfo = PIPELINE_STAGES[opp.pipelineStageId] || {};
+              console.log('Creating new stage stat:', {
+                stageId: opp.pipelineStageId,
+                pipelineStageInfo
+              });
+              
+              stageStats.set(opp.pipelineStageId, {
+                count: 0,
+                name: pipelineStageInfo.name || 'Unknown Stage',
+                status: pipelineStageInfo.status || 'unknown',
+                order: pipelineStageInfo.order,
+                examples: []
+              });
+            }
+            const stats = stageStats.get(opp.pipelineStageId);
+            stats.count++;
+            if (stats.examples.length < 3) {
+              stats.examples.push({
+                id: opp.id,
+                name: opp.name,
+                stageId: opp.pipelineStageId,
+                assignedTo: userMap.get(opp.assignedTo) || 'Unknown User'
+              });
+            }
+
+            // Set whether the lead is unattended based on stage
+            opp.isHotLeadsUncontacted = isUnattendedStage(opp.pipelineStageId);
+            
+            // Add the user's name to the opportunity
+            if (opp.assignedTo) {
+              opp.assignedToName = userMap.get(opp.assignedTo) || 'Unknown User';
+            }
+          }
+
+          return pipelineMatches && (!sourceCategory || opp.sourceCategory === sourceCategory);
+        });
+
+        allOpportunities = allOpportunities.concat(filteredOpportunities);
+        console.log(`Fetched ${filteredOpportunities.length} opportunities out of ${data.opportunities.length}, total: ${allOpportunities.length}`);
+        
+        startAfter = data.meta?.startAfter;
+        startAfterId = data.meta?.startAfterId;
+        hasMore = !!startAfter && !!startAfterId;
       }
-    }
 
-    // Function to populate the table 
-    async function populateTable() {
+      // Log all unique stages we found
+      console.log('All Pipeline Stages Found:');
+      for (const [stageId, stats] of stageStats.entries()) {
+        console.log(`Stage ID: ${stageId}`);
+        console.log(`  Name: ${stats.name}`);
+        console.log(`  Count: ${stats.count} opportunities`);
+        console.log(`  Example Opportunities:`, stats.examples);
+        console.log('---');
+      }
+
+      // Log summary for Alan Hoo's opportunities
+      const alanHooOpps = allOpportunities.filter(opp => opp.assignedToName === 'Alan Hoo');
+      const alanHooStats = {
+        total: alanHooOpps.length,
+        unattended: alanHooOpps.filter(opp => opp.isHotLeadsUncontacted).length,
+        attended: alanHooOpps.filter(opp => !opp.isHotLeadsUncontacted).length,
+        stageBreakdown: alanHooOpps.reduce((acc, opp) => {
+          acc[opp.pipelineStageId] = (acc[opp.pipelineStageId] || 0) + 1;
+          return acc;
+        }, {})
+      };
+      console.log('Alan Hoo Stats:', alanHooStats);
+      
+      return allOpportunities;
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      alert('Failed to fetch opportunities. Please check the console for details.');
+      return [];
+    }
+  }
+
+  // Function to process opportunities
+  function processOpportunities(opportunities) {
+    const salesRepMap = new Map();
+
+    opportunities.forEach(opp => {
+      const salesRep = opp.assignedToName || 'No Rep Assigned';
+      
+      if (!salesRepMap.has(salesRep)) {
+        salesRepMap.set(salesRep, {
+          totalLeads: 0,
+          totalAttendedLeads: 0,
+          totalUnattendedLeads: 0,
+          aging: {
+            "5Days": { count: 0, stages: {}, leads: {} },
+            "10Days": { count: 0, stages: {}, leads: {} },
+            "15Days": { count: 0, stages: {}, leads: {} },
+            "30Days": { count: 0, stages: {}, leads: {} },
+            "gt30Days": { count: 0, stages: {}, leads: {} }
+          }
+        });
+      }
+
+      const repData = salesRepMap.get(salesRep);
+      repData.totalLeads++;
+
+      if (opp.isHotLeadsUncontacted) {
+        repData.totalUnattendedLeads++;
+        
+        // Only calculate aging for unattended leads
+        const createdDate = new Date(opp.createdAt);
+        const now = new Date();
+        const agingDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+        
+        let agingCategory;
+        if (agingDays <= 5) agingCategory = "5Days";
+        else if (agingDays <= 10) agingCategory = "10Days";
+        else if (agingDays <= 15) agingCategory = "15Days";
+        else if (agingDays <= 30) agingCategory = "30Days";
+        else agingCategory = "gt30Days";
+
+        repData.aging[agingCategory].count++;
+        
+        const stageId = opp.pipelineStageId;
+        if (stageId) {
+          if (!repData.aging[agingCategory].stages[stageId]) {
+            repData.aging[agingCategory].stages[stageId] = 0;
+            repData.aging[agingCategory].leads[stageId] = [];
+          }
+          repData.aging[agingCategory].stages[stageId]++;
+          
+          // Store lead information
+          repData.aging[agingCategory].leads[stageId].push({
+            name: opp.name || 'Unnamed Lead',
+            createdAt: opp.createdAt
+          });
+        }
+      } else {
+        repData.totalAttendedLeads++;
+      }
+    });
+
+    return salesRepMap;
+  }
+
+  // Function to update the table with processed data
+  async function updateTable() {
+    try {
+    const pipelineId = document.querySelector('.filter-bar select:nth-child(3)').value;
+    const sourceCategory = document.querySelector('.filter-bar select:nth-child(2)').value;
+      
+      // Show loading state
       const tableBody = document.getElementById("leadsTableBody");
-      tableBody.innerHTML = ""; // Clear existing rows
+      tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center;">Loading data...</td></tr>';
 
-      for (const lead of leadsData) {
-        // Calculate time difference
-        const daysDifference = calculateTimeDifference(lead.initialResponse, lead.opportunityCreated);
-        const aging = categorizeAging(daysDifference);
+      // Fetch and process opportunities
+    const opportunities = await fetchAllOpportunities(pipelineId, sourceCategory);
+    const processedData = processOpportunities(opportunities);
 
-        // Fetch Avanser call data
-        const callData = await fetchAvanserCallData(lead.phoneNumber);
+      // Clear loading state
+      tableBody.innerHTML = '';
 
-        // Create table row
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${lead.salesRep}</td>
-          <td>${lead.totalDeals}</td>
-          <td>${lead.totalAttendedLeads}</td>
-          <td>${lead.totalUnattendedLeads}</td>
-          <td>${aging["5Days"]}</td>
-          <td>${aging["10Days"]}</td>
-          <td>${aging["15Days"]}</td>
-          <td>${aging["30Days"]}</td>
-          <td>${aging["gt30Days"]}</td>
-          <td>${callData.averageCallTime}</td>
-          <td>${callData.callsPerMonth}</td>
+      // Sort sales reps alphabetically
+      const sortedReps = Array.from(processedData.keys()).sort();
+
+      // Add rows for each sales rep
+      sortedReps.forEach(salesRep => {
+        const data = processedData.get(salesRep);
+        const row = document.createElement('tr');
+        
+      row.innerHTML = `
+        <td>${salesRep}</td>
+          <td>${data.totalLeads}</td>
+        <td>${data.totalAttendedLeads}</td>
+        <td>${data.totalUnattendedLeads}</td>
+          <td class="aging-cell" data-rep="${salesRep}" data-category="5Days">${data.aging["5Days"].count}</td>
+          <td class="aging-cell" data-rep="${salesRep}" data-category="10Days">${data.aging["10Days"].count}</td>
+          <td class="aging-cell" data-rep="${salesRep}" data-category="15Days">${data.aging["15Days"].count}</td>
+          <td class="aging-cell" data-rep="${salesRep}" data-category="30Days">${data.aging["30Days"].count}</td>
+          <td class="aging-cell" data-rep="${salesRep}" data-category="gt30Days">${data.aging["gt30Days"].count}</td>
         `;
+
+        // Add click handlers for aging cells
+        row.querySelectorAll('.aging-cell').forEach(cell => {
+          cell.addEventListener('click', () => {
+            const rep = cell.getAttribute('data-rep');
+            const category = cell.getAttribute('data-category');
+            const repData = processedData.get(rep).aging[category];
+            showStageBreakdown(rep, category.replace('Days', ''), repData.stages, repData.leads);
+          });
+        });
+        
         tableBody.appendChild(row);
+      });
+
+      // Add a summary row at the bottom
+      const summaryRow = document.createElement('tr');
+      summaryRow.style.fontWeight = 'bold';
+      summaryRow.style.backgroundColor = '#f9f9f9';
+
+      const totals = {
+        totalLeads: 0,
+        totalAttendedLeads: 0,
+        totalUnattendedLeads: 0,
+        aging: {
+          "5Days": { count: 0, stages: {} },
+          "10Days": { count: 0, stages: {} },
+          "15Days": { count: 0, stages: {} },
+          "30Days": { count: 0, stages: {} },
+          "gt30Days": { count: 0, stages: {} }
+        }
+      };
+
+      // Calculate totals
+      processedData.forEach(data => {
+        totals.totalLeads += data.totalLeads;
+        totals.totalAttendedLeads += data.totalAttendedLeads;
+        totals.totalUnattendedLeads += data.totalUnattendedLeads;
+        Object.keys(data.aging).forEach(key => {
+          totals.aging[key].count += data.aging[key].count;
+          totals.aging[key].stages = { ...totals.aging[key].stages, ...data.aging[key].stages };
+        });
+      });
+
+      summaryRow.innerHTML = `
+        <td>TOTAL</td>
+        <td>${totals.totalLeads}</td>
+        <td>${totals.totalAttendedLeads}</td>
+        <td>${totals.totalUnattendedLeads}</td>
+        <td class="aging-cell" data-rep="TOTAL" data-category="5Days">${totals.aging["5Days"].count}</td>
+        <td class="aging-cell" data-rep="TOTAL" data-category="10Days">${totals.aging["10Days"].count}</td>
+        <td class="aging-cell" data-rep="TOTAL" data-category="15Days">${totals.aging["15Days"].count}</td>
+        <td class="aging-cell" data-rep="TOTAL" data-category="30Days">${totals.aging["30Days"].count}</td>
+        <td class="aging-cell" data-rep="TOTAL" data-category="gt30Days">${totals.aging["gt30Days"].count}</td>
+      `;
+
+      // Add click handlers for summary aging cells
+      summaryRow.querySelectorAll('.aging-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const rep = cell.getAttribute('data-rep');
+          const category = cell.getAttribute('data-category');
+          const stageData = processedData.get(rep).aging[category].stages;
+          showStageBreakdown(rep, category.replace('Days', ''), stageData, processedData.get(rep).aging[category].leads);
+        });
+      });
+
+      tableBody.appendChild(summaryRow);
+
+    } catch (error) {
+      console.error('Error updating table:', error);
+      const tableBody = document.getElementById("leadsTableBody");
+      tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: red;">Error loading data. Please try again.</td></tr>';
+    }
+  }
+
+  // Function to update pipeline dropdown
+  function updatePipelineDropdown() {
+    const pipelineSelect = document.querySelector('.filter-bar select:nth-child(3)');
+    pipelineSelect.innerHTML = '<option value="">All Pipelines</option>';
+    
+    pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+    });
+  }
+
+  // Function to fetch source categories
+  async function fetchSourceCategories() {
+    try {
+      const response = await fetch(`https://rest.gohighlevel.com/v1/custom-fields/`, {
+        headers: {
+          'Authorization': `Bearer ${CONFIG.apiKey}`
+        }
+      });
+      const data = await response.json();
+      const sourceCategorySelect = document.querySelector('.filter-bar select:nth-child(2)');
+      sourceCategorySelect.innerHTML = '<option value="">Select Source Category</option>';
+      
+      // Find the source category custom field
+      const sourceCategoryField = data.customFields?.find(field => 
+        field.name.toLowerCase().includes('source') && field.name.toLowerCase().includes('category')
+      );
+
+      if (sourceCategoryField && sourceCategoryField.options) {
+        sourceCategoryField.options.forEach(option => {
+          const optionElement = document.createElement('option');
+          optionElement.value = option.value;
+          optionElement.textContent = option.name;
+          sourceCategorySelect.appendChild(optionElement);
+        });
       }
+    } catch (error) {
+      console.error('Error fetching source categories:', error);
+    }
+  }
+
+  // Modify the pipeline change handler
+  function handlePipelineChange(event) {
+    // Do nothing - data will be fetched when Apply is clicked
+  }
+
+  // Initialize the application
+  async function initializeApp() {
+    console.log('Initializing application...');
+    await loadConfig();
+    await fetchPipelines();  // Only fetch pipelines list initially
+    await fetchSourceCategories();
+    
+    // Set up event listeners
+    document.querySelector('.filter-bar .apply').addEventListener('click', async () => {
+      const pipelineId = document.querySelector('.filter-bar select:nth-child(3)').value;
+      if (pipelineId) {
+        await fetchPipelineStages(pipelineId);
+      }
+      updateTable();
+    });
+
+    document.querySelector('.filter-bar .print').addEventListener('click', () => window.print());
+    
+    // Initialize the date inputs with current date range
+    const today = new Date();
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+    const dateInputs = document.querySelectorAll('.filter-bar input[type="date"]');
+    if (dateInputs.length >= 2) {
+      dateInputs[0].value = oneYearAgo.toISOString().split('T')[0];
+      dateInputs[1].value = today.toISOString().split('T')[0];
     }
 
-    // Initialize the table
-    populateTable();
+    // Show empty table initially
+    const tableBody = document.getElementById("leadsTableBody");
+    tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center;">Click Apply to load data</td></tr>';
+    
+    console.log('Application initialization complete');
+  }
+
+  // Function to calculate time difference between initial response and opportunity created
+  function calculateTimeDifference(initialResponse, opportunityCreated) {
+    const initial = new Date(initialResponse);
+    const opportunity = new Date(opportunityCreated);
+    const diffInMs = opportunity - initial;
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    return diffInDays;
+  }
+
+  // Function to categorize aging
+  function categorizeAging(days) {
+    if (days <= 5) return { "5Days": 1, "10Days": 0, "15Days": 0, "30Days": 0, "gt30Days": 0 };
+    if (days <= 10) return { "5Days": 0, "10Days": 1, "15Days": 0, "30Days": 0, "gt30Days": 0 };
+    if (days <= 15) return { "5Days": 0, "10Days": 0, "15Days": 1, "30Days": 0, "gt30Days": 0 };
+    if (days <= 30) return { "5Days": 0, "10Days": 0, "15Days": 0, "30Days": 1, "gt30Days": 0 };
+    return { "5Days": 0, "10Days": 0, "15Days": 0, "30Days": 0, "gt30Days": 1 };
+  }
+
+  // Function to fetch Avanser Telco API call data
+  async function fetchAvanserCallData(phoneNumber) {
+    try {
+      // Define the date range for the last 30 days
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 30);
+
+      // Format dates as YYYY-MM-DD
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      // Fetch call data from Avanser Telco API
+      const response = await fetch(
+        `https://avansertapi.docs.apiary.io/calls?phone_number=${phoneNumber}&start_date=${startDateStr}&end_date=${endDateStr}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: "Basic Y2hsb2Uub29pQG1uY3RlY2hzb2x1dGlvbnMuY29tOmNobG9lb29pMjAwNA==", 
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Avanser API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Calculate average call time and total calls
+      // Assuming the response is an array of call objects with 'duration' (in seconds) and 'created_at'
+      const calls = data.calls || []; // Adjust based on actual response structure
+      const totalCalls = calls.length;
+      const totalDuration = calls.reduce((sum, call) => sum + (call.duration || 0), 0);
+      const averageCallTime = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0;
+
+      return {
+        averageCallTime, // In seconds
+        callsPerMonth: totalCalls, // Calls in the last 30 days
+      };
+    } catch (error) {  
+      console.error("Error fetching Avanser call data:", error);
+      return {
+        averageCallTime: 0,
+        callsPerMonth: 0,
+      };
+    }
+  }
+
+  // Function to close all modals and reset their state
+  function closeAllModals() {
+    const stageModal = document.getElementById('stageBreakdownModal');
+    const leadModal = document.getElementById('leadNamesModal');
+    stageModal.style.display = 'none';
+    leadModal.style.display = 'none';
+    
+    // Clear the content
+    document.getElementById('stageBreakdownBody').innerHTML = '';
+    document.getElementById('leadNamesList').innerHTML = '';
+  }
+
+  // Function to close just the leads modal
+  function closeLeadsModal() {
+    const leadModal = document.getElementById('leadNamesModal');
+    leadModal.style.display = 'none';
+    document.getElementById('leadNamesList').innerHTML = '';
+  }
+
+  // Close modal when clicking the close button or outside the modal
+  document.querySelector('.close-modal').addEventListener('click', closeAllModals);
+
+  // Close lead names modal when clicking close button
+  document.querySelector('.close-lead-names').addEventListener('click', closeLeadsModal);
+
+  // Handle clicking outside modals
+  window.addEventListener('click', (event) => {
+    const stageModal = document.getElementById('stageBreakdownModal');
+    const leadModal = document.getElementById('leadNamesModal');
+    
+    // If clicking outside the stage breakdown modal
+    if (event.target === stageModal) {
+      closeAllModals();
+    }
+    
+    // If clicking outside the lead names modal but inside the stage breakdown modal
+    if (event.target === leadModal) {
+      closeLeadsModal();
+    }
+  });
+
+  // Function to show stage breakdown modal
+  function showStageBreakdown(salesRep, agingCategory, stageData, leadsData) {
+    const modal = document.getElementById('stageBreakdownModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const tableBody = document.getElementById('stageBreakdownBody');
+    
+    modalTitle.textContent = `${salesRep} - ${agingCategory} Days Breakdown`;
+    
+    // Clear existing table content
+    tableBody.innerHTML = '';
+    
+    // Add rows for each stage
+    Object.entries(stageData).forEach(([stageId, count]) => {
+      const row = document.createElement('tr');
+      const leadsList = leadsData && leadsData[stageId] ? leadsData[stageId] : [];
+      const leadsJson = JSON.stringify(leadsList).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      
+      // Get stage info from PIPELINE_STAGES
+      const stageInfo = PIPELINE_STAGES[stageId];
+      
+      // Get the stage name from our mapping
+      const stageName = getStageNameFromId(stageId);
+      
+      // Format the display
+      const displayHtml = `
+        <div>${stageName}</div>
+        <small class="stage-status">(Stage ID: ${stageId})</small>
+      `;
+      
+      row.innerHTML = `
+        <td>
+          ${displayHtml}
+        </td>
+        <td>${count}</td>
+        <td>
+          <button class="view-leads-btn" data-leads='${leadsJson}' data-stage='${stageId}' data-rep='${salesRep}' data-category='${agingCategory}'>
+            View Leads
+          </button>
+        </td>
+      `;
+      tableBody.appendChild(row);
+
+      // Add click handler for the View Leads button
+      const viewLeadsBtn = row.querySelector('.view-leads-btn');
+      viewLeadsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const leads = JSON.parse(this.getAttribute('data-leads'));
+        const stageId = this.getAttribute('data-stage');
+        const rep = this.getAttribute('data-rep');
+        const category = this.getAttribute('data-category');
+        showLeadNames(rep, category, stageId, leads);
+      });
+    });
+    
+    modal.style.display = 'block';
+  }
+
+  // Function to show lead names for a specific stage
+  function showLeadNames(salesRep, agingCategory, stageId, leads) {
+    const leadNamesModal = document.getElementById('leadNamesModal');
+    const leadNamesTitle = document.getElementById('leadNamesTitle');
+    const leadNamesList = document.getElementById('leadNamesList');
+    
+    const stageInfo = PIPELINE_STAGES[stageId] || { name: stageId };
+    leadNamesTitle.textContent = `${stageInfo.name} Leads - ${salesRep}`;
+    
+    leadNamesList.innerHTML = '';
+    
+    if (!leads || leads.length === 0) {
+      leadNamesList.innerHTML = '<div class="lead-item">No leads found</div>';
+    } else {
+      leads.forEach(lead => {
+        const leadItem = document.createElement('div');
+        leadItem.className = 'lead-item';
+        const createdDate = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'Unknown';
+        
+        leadItem.innerHTML = `
+          <div>
+            <div>${lead.name || 'Unnamed Lead'}</div>
+            <div class="lead-contact-info">
+              Created: ${createdDate}
+            </div>
+          </div>
+        `;
+        leadNamesList.appendChild(leadItem);
+      });
+    }
+    
+    leadNamesModal.style.display = 'block';
+    
+    // Prevent clicks inside the modal from bubbling up
+    leadNamesModal.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // Function to get stage name from ID based on known mapping
+  function getStageNameFromId(stageId) {
+    const stageMapping = {
+      '94e23266-878e-4117-8ef4-a787bab18e07': 'Prequalified',
+      '66898896-0059-40d7-86f0-bc4f88ca38fb': 'Hot Leads (Uncontacted)',
+      '11b2b8d6-ea11-4635-ae52-7265b6d3abe7': 'Follow Up (Contacted)',
+      '2ff5aba1-9d91-4195-b281-6ae23a9e8c86': 'Appointment',
+      '70804df2-66bb-4bf7-b162-90e93b48db29': 'Booking',
+      '7c8bead4-536a-4e12-8d65-e49af199d1c7': 'Re-nurture',
+      'd4199bbd-d53f-4dd2-9900-9511e21ef1f9': 'Recycled'
+    };
+    return stageMapping[stageId] || stageId;
+  }
+
+  // Initialize the application when the page loads
+  document.addEventListener('DOMContentLoaded', initializeApp);
+
+  // Make showLeadNames function globally available
+  window.showLeadNames = showLeadNames;
   </script>
 </body>
 </html>
