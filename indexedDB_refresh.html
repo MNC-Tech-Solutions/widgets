@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refresh Opportunities</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #removeDuplicatesBtn {
+      background-color: #dc3545;
+    }
+    #removeDuplicatesBtn:hover {
+      background-color: #b02a37;
+    }
+    p {
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Refresh Opportunities</h1>
+  <div class="control-group">
+    <label for="locationIdInput">Location ID:</label>
+    <input type="text" id="locationIdInput" placeholder="Enter Location ID">
+  </div>
+  <button id="refreshBtn">Refresh Database</button>
+  <button id="removeDuplicatesBtn">Remove Duplicates</button>
+  <p>Check the console for logs (right-click → Inspect → Console).</p>
+
+  <script type="module">
+    import { loadConfigForRefresh, refreshOpportunitiesByLocationId, removeDuplicateOpportunities, fetchPipelines } from './ghlData.js';
+
+    async function getConfig(locationId) {
+      try {
+        const { config } = await loadConfigForRefresh(locationId);
+        if (!config) {
+          console.error('Failed to load config. Ensure config.json is available and locationId matches config.');
+          return null;
+        }
+        return config;
+      } catch (error) {
+        console.error('Error loading config:', error);
+        return null;
+      }
+    }
+
+    async function refreshDatabase() {
+      const locationId = document.getElementById('locationIdInput').value.trim();
+      if (!locationId) {
+        console.error('Please enter a Location ID.');
+        return;
+      }
+
+      const config = await getConfig(locationId);
+      if (!config) return;
+
+      try {
+        console.log('Running refresh for locationId:', locationId);
+        await refreshOpportunitiesByLocationId(config, locationId);
+        console.log('Refresh completed successfully.');
+      } catch (error) {
+        console.error('Error during refresh:', error);
+      }
+    }
+
+    async function removeDuplicates() {
+      const locationId = document.getElementById('locationIdInput').value.trim();
+      if (!locationId) {
+        console.error('Please enter a Location ID.');
+        return;
+      }
+
+      const config = await getConfig(locationId);
+      if (!config) return;
+
+      try {
+        const pipelines = await fetchPipelines(config, locationId);
+        if (!pipelines || pipelines.length === 0) {
+          console.warn(`No pipelines found for locationId: ${locationId}`);
+          return;
+        }
+
+        console.log('Removing duplicates for locationId:', locationId);
+        for (const pipeline of pipelines) {
+          console.log(`Checking pipeline: ${pipeline.id}`);
+          await removeDuplicateOpportunities(locationId, pipeline.id);
+        }
+        console.log('Duplicate removal completed successfully.');
+      } catch (error) {
+        console.error('Error during duplicate removal:', error);
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshDatabase);
+    document.getElementById('removeDuplicatesBtn').addEventListener('click', removeDuplicates);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHL Funnel Widget</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --funnel-1: #91aec4;
+      --funnel-2: #b7d0e1;
+      --funnel-3: #cadeed;
+      --funnel-4: #dbecf4;
+      --text: #374151;
+      --border: #d1d5db;
+      --funnel-grey: #e5e7eb;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: white;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .widget {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 15px;
+      position: relative;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+    
+    label {
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    select, input[type="text"], input[type="date"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+    
+    select[multiple] {
+      padding: 0;
+    }
+
+    .choices {
+      margin-bottom: 0;
+    }
+
+    .choices__inner {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+      min-height: 38px;
+    }
+
+    .choices__list--multiple .choices__item {
+      background-color: var(--primary);
+      border: 1px solid var(--primary-dark);
+      color: white;
+      font-size: 12px;
+      padding: 2px 8px;
+      margin: 2px;
+    }
+
+    .choices__list--dropdown {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+      background-color: var(--funnel-grey);
+    }
+
+    #funnel-container {
+      width: 100%;
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: flex-start;
+    }
+
+    .funnel-card {
+      flex: 0 0 calc(50% - 15px);
+      min-width: 550px;
+      margin-bottom: 15px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .funnel-card .card-header {
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .funnel-card .card-body {
+      padding: 10px;
+    }
+
+    rect {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    rect:hover {
+      opacity: 0.8;
+    }
+
+    .modal-dialog {
+      max-width: 90%;
+      margin: 1.75rem auto;
+    }
+
+    .modal-content {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      background: #fff;
+    }
+
+    .modal-header {
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .modal-header .btn {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+    }
+
+    .modal-body {
+      padding: 20px 30px;
+      position: relative;
+    }
+
+    .modal-body .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-body h6 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .table-container {
+      max-height: 95%;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .table {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .table thead th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border-bottom: 2px solid #e5e7eb;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .table tbody tr {
+      transition: background 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    .table tbody td {
+      font-size: 13px;
+      padding: 10px;
+      border-top: 1px solid #e5e7eb;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+
+    .table-container::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+      background: #adb5bd;
+      border-radius: 6px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+
+    .pagination-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .pagination-info {
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+
+    .pagination-buttons .btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .pagination-buttons .btn-outline-primary {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .pagination-buttons .btn-outline-primary:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .pagination-buttons .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .widget-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #dateSelectionModal .modal-dialog { max-width: 650px; }
+    #dateSelectionModal .quick-selections { margin-top: 10px; }
+    #dateSelectionModal .quick-selections button { margin-right: 5px; margin-bottom: 5px; }
+    #openDateModal {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="container-fluid">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="control-group">
+            <label for="pipeline">Pipeline</label>
+            <select id="pipeline" class="form-select"></select>
+          </div>
+        </div>
+        <div class="col-md-2 d-none">
+          <div class="control-group">
+            <label for="campaign">Campaign</label>
+            <select id="campaign" class="form-select">
+              <option value="all">All Campaigns</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="control-group">
+            <label for="sourceCategory">Source Category</label>
+            <select id="sourceCategory" class="form-select" multiple>
+              <option value="all">All Source Categories</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="control-group">
+            <label for="channel">Source</label>
+            <select id="channel" class="form-select" multiple>
+              <option value="all">All Sources</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="control-group">
+            <label for="agent">Agent</label>
+            <select id="agent" class="form-select" multiple>
+              <option value="all">All Agents</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    
+      <!-- Date Range and Clear Button -->
+      <div class="row g-3 mt-1">
+        <div class="col-md-12">
+          <div class="control-group w-100 d-flex gap-2 align-items-end">
+            <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+            <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="funnel-container"></div>
+    <div class="widget-loading-overlay" id="widgetLoadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Date Selection Modal -->
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modalDateRange" class="form-label">Date Range</label>
+            <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+          </div>
+          <div class="quick-selections">
+            <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+          <button type="button" class="btn btn-primary" id="doneButton">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opportunities Modal -->
+  <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="opportunitiesModalLabel">Records</h5>
+          <div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="header-row">
+            <h6>Funnel</h6>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
+          </div>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Opportunity Name</th>
+                  <th>Primary Contact Name</th>
+                  <th>Source</th>
+                  <th>Assigned User</th>
+                  <th>Status</th>
+                  <th>Phone Number</th>
+                  <th>Lead Value</th>
+                  <th>Project</th>
+                  <th>Contact Created</th>
+                </tr>
+              </thead>
+              <tbody id="opportunitiesTableBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination-section d-flex justify-content-between align-items-center">
+            <span class="pagination-info" id="paginationInfo">Showing 1 to 0 of 0</span>
+            <div class="pagination-buttons">
+              <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
+              <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+            </div>
+          </div>
+          <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script>
+    // Global config object and location ID
+    let CONFIG = {};
+    let locationId = '';
+
+    // Get location ID from query parameters or parent URL
+    function getLocationId(fallbackLocationId) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationId = urlParams.get('locationId');
+        if (locationId) {
+          return locationId;
+        }
+        const parentUrl = window.parent.location.href;
+        const match = parentUrl.match(/\/location\/([^/]+)\//);
+        return match && match[1] ? match[1] : fallbackLocationId;
+      } catch (e) {
+        console.error('Error accessing location ID:', e);
+        return fallbackLocationId;
+      }
+    }
+
+    // Select config based on location ID
+    function selectConfig(configs, locationId) {
+      return configs.find(config => config.defaultLocationId === locationId) || {};
+    }
+
+    // Global variables
+    let pipelines = [];
+    let currentOpportunities = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let usersMap = new Map();
+    let sourcesSet = new Set();
+    let sourceCategoriesSet = new Set();
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+    let sourceCategoryToSources = {};
+    let sourceToCategories = {};
+    let choicesInstances = {};
+
+    // Colors for different stages
+    const stageColors = [
+      '#91aec4', // funnel-1
+      '#b7d0e1', // funnel-2
+      '#cadeed', // funnel-3
+      '#dbecf4', // funnel-4
+      '#e5e7eb'  // funnel-grey
+    ];
+
+    // Initialize widget on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        const response = await fetch('./config.json');
+        if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
+        const configs = await response.json();
+        locationId = getLocationId('1sEFWbzzULapMdQ'); // Default to a valid locationId for testing
+        CONFIG = selectConfig(configs, locationId);
+        if (Object.keys(CONFIG).length === 0) {
+          console.warn('No config found for locationId:', locationId);
+          document.getElementById('funnel-container').innerHTML = '<p>No configuration available for this location.</p>';
+          hideWidgetSpinner();
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading config:', error);
+        CONFIG = { apiKey: 'your-api-key', accessToken: 'your-access-token', customFieldIds: { sourceCategory: 'source_category_id', project: 'project_id' } }; // Fallback config for testing
+        locationId = '1sEFWbzzULapMdQ';
+        console.warn('Using fallback configuration due to error.');
+      }
+
+      await initWidget();
+      updateHeight();
+    });
+
+    // Show/hide widget loading spinner
+    function showWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'flex';
+    }
+
+    function hideWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'none';
+    }
+
+    // Show/hide modal loading spinner
+    function showModalSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideModalSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Initialize widget: fetch data and set up event listeners
+    async function initWidget() {
+      const pipelineSelect = document.getElementById('pipeline');
+      const campaignSelect = document.getElementById('campaign');
+      const channelSelect = document.getElementById('channel');
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const agentSelect = document.getElementById('agent');
+
+      // Initialize Choices.js for multi-select dropdowns
+      choicesInstances.sourceCategory = new Choices(sourceCategorySelect, {
+        removeItemButton: true,
+        placeholderValue: 'All Source Categories',
+        maxItemCount: -1,
+        allowHTML: false
+      });
+      choicesInstances.channel = new Choices(channelSelect, {
+        removeItemButton: true,
+        placeholderValue: 'All Sources',
+        maxItemCount: -1,
+        allowHTML: false
+      });
+      choicesInstances.agent = new Choices(agentSelect, {
+        removeItemButton: true,
+        placeholderValue: 'All Agents',
+        maxItemCount: -1,
+        allowHTML: false
+      });
+
+      // Initialize Flatpickr for the date picker
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode: "range",
+        dateFormat: "Y/m/d",
+        numberOfMonths: 2,
+        onClose: function(selectedDates, dateStr, instance) {
+          if (selectedDates.length === 2) {
+            const start = flatpickr.formatDate(selectedDates[0], "Y/m/d");
+            const end = flatpickr.formatDate(selectedDates[1], "Y/m/d");
+            instance.input.value = `${start} - ${end}`;
+          }
+        }
+      });
+
+      // Open Date Modal Button
+      document.getElementById('openDateModal').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+        if (selectedStartDate && selectedEndDate) {
+          dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
+        } else {
+          dateRangePicker.clear();
+        }
+        modal.show();
+      });
+
+      // Clear Filters Button
+      document.getElementById('clearFilters').addEventListener('click', async function() {
+        // Reset pipeline to first option
+        if (pipelines.length > 0) {
+          pipelineSelect.value = pipelines[0].id;
+        } else {
+          pipelineSelect.value = '';
+        }
+        // Reset campaign
+        campaignSelect.value = 'all';
+        // Clear all selected options from dropdowns and set to 'all'
+        choicesInstances.sourceCategory.removeActiveItems();
+        choicesInstances.sourceCategory.setChoiceByValue('all');
+        choicesInstances.channel.removeActiveItems();
+        choicesInstances.channel.setChoiceByValue('all');
+        choicesInstances.agent.removeActiveItems();
+        choicesInstances.agent.setChoiceByValue('all');
+        // Reset date range
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        dateRangePicker.clear();
+        // Update channels and agents for the first pipeline
+        await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+        updateAgents();
+        // Render funnel with reset filters
+        await renderFunnel();
+      });
+
+      // Quick Selection Buttons
+      document.querySelectorAll('.quick-selections button').forEach(button => {
+        button.addEventListener('click', function() {
+          const range = this.getAttribute('data-range');
+          const { start, end } = getDateRange(range);
+          if (start && end) {
+            dateRangePicker.setDate([start, end], false);
+          }
+        });
+      });
+
+      // Done Button
+      document.getElementById('doneButton').addEventListener('click', async function() {
+        const selectedDates = dateRangePicker.selectedDates;
+        const dateButton = document.getElementById('openDateModal');
+        if (selectedDates.length === 2) {
+          selectedStartDate = flatpickr.formatDate(selectedDates[0], "Y-m-d");
+          selectedEndDate = flatpickr.formatDate(selectedDates[1], "Y-m-d");
+          dateButton.textContent = `${selectedStartDate} - ${selectedEndDate}`;
+        } else {
+          selectedStartDate = null;
+          selectedEndDate = null;
+          dateButton.textContent = 'Select Date Range';
+        }
+        const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+        modal.hide();
+        await renderFunnel();
+      });
+
+      // Clear Filter Button (Date Modal)
+      document.getElementById('clearFilter').addEventListener('click', async function() {
+        dateRangePicker.clear();
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+        modal.hide();
+        await renderFunnel();
+      });
+
+      // Fetch initial data
+      await fetchPipelines();
+      await fetchAllUsers();
+      updatePipelines();
+      await updateChannels(pipelineSelect.value || pipelines[0]?.id); // Ensure channels are updated with a valid pipeline
+      updateAgents();
+
+      // Initialize dropdowns with 'all' selected
+      if (pipelines.length > 0) {
+        pipelineSelect.value = pipelines[0].id;
+        choicesInstances.sourceCategory.setChoiceByValue('all');
+        choicesInstances.channel.setChoiceByValue('all');
+        choicesInstances.agent.setChoiceByValue('all');
+      }
+
+      // Render funnel with all data initially
+      await renderFunnel();
+
+      // Set up event listeners
+      pipelineSelect.addEventListener('change', async function() {
+        await updateChannels(this.value);
+        updateAgents();
+        choicesInstances.agent.setChoiceByValue('all');
+        choicesInstances.channel.setChoiceByValue('all');
+        choicesInstances.sourceCategory.setChoiceByValue('all');
+        campaignSelect.value = 'all';
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        await renderFunnel();
+      });
+
+      sourceCategorySelect.addEventListener('change', function() {
+        updateSourceDropdown();
+        renderFunnel();
+      });
+
+      channelSelect.addEventListener('change', function() {
+        renderFunnel();
+      });
+
+      campaignSelect.addEventListener('change', renderFunnel);
+      agentSelect.addEventListener('change', renderFunnel);
+
+      document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderModalTable();
+        }
+      });
+
+      document.getElementById('nextPageBtn').addEventListener('click', () => {
+        if (currentPage < Math.ceil(currentOpportunities.length / itemsPerPage)) {
+          currentPage++;
+          renderModalTable();
+        }
+      });
+    }
+
+    // Function to Calculate Date Ranges for Quick Selections
+    function getDateRange(range) {
+      const today = new Date();
+      let start, end;
+      switch (range) {
+        case 'thisWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay());
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'lastWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 7);
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'last7Days':
+          start = new Date(today);
+          start.setDate(today.getDate() - 7);
+          end = new Date(today);
+          break;
+        case 'thisMonth':
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case 'lastMonth':
+          start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 0);
+          break;
+        case 'thisYear':
+          start = new Date(today.getFullYear(), 0, 1);
+          end = new Date(today.getFullYear(), 11, 31);
+          break;
+        default:
+          start = null;
+          end = null;
+      }
+      return { start, end };
+    }
+
+    // Update source dropdown based on selected source categories
+    function updateSourceDropdown() {
+      const selectedCategories = choicesInstances.sourceCategory.getValue(true);
+      const channelChoices = choicesInstances.channel;
+      const sourcesToShow = new Set();
+
+      // Clear existing choices
+      channelChoices.clearChoices();
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+
+      // If 'all' is selected or no categories are selected, show all sources
+      if (selectedCategories.includes('all') || selectedCategories.length === 0) {
+        sourcesSet.forEach(source => sourcesToShow.add(source));
+      } else {
+        // Collect sources associated with selected categories
+        selectedCategories.forEach(category => {
+          if (sourceCategoryToSources[category]) {
+            sourceCategoryToSources[category].forEach(source => sourcesToShow.add(source));
+          }
+        });
+      }
+
+      // Sort and add sources to dropdown
+      Array.from(sourcesToShow).sort().forEach(source => {
+        channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+      });
+
+      // Ensure 'all' is selected if no specific sources are chosen
+      if (channelChoices.getValue(true).length === 0) {
+        channelChoices.setChoiceByValue('all');
+      }
+    }
+
+    // Update source category dropdown
+    function updateSourceCategoryDropdown() {
+      const sourceCategoryChoices = choicesInstances.sourceCategory;
+      sourceCategoryChoices.clearChoices();
+      sourceCategoryChoices.setChoices([{ value: 'all', label: 'All Source Categories' }], 'value', 'label', true);
+
+      // Add all source categories
+      Array.from(sourceCategoriesSet).sort().forEach(category => {
+        sourceCategoryChoices.setChoices([{ value: category, label: category }], 'value', 'label', false);
+      });
+
+      // Ensure 'all' is selected if no specific categories are chosen
+      if (sourceCategoryChoices.getValue(true).length === 0) {
+        sourceCategoryChoices.setChoiceByValue('all');
+      }
+    }
+
+    // Fetch pipelines from v1 API
+    async function fetchPipelines() {
+      showWidgetSpinner();
+      try {
+        const response = await fetch('https://rest.gohighlevel.com/v1/pipelines/', {
+          headers: { 'Authorization': `Bearer ${CONFIG.apiKey}`, 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        pipelines = data.pipelines || [];
+        console.log('Pipelines fetched:', pipelines.length);
+      } catch (error) {
+        console.error('Error fetching pipelines:', error);
+        pipelines = [];
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    // Fetch users from v1 API
+    async function fetchAllUsers() {
+      showWidgetSpinner();
+      try {
+        const response = await fetch('https://rest.gohighlevel.com/v1/users/', {
+          headers: { 'Authorization': `Bearer ${CONFIG.apiKey}`, 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        data.users.forEach(user => {
+          usersMap.set(user.id, `${user.firstName} ${user.lastName}`.trim() || user.email);
+        });
+        console.log('Users fetched:', usersMap.size);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    // Populate pipeline dropdown
+    function updatePipelines() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelineSelect.innerHTML = '';
+      pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+      });
+    }
+
+    // Populate source and source category dropdowns
+    async function updateChannels(pipelineId) {
+      const channelChoices = choicesInstances.channel;
+      const sourceCategoryChoices = choicesInstances.sourceCategory;
+      
+      channelChoices.clearChoices();
+      sourceCategoryChoices.clearChoices();
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+      sourceCategoryChoices.setChoices([{ value: 'all', label: 'All Source Categories' }], 'value', 'label', true);
+      sourcesSet.clear();
+      sourceCategoriesSet.clear();
+      sourceCategoryToSources = {};
+      sourceToCategories = {};
+
+      if (pipelineId) {
+        const opportunities = await fetchAllOpportunities(pipelineId);
+        console.log('Opportunities fetched for channels:', opportunities.length);
+        opportunities.forEach(op => {
+          const source = op.source;
+          const sourceCategory = op.customFields?.find(cf => cf.id === CONFIG.customFieldIds.sourceCategory)?.fieldValueString;
+
+          if (source) sourcesSet.add(source);
+          if (sourceCategory) sourceCategoriesSet.add(sourceCategory);
+
+          if (source && sourceCategory) {
+            if (!sourceCategoryToSources[sourceCategory]) {
+              sourceCategoryToSources[sourceCategory] = new Set();
+            }
+            sourceCategoryToSources[sourceCategory].add(source);
+
+            if (!sourceToCategories[source]) {
+              sourceToCategories[source] = new Set();
+            }
+            sourceToCategories[source].add(sourceCategory);
+          }
+        });
+
+        // Populate source and source category dropdowns
+        Array.from(sourcesSet).sort().forEach(source => {
+          channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+        });
+        Array.from(sourceCategoriesSet).sort().forEach(category => {
+          sourceCategoryChoices.setChoices([{ value: category, label: category }], 'value', 'label', false);
+        });
+
+        // Ensure 'all' is selected for both dropdowns
+        channelChoices.setChoiceByValue('all');
+        sourceCategoryChoices.setChoiceByValue('all');
+      }
+    }
+
+    // Populate agent dropdown
+    function updateAgents() {
+      const agentChoices = choicesInstances.agent;
+      agentChoices.clearChoices();
+      agentChoices.setChoices([{ value: 'all', label: 'All Agents' }], 'value', 'label', true);
+      usersMap.forEach((name, userId) => {
+        agentChoices.setChoices([{ value: userId, label: name }], 'value', 'label', false);
+      });
+      // Ensure 'all' is selected
+      agentChoices.setChoiceByValue('all');
+    }
+
+    // Calculate conversion rates for the funnel
+    function calculateConversionRates(stages) {
+      if (stages.length === 0 || stages[0].value === 0) {
+        return stages.map(stage => ({
+          ...stage,
+          cumulativeConversion: "0.00",
+          nextStepConversion: "0.00"
+        }));
+      }
+
+      const firstStageCount = stages[0].value;
+
+      return stages.map((stage, index) => {
+        const currentStageCount = stage.value;
+        const cumulativeConversion = (currentStageCount / firstStageCount) * 100;
+        let nextStepConversion = index === 0 ? 100.0 : (stages[index - 1].value > 0 ? (currentStageCount / stages[index - 1].value) * 100 : 0);
+
+        return {
+          ...stage,
+          cumulativeConversion: cumulativeConversion.toFixed(2),
+          nextStepConversion: nextStepConversion.toFixed(2)
+        };
+      });
+    }
+
+    // Compute cumulative funnel values
+    function computeFunnelValues(stageCounts, stages) {
+      return stages.map((stage, index) =>
+        stages.slice(index).reduce((sum, s) => sum + (stageCounts[s.id] || 0), 0)
+      );
+    }
+
+    // Render funnel charts
+    async function renderFunnel() {
+      showWidgetSpinner();
+      const pipelineId = document.getElementById('pipeline').value;
+      const campaign = document.getElementById('campaign').value;
+      let selectedChannels = choicesInstances.channel.getValue(true);
+      let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
+      let selectedAgents = choicesInstances.agent.getValue(true);
+      const container = document.getElementById('funnel-container');
+      container.innerHTML = '';
+
+      console.log('Rendering funnel for pipeline:', pipelineId);
+      console.log('Selected Channels:', selectedChannels);
+      console.log('Selected Source Categories:', selectedSourceCategories);
+      console.log('Selected Agents:', selectedAgents);
+
+      try {
+        if (!pipelineId) {
+          drawChart([]);
+          return;
+        }
+
+        const selectedPipeline = pipelines.find(p => p.id === pipelineId);
+        if (!selectedPipeline) {
+          drawChart([]);
+          return;
+        }
+
+        // Fetch opportunities with consistent filters
+        const opportunities = await fetchAllOpportunities(
+          pipelineId,
+          null,
+          selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : ['all'],
+          selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : ['all'],
+          selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : ['all']
+        );
+        console.log('Total opportunities fetched:', opportunities.length);
+
+        // Apply campaign filter
+        let filteredOpportunities = opportunities;
+        if (campaign !== 'all') {
+          filteredOpportunities = filteredOpportunities.filter(op => op.campaign === campaign);
+        }
+
+        // --- General Funnel (All Projects) ---
+        const generalStageCounts = {};
+        selectedPipeline.stages.forEach(stage => {
+          generalStageCounts[stage.id] = 0;
+        });
+        filteredOpportunities.forEach(op => {
+          const stageId = op.pipelineStageId;
+          if (stageId && generalStageCounts.hasOwnProperty(stageId)) {
+            generalStageCounts[stageId]++;
+          }
+        });
+
+        // Compute cumulative funnel values
+        const generalFunnelValues = computeFunnelValues(generalStageCounts, selectedPipeline.stages);
+
+        // Prepare data with cumulative counts and colors
+        let generalData = selectedPipeline.stages.map((stage, index) => ({
+          label: stage.name,
+          value: generalFunnelValues[index],
+          color: stageColors[index % stageColors.length],
+          stageId: stage.id,
+          project: null
+        }));
+
+        // Calculate conversion rates for general funnel
+        generalData = calculateConversionRates(generalData);
+
+        // Create card for general funnel (only once)
+        const generalCard = document.createElement('div');
+        generalCard.className = 'funnel-card';
+        generalCard.innerHTML = `<div class="card-header">All Projects</div><div class="card-body"></div>`;
+        container.appendChild(generalCard);
+        drawChart(generalData, generalCard.querySelector('.card-body'));
+
+        // --- Funnels by Project (Optional) ---
+        // Comment out the following block to disable project-specific charts
+        const projectGroups = {};
+        filteredOpportunities.forEach(op => {
+          const project = op.project || 'N/A';
+          if (!projectGroups[project]) projectGroups[project] = [];
+          projectGroups[project].push(op);
+        });
+
+        for (const [project, projectOpps] of Object.entries(projectGroups)) {
+          const projectStageCounts = {};
+          selectedPipeline.stages.forEach(stage => {
+            projectStageCounts[stage.id] = 0;
+          });
+          projectOpps.forEach(op => {
+            const stageId = op.pipelineStageId;
+            if (stageId && projectStageCounts.hasOwnProperty(stageId)) {
+              projectStageCounts[stageId]++;
+            }
+          });
+
+          // Compute cumulative funnel values for project
+          const projectFunnelValues = computeFunnelValues(projectStageCounts, selectedPipeline.stages);
+
+          // Prepare data
+          let projectData = selectedPipeline.stages.map((stage, index) => ({
+            label: stage.name,
+            value: projectFunnelValues[index],
+            color: stageColors[index % stageColors.length],
+            stageId: stage.id,
+            project: project
+          }));
+
+          // Calculate conversion rates for project funnel
+          projectData = calculateConversionRates(projectData);
+
+          // Create card for project-specific funnel
+          const projectCard = document.createElement('div');
+          projectCard.className = 'funnel-card';
+          projectCard.innerHTML = `<div class="card-header">Project: ${project}</div><div class="card-body"></div>`;
+          container.appendChild(projectCard);
+          drawChart(projectData, projectCard.querySelector('.card-body'));
+        }
+
+        updateHeight();
+      } catch (error) {
+        console.error('Error rendering funnel:', error);
+        drawChart([], container);
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    // Fetch opportunities from v2 API
+    async function fetchAllOpportunities(pipelineId, stageId = null, channels = ['all'], sourceCategories = ['all'], agents = ['all'], project = null, startDate = selectedStartDate, endDate = selectedEndDate) {
+      showWidgetSpinner();
+      let allOpportunities = [];
+      let startAfter = null;
+      let startAfterId = null;
+      let total = 0;
+      let hasMore = true;
+      const limit = 100;
+
+      try {
+        while (hasMore) {
+          let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
+          if (startAfter && startAfterId) {
+            url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
+          }
+
+          const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${CONFIG.accessToken}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' }
+          });
+          if (!response.ok) {
+            console.error(`HTTP error! Status: ${response.status}, Response: ${await response.text()}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const data = await response.json();
+          console.log('API response meta:', data.meta);
+
+          if (!total) {
+            total = data.meta?.total || 0;
+            console.log('Total opportunities expected:', total);
+          }
+
+          allOpportunities = allOpportunities.concat(data.opportunities || []);
+          console.log('Fetched opportunities so far:', allOpportunities.length);
+
+          startAfter = data.meta?.startAfter || null;
+          startAfterId = data.meta?.startAfterId || null;
+          hasMore = !!startAfter && !!startAfterId && allOpportunities.length < (data.meta?.total || 0);
+        }
+        console.log('Total opportunities fetched for pipeline', pipelineId, ':', allOpportunities.length);
+
+        let filteredOpportunities = allOpportunities.map(op => {
+          const customFieldSourceCategory = (op.customFields || []).find(cf => cf.id === CONFIG.customFieldIds.sourceCategory);
+          const customFieldProject = (op.customFields || []).find(cf => cf.id === CONFIG.customFieldIds.project);
+          return {
+            ...op,
+            sourceCategory: customFieldSourceCategory ? customFieldSourceCategory.fieldValueString : null,
+            project: customFieldProject ? customFieldProject.fieldValueString : 'N/A'
+          };
+        });
+
+        // Apply filters
+        if (pipelineId) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.pipelineId === pipelineId);
+          console.log('After pipeline filter:', filteredOpportunities.length);
+        }
+        if (stageId) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.pipelineStageId === stageId);
+          console.log('After stage filter:', filteredOpportunities.length);
+        }
+        if (channels.length > 0 && !channels.includes('all')) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.source && channels.includes(op.source));
+          console.log('After channel filter:', filteredOpportunities.length);
+        }
+        if (sourceCategories.length > 0 && !sourceCategories.includes('all')) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.sourceCategory && sourceCategories.includes(op.sourceCategory));
+          console.log('After source category filter:', filteredOpportunities.length);
+        }
+        if (agents.length > 0 && !agents.includes('all')) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.assignedTo && agents.includes(op.assignedTo));
+          console.log('After agent filter:', filteredOpportunities.length);
+        }
+        if (project) {
+          filteredOpportunities = filteredOpportunities.filter(op => op.project === project);
+          console.log('After project filter:', filteredOpportunities.length);
+        }
+        if (startDate) {
+          filteredOpportunities = filteredOpportunities.filter(op => {
+            const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+            const createdAtDate = new Date(createdAtFormatted.split(' ')[0]);
+            const start = new Date(startDate);
+            return createdAtDate >= start;
+          });
+          console.log('After start date filter:', filteredOpportunities.length);
+        }
+        if (endDate) {
+          filteredOpportunities = filteredOpportunities.filter(op => {
+            const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+            const createdAtDate = new Date(createdAtFormatted.split(' ')[0]);
+            const end = new Date(endDate);
+            return createdAtDate <= end;
+          });
+          console.log('After end date filter:', filteredOpportunities.length);
+        }
+
+        return filteredOpportunities;
+      } catch (error) {
+        console.error('Error fetching opportunities:', error);
+        return [];
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    // Draw a funnel chart
+    function drawChart(stages, container = document.getElementById('funnel-container')) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "300px");
+
+      const fixedWidth = 550;
+      const fixedHeight = 300;
+      const topPadding = 30;
+      const bottomPadding = 20;
+      const leftPadding = 150;
+      const rightPadding = 120;
+
+      svg.setAttribute("viewBox", `0 0 ${fixedWidth} ${fixedHeight}`);
+
+      const availableHeight = fixedHeight - topPadding - bottomPadding;
+      const stageHeight = stages.length > 0 ? availableHeight / stages.length : availableHeight;
+      const barHeight = stageHeight * 0.55;
+
+      const maxValue = stages.length > 0 ? Math.max(...stages.map(s => s.value)) : 1;
+      const barAreaWidth = fixedWidth - leftPadding - rightPadding - 50;
+
+      const step = maxValue > 0 ? Math.ceil(maxValue / 4) : 100;
+      for (let i = 0; i <= 4; i++) {
+        const x = leftPadding + (i * barAreaWidth) / 4;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x);
+        line.setAttribute("y1", topPadding);
+        line.setAttribute("x2", x);
+        line.setAttribute("y2", fixedHeight - bottomPadding);
+        line.setAttribute("stroke", "#e5e7eb");
+        line.setAttribute("stroke-width", "1");
+        line.setAttribute("stroke-dasharray", "2,2");
+        svg.appendChild(line);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", topPadding - 10);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "#666666");
+        text.setAttribute("font-size", "12px");
+        text.textContent = i * step;
+        svg.appendChild(text);
+      }
+
+      const cumulativeHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      cumulativeHeader.setAttribute("x", fixedWidth - rightPadding + 30);
+      cumulativeHeader.setAttribute("y", topPadding - 10);
+      cumulativeHeader.setAttribute("text-anchor", "middle");
+      cumulativeHeader.setAttribute("fill", "#666666");
+      cumulativeHeader.setAttribute("font-size", "12px");
+      cumulativeHeader.setAttribute("font-weight", "bold");
+      cumulativeHeader.textContent = "Cumulative";
+      svg.appendChild(cumulativeHeader);
+
+      const nextStepHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      nextStepHeader.setAttribute("x", fixedWidth - rightPadding + 100);
+      nextStepHeader.setAttribute("y", topPadding - 10);
+      nextStepHeader.setAttribute("text-anchor", "middle");
+      nextStepHeader.setAttribute("fill", "#666666");
+      nextStepHeader.setAttribute("font-size", "12px");
+      nextStepHeader.setAttribute("font-weight", "bold");
+      nextStepHeader.textContent = "Next-Step";
+      svg.appendChild(nextStepHeader);
+
+      stages.forEach((stage, i) => {
+        const y = topPadding + i * stageHeight + stageHeight / 2;
+
+        const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        labelText.setAttribute("x", leftPadding - 10);
+        labelText.setAttribute("y", y + barHeight / 2);
+        labelText.setAttribute("text-anchor", "end");
+        labelText.setAttribute("fill", "#444444");
+        labelText.setAttribute("font-size", "12px");
+        labelText.setAttribute("dy", "0.35em");
+        labelText.textContent = stage.label;
+        svg.appendChild(labelText);
+
+        const barWidth = maxValue > 0 ? (stage.value / maxValue) * barAreaWidth : 0;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", leftPadding);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", barWidth);
+        rect.setAttribute("height", barHeight);
+        rect.setAttribute("fill", stage.color);
+        rect.setAttribute("rx", "4");
+        rect.setAttribute("stroke", "#d1d5db");
+        rect.setAttribute("stroke-width", "1");
+        rect.addEventListener('click', () => showOpportunitiesModal(stage.stageId, stage.label, stage.project));
+        svg.appendChild(rect);
+
+        const valueText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const textX = barWidth > 50 ? leftPadding + barWidth - 10 : leftPadding + barWidth + 10;
+        const textAnchor = barWidth > 50 ? "end" : "start";
+        valueText.setAttribute("x", textX);
+        valueText.setAttribute("y", y + barHeight / 2);
+        valueText.setAttribute("text-anchor", textAnchor);
+        valueText.setAttribute("fill", barWidth > 50 ? "#ffffff" : "#444444");
+        valueText.setAttribute("font-size", "14px");
+        valueText.setAttribute("dy", "0.35em");
+        valueText.textContent = stage.value;
+        svg.appendChild(valueText);
+
+        const cumulativeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        cumulativeText.setAttribute("x", fixedWidth - rightPadding + 30);
+        cumulativeText.setAttribute("y", y + barHeight / 2);
+        cumulativeText.setAttribute("text-anchor", "middle");
+        cumulativeText.setAttribute("fill", "#666666");
+        cumulativeText.setAttribute("font-size", "12px");
+        cumulativeText.setAttribute("dy", "0.35em");
+        cumulativeText.textContent = `${stage.cumulativeConversion}%`;
+        svg.appendChild(cumulativeText);
+
+        const nextStepText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        nextStepText.setAttribute("x", fixedWidth - rightPadding + 100);
+        nextStepText.setAttribute("y", y + barHeight / 2);
+        nextStepText.setAttribute("text-anchor", "middle");
+        nextStepText.setAttribute("fill", "#666666");
+        nextStepText.setAttribute("font-size", "12px");
+        nextStepText.setAttribute("dy", "0.35em");
+        nextStepText.textContent = `${stage.nextStepConversion}%`;
+        svg.appendChild(nextStepText);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(svg);
+    }
+
+    // Show modal with opportunities
+    async function showOpportunitiesModal(stageId, stageLabel, project = null) {
+      const pipelineId = document.getElementById('pipeline').value;
+      let selectedChannels = choicesInstances.channel.getValue(true);
+      let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
+      let selectedAgents = choicesInstances.agent.getValue(true);
+      if (!pipelineId) return;
+
+      showModalSpinner();
+      try {
+        // Ensure 'all' is used if no specific selections
+        if (selectedChannels.length === 0 || selectedChannels.includes('all')) selectedChannels = ['all'];
+        if (selectedSourceCategories.length === 0 || selectedSourceCategories.includes('all')) selectedSourceCategories = ['all'];
+        if (selectedAgents.length === 0 || selectedAgents.includes('all')) selectedAgents = ['all'];
+
+        currentOpportunities = await fetchAllOpportunities(
+          pipelineId,
+          stageId,
+          selectedChannels,
+          selectedSourceCategories,
+          selectedAgents,
+          project,
+          selectedStartDate,
+          selectedEndDate
+        );
+        console.log('Opportunities for stage', stageId, 'and project', project, ':', currentOpportunities.length);
+        currentPage = 1;
+
+        const modalTitle = project ? `Records - ${stageLabel} (Project: ${project})` : `Records - ${stageLabel}`;
+        document.getElementById('opportunitiesModalLabel').textContent = modalTitle;
+        renderModalTable();
+
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.onclick = () => exportToCSV(currentOpportunities, stageLabel + (project ? `_Project_${project}` : ''));
+
+        const modal = new bootstrap.Modal(document.getElementById('opportunitiesModal'));
+        modal.show();
+      } catch (error) {
+        console.error('Error loading modal data:', error);
+      } finally {
+        hideModalSpinner();
+      }
+    }
+
+    // Render opportunities table in modal
+    function renderModalTable() {
+      const tbody = document.getElementById('opportunitiesTableBody');
+      tbody.innerHTML = '';
+
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, currentOpportunities.length);
+      const totalItems = currentOpportunities.length;
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const op = currentOpportunities[i];
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${op.name || 'N/A'}</td>
+          <td>${op.contact?.name || 'N/A'}</td>
+          <td>${op.source || 'N/A'}</td>
+          <td>${assignedUserName}</td>
+          <td>${op.status || 'N/A'}</td>
+          <td>${op.contact?.phone || 'N/A'}</td>
+          <td>${op.monetaryValue || 0}</td>
+          <td>${op.project || 'N/A'}</td>
+          <td>${createdAtFormatted}</td>
+        `;
+        tbody.appendChild(row);
+      }
+
+      document.getElementById('paginationInfo').textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems}`;
+
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = endIndex >= totalItems;
+    }
+
+    // Export to CSV
+    function exportToCSV(opportunities, stageLabel) {
+      const headers = [
+        'Opportunity Name',
+        'Primary Contact Name',
+        'Source',
+        'Assigned User',
+        'Pipeline Name',
+        'Status',
+        'Phone Number',
+        'Lead Value',
+        'Project',
+        'Contact Created'
+      ];
+
+      const rows = opportunities.map(op => {
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        return [
+          op.name || 'N/A',
+          op.contact?.name || 'N/A',
+          op.source || 'N/A',
+          assignedUserName,
+          pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
+          op.status || 'N/A',
+          op.contact?.phone || 'N/A',
+          op.monetaryValue || 0,
+          op.project || 'N/A',
+          createdAtFormatted
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
+      });
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `opportunities_${stageLabel}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Format datetime with +8 hours offset
+    function formatDateTimeWithOffset(utcDateString) {
+      if (!utcDateString) return 'N/A';
+      const date = new Date(utcDateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // Update widget height
+    function updateHeight() {
+      const height = document.documentElement.scrollHeight;
+      try {
+        window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+      } catch (e) {
+        console.log("Parent communication not available");
+      }
+    }
+
+    // Handle parent messages
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'ping') {
+        updateHeight();
+      }
+    });
+  </script>
+</body>
+</html>
