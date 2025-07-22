@@ -37,10 +37,10 @@ function deleteUserData($phone_number, $log_file) {
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
-$twilio_account_sid = 'ACe217c9267706083594bb2a4cf26b2ae5'; // Updated to match JSON
-$twilio_auth_token = '1c46b5593e219a0ddbc1f6a315adc5e0';
-$twilio_whatsapp_number = '+15557822704';
-$messaging_service_sid = 'MG0ab9b89d512561331c3be3dd6f17f9e5'; // Match JSON if used
+$twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201'; // Updated to match JSON
+$twilio_auth_token = '9c048a45f4ec7ac08841b4ebeea37503';
+$twilio_whatsapp_number = '+60145500532';
+$messaging_service_sid = 'MGcbb564952ffcda04a57c4719d6e31cae'; // Match JSON if used
 
 // Initialize Twilio client
 try {
@@ -74,10 +74,10 @@ if ($from && in_array($body, ['yes', 'hi'])) {
             $message = $twilio->messages->create(
                 "whatsapp:$phone_number",
                 [
-                    'from' => "whatsapp:+15557822704",
+                    'from' => "whatsapp:+60145500532",
                     'body' => "Hello $visitor_name! Here's your QR code:",
                     'mediaUrl' => [$image_url],
-                    'messagingServiceSid' => "MG0ab9b89d512561331c3be3dd6f17f9e5",
+                    'messagingServiceSid' => "MGcbb564952ffcda04a57c4719d6e31cae",
                 ]
             );
             writeLog("Image message sent successfully. Message SID: {$message->sid}", $log_file);

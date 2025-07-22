@@ -26,13 +26,23 @@ function saveUserData($phone_number, $visitor_name, $image_url) {
     file_put_contents($filename, json_encode($data));
 }
 
+// Function to format timestamp to "6th of June, at 4:00 pm"
+function formatTimestamp($timestamp) {
+    $day = date('j', $timestamp);
+    $suffix = 'th';
+    if ($day % 10 == 1 && $day != 11) $suffix = 'st';
+    elseif ($day % 10 == 2 && $day != 12) $suffix = 'nd';
+    elseif ($day % 10 == 3 && $day != 13) $suffix = 'rd';
+    return date("j{$suffix} \o\f F, \a\t g:i a", $timestamp);
+}
+
 // Set default time zone to match your location (UTC+8)
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
-$twilio_account_sid = 'ACe217c9267706083594bb2a4cf26b2ae5';
-$twilio_auth_token = '1c46b5593e219a0ddbc1f6a315adc5e0';
-$twilio_whatsapp_number = '+15557822704';
+$twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201';
+$twilio_auth_token = '9c048a45f4ec7ac08841b4ebeea37503';
+$twilio_whatsapp_number = '+60145500532';
 
 // Initialize Twilio client
 try {
@@ -89,19 +99,26 @@ if (!preg_match('/^\+60[0-9]{9,10}$/', $phone_number)) {
 
 try {
     // Log the from address being used
-    $from_address = "whatsapp:+15557822704";
+    $from_address = "whatsapp:+60145500532";
     writeLog("Attempting to send with from address: $from_address", $log_file);
 
     // Save user data
     saveUserData($phone_number, $visitor_name, $image_url);
 
-    // Initial template message
+    // Format timestamp for the template
+    $formatted_timestamp = formatTimestamp(time());
+
+    // Initial template message with content variables
     $message = $twilio->messages->create(
         "whatsapp:$phone_number",
         [
-            'contentSid' => "HXa8f21e784658e807c0789ef5918098ed",
+            'contentSid' => "HXcca95aefb64616f8512d67b3c7d9e76e",
             'from' => $from_address,
-            "messagingServiceSid" => "MG0ab9b89d512561331c3be3dd6f17f9e5",
+            "messagingServiceSid" => "MGcbb564952ffcda04a57c4719d6e31cae",
+            'contentVariables' => json_encode([
+                '1' => $visitor_name,
+                '2' => $formatted_timestamp
+            ])
         ]
     );
 
