@@ -13,27 +13,17 @@ function writeLog($message, $log_file) {
 }
 
 // Function to save user data
-function saveUserData($phone_number, $visitor_name, $image_url) {
+function saveUserData($phone_number, $visitor_name, $image_url, $visitation_date) {
     $data = [
         'visitor_name' => $visitor_name,
         'image_url' => $image_url,
-        'timestamp' => time()
+        'visitation_date' => $visitation_date
     ];
     $filename = __DIR__ . '/user_data/' . str_replace('+', '_', $phone_number) . '.json';
     if (!file_exists(__DIR__ . '/user_data')) {
         mkdir(__DIR__ . '/user_data', 0777, true);
     }
     file_put_contents($filename, json_encode($data));
-}
-
-// Function to format timestamp to "6th of June, at 4:00 pm"
-function formatTimestamp($timestamp) {
-    $day = date('j', $timestamp);
-    $suffix = 'th';
-    if ($day % 10 == 1 && $day != 11) $suffix = 'st';
-    elseif ($day % 10 == 2 && $day != 12) $suffix = 'nd';
-    elseif ($day % 10 == 3 && $day != 13) $suffix = 'rd';
-    return date("j{$suffix} \o\f F, \a\t g:i a", $timestamp);
 }
 
 // Set default time zone to match your location (UTC+8)
@@ -64,7 +54,7 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 }
 
 // Validate required fields
-$required_fields = ['image_url', 'visitor_name', 'phone_number'];
+$required_fields = ['image_url', 'visitor_name', 'phone_number', 'visitation_date'];
 foreach ($required_fields as $field) {
     if (!isset($input[$field]) || empty(trim($input[$field]))) {
         writeLog("Missing or empty field: $field", $log_file);
@@ -77,9 +67,10 @@ foreach ($required_fields as $field) {
 $image_url = filter_var($input['image_url'], FILTER_VALIDATE_URL);
 $visitor_name = filter_var($input['visitor_name'], FILTER_SANITIZE_STRING);
 $phone_number = trim($input['phone_number']);
+$visitation_date = trim($input['visitation_date']);
 
 // Log received data
-writeLog("Received data: image_url=$image_url, visitor_name=$visitor_name, phone_number=$phone_number", $log_file);
+writeLog("Received data: image_url=$image_url, visitor_name=$visitor_name, phone_number=$phone_number, visitation_date=$visitation_date", $log_file);
 
 // Validate image URL
 if (!$image_url) {
@@ -103,10 +94,7 @@ try {
     writeLog("Attempting to send with from address: $from_address", $log_file);
 
     // Save user data
-    saveUserData($phone_number, $visitor_name, $image_url);
-
-    // Format timestamp for the template
-    $formatted_timestamp = formatTimestamp(time());
+    saveUserData($phone_number, $visitor_name, $image_url, $visitation_date);
 
     // Initial template message with content variables
     $message = $twilio->messages->create(
@@ -117,7 +105,7 @@ try {
             "messagingServiceSid" => "MGcbb564952ffcda04a57c4719d6e31cae",
             'contentVariables' => json_encode([
                 '1' => $visitor_name,
-                '2' => $formatted_timestamp
+                '2' => $visitation_date
             ])
         ]
     );
