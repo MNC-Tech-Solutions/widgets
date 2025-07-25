@@ -22,7 +22,7 @@
     }
     
     body {
-      font-family: ' Cem Seui', Tahoma, sans-serif;
+      font-family: 'Cem Seui', Tahoma, sans-serif;
       margin: 0;
       padding: 15px;
       background: white;
@@ -351,7 +351,7 @@
   <div class="widget">
     <div class="container-fluid">
       <div class="row g-3">
-        <div class="col-md-3">
+        <div class="col-md-4">
           <div class="control-group">
             <label for="pipeline">Pipeline</label>
             <select id="pipeline" class="form-select"></select>
@@ -361,31 +361,36 @@
           <div class="control-group">
             <label for="campaign">Campaign</label>
             <select id="campaign" class="form-select">
-              <option value="all">All Campaigns</option>
             </select>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <div class="control-group">
             <label for="sourceCategory">Source Category</label>
             <select id="sourceCategory" class="form-select" multiple>
-              <option value="all">All Source Categories</option>
             </select>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <div class="control-group">
             <label for="channel">Source</label>
             <select id="channel" class="form-select" multiple>
-              <option value="all">All Sources</option>
             </select>
           </div>
         </div>
-        <div class="col-md-3">
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
           <div class="control-group">
             <label for="agent">Agent</label>
             <select id="agent" class="form-select" multiple>
-              <option value="all">All Agents</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6" id="teamFilter">
+          <div class="control-group">
+            <label for="team">Assigned Team</label>
+            <select id="team" class="form-select" multiple>
             </select>
           </div>
         </div>
@@ -466,6 +471,7 @@
                   <th>Lead Value</th>
                   <th>Project</th>
                   <th>Contact Created</th>
+                  <th>Team</th>
                 </tr>
               </thead>
               <tbody id="opportunitiesTableBody">
@@ -514,13 +520,14 @@
     let usersMap = new Map();
     let sourcesSet = new Set();
     let sourceCategoriesSet = new Set();
+    let teamsSet = new Set();
     let selectedStartDate = null;
     let selectedEndDate = null;
     let dateRangePicker;
     let sourceCategoryToSources = {};
     let sourceToCategories = {};
     let choicesInstances = {};
-    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    const BACKGROUND_REFRESH_INTERVAL = 1 * 60 * 1000; // 10 minutes
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
 
     // Show/hide widget loading spinner
@@ -577,30 +584,38 @@
 
     // Initialize widget
     async function initWidget() {
+      // Hide team filter for non-specified locationId
+      if (locationId !== 'rsdW1sEFWbzzULIapmdQ') {
+        document.getElementById('teamFilter').classList.add('d-none');
+      }
+
       const pipelineSelect = document.getElementById('pipeline');
       const campaignSelect = document.getElementById('campaign');
       const channelSelect = document.getElementById('channel');
       const sourceCategorySelect = document.getElementById('sourceCategory');
       const agentSelect = document.getElementById('agent');
+      const teamSelect = document.getElementById('team');
 
-      choicesInstances.sourceCategory = new Choices(sourceCategorySelect, {
-        removeItemButton: true,
-        placeholderValue: 'All Source Categories',
-        maxItemCount: -1,
-        allowHTML: false
-      });
-      choicesInstances.channel = new Choices(channelSelect, {
-        removeItemButton: true,
-        placeholderValue: 'All Sources',
-        maxItemCount: -1,
-        allowHTML: false
-      });
-      choicesInstances.agent = new Choices(agentSelect, {
-        removeItemButton: true,
-        placeholderValue: 'All Agents',
-        maxItemCount: -1,
-        allowHTML: false
-      });
+      // Initialize Choices.js with custom logic for multiselect
+      const createChoicesInstance = (selectElement, placeholder) => {
+        return new Choices(selectElement, {
+          removeItemButton: true,
+          placeholderValue: placeholder,
+          maxItemCount: -1,
+          allowHTML: false,
+          callbackOnChange: function() {
+            const values = this.getValue(true);
+            if (values.length > 0 && values.includes('all') && values.length > 1) {
+              this.removeActiveItemsByValue('all');
+            }
+          }
+        });
+      };
+
+      choicesInstances.sourceCategory = createChoicesInstance(sourceCategorySelect, 'All Source Categories');
+      choicesInstances.channel = createChoicesInstance(channelSelect, 'All Sources');
+      choicesInstances.agent = createChoicesInstance(agentSelect, 'All Agents');
+      choicesInstances.team = createChoicesInstance(teamSelect, 'All Teams');
 
       dateRangePicker = flatpickr('#modalDateRange', {
         mode: "range",
@@ -638,13 +653,11 @@
         }
         // Reset campaign
         campaignSelect.value = 'all';
-        // Clear all selected options from dropdowns and set to 'all'
+        // Clear all selected options from dropdowns
         choicesInstances.sourceCategory.removeActiveItems();
-        choicesInstances.sourceCategory.setChoiceByValue('all');
         choicesInstances.channel.removeActiveItems();
-        choicesInstances.channel.setChoiceByValue('all');
         choicesInstances.agent.removeActiveItems();
-        choicesInstances.agent.setChoiceByValue('all');
+        choicesInstances.team.removeActiveItems();
         // Reset date range
         selectedStartDate = null;
         selectedEndDate = null;
@@ -653,6 +666,7 @@
         // Update channels and agents for the first pipeline
         await updateChannels(pipelineSelect.value || pipelines[0]?.id);
         updateAgents();
+        updateTeams();
         // Render funnel with reset filters
         await renderFunnel();
       });
@@ -698,9 +712,11 @@
       pipelineSelect.addEventListener('change', async () => {
         await updateChannels(pipelineSelect.value);
         updateAgents();
-        choicesInstances.agent.setChoiceByValue('all');
-        choicesInstances.channel.setChoiceByValue('all');
-        choicesInstances.sourceCategory.setChoiceByValue('all');
+        updateTeams();
+        choicesInstances.agent.removeActiveItems();
+        choicesInstances.channel.removeActiveItems();
+        choicesInstances.sourceCategory.removeActiveItems();
+        choicesInstances.team.removeActiveItems();
         campaignSelect.value = 'all';
         selectedStartDate = null;
         selectedEndDate = null;
@@ -716,6 +732,7 @@
       channelSelect.addEventListener('change', renderFunnel);
       campaignSelect.addEventListener('change', renderFunnel);
       agentSelect.addEventListener('change', renderFunnel);
+      teamSelect.addEventListener('change', renderFunnel);
 
       document.getElementById('prevPageBtn').addEventListener('click', () => {
         if (currentPage > 1) {
@@ -738,6 +755,7 @@
       updatePipelines();
       await updateChannels(pipelineSelect.value || pipelines[0]?.id);
       updateAgents();
+      updateTeams();
 
       if (pipelines.length > 0) {
         // Set default pipeline based on locationId
@@ -746,9 +764,6 @@
         } else {
           pipelineSelect.value = pipelines[0].id;
         }
-        choicesInstances.sourceCategory.setChoiceByValue('all');
-        choicesInstances.channel.setChoiceByValue('all');
-        choicesInstances.agent.setChoiceByValue('all');
       }
 
       await renderFunnel();
@@ -766,17 +781,21 @@
       });
     }
 
-    // Populate source and source category dropdowns
+    // Populate source, source category, and team dropdowns
     async function updateChannels(pipelineId) {
       const channelChoices = choicesInstances.channel;
       const sourceCategoryChoices = choicesInstances.sourceCategory;
+      const teamChoices = choicesInstances.team;
       
       channelChoices.clearChoices();
       sourceCategoryChoices.clearChoices();
+      teamChoices.clearChoices();
       channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
       sourceCategoryChoices.setChoices([{ value: 'all', label: 'All Source Categories' }], 'value', 'label', true);
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
       sourcesSet.clear();
       sourceCategoriesSet.clear();
+      teamsSet.clear();
       sourceCategoryToSources = {};
       sourceToCategories = {};
 
@@ -785,9 +804,11 @@
         opportunities.forEach(op => {
           const source = op.source;
           const sourceCategory = op.sourceCategory;
+          const team = op.team;
 
           if (source) sourcesSet.add(source);
           if (sourceCategory) sourceCategoriesSet.add(sourceCategory);
+          if (team) teamsSet.add(team);
 
           if (source && sourceCategory) {
             if (!sourceCategoryToSources[sourceCategory]) sourceCategoryToSources[sourceCategory] = new Set();
@@ -803,9 +824,9 @@
         Array.from(sourceCategoriesSet).sort().forEach(category => {
           sourceCategoryChoices.setChoices([{ value: category, label: category }], 'value', 'label', false);
         });
-
-        channelChoices.setChoiceByValue('all');
-        sourceCategoryChoices.setChoiceByValue('all');
+        Array.from(teamsSet).sort().forEach(team => {
+          teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+        });
       }
     }
 
@@ -817,7 +838,16 @@
       usersMap.forEach((name, userId) => {
         agentChoices.setChoices([{ value: userId, label: name }], 'value', 'label', false);
       });
-      agentChoices.setChoiceByValue('all');
+    }
+
+    // Update teams dropdown
+    function updateTeams() {
+      const teamChoices = choicesInstances.team;
+      teamChoices.clearChoices();
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
+      Array.from(teamsSet).sort().forEach(team => {
+        teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+      });
     }
 
     // Update source dropdown
@@ -842,10 +872,6 @@
       Array.from(sourcesToShow).sort().forEach(source => {
         channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
       });
-
-      if (channelChoices.getValue(true).length === 0) {
-        channelChoices.setChoiceByValue('all');
-      }
     }
 
     // Calculate conversion rates
@@ -886,6 +912,7 @@
       let selectedChannels = choicesInstances.channel.getValue(true);
       let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
       let selectedAgents = choicesInstances.agent.getValue(true);
+      let selectedTeams = choicesInstances.team.getValue(true);
       const container = document.getElementById('funnel-container');
       container.innerHTML = '';
 
@@ -899,7 +926,8 @@
         const filteredOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), {
           channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
           sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],
-          agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : []
+          agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : [],
+          teams: selectedTeams.length > 0 && !selectedTeams.includes('all') ? selectedTeams : []
         });
 
         const selectedPipeline = pipelines.find(p => p.id === pipelineId);
@@ -1129,6 +1157,7 @@
       let selectedChannels = choicesInstances.channel.getValue(true);
       let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
       let selectedAgents = choicesInstances.agent.getValue(true);
+      let selectedTeams = choicesInstances.team.getValue(true);
       if (!pipelineId) return;
 
       showModalSpinner();
@@ -1138,6 +1167,7 @@
           channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
           sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],
           agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : [],
+          teams: selectedTeams.length > 0 && !selectedTeams.includes('all') ? selectedTeams : [],
           stageId: stageId,
           project: project
         });
@@ -1184,6 +1214,7 @@
           <td>${op.monetaryValue || 0}</td>
           <td>${op.project || 'N/A'}</td>
           <td>${createdAtFormatted}</td>
+          <td>${op.team || 'N/A'}</td>
         `;
         tbody.appendChild(row);
       }
@@ -1208,7 +1239,8 @@
         'Phone Number',
         'Lead Value',
         'Project',
-        'Contact Created'
+        'Contact Created',
+        'Team'
       ];
 
       const rows = opportunities.map(op => {
@@ -1224,7 +1256,8 @@
           op.contact?.phone || 'N/A',
           op.monetaryValue || 0,
           op.project || 'N/A',
-          createdAtFormatted
+          createdAtFormatted,
+          op.team || 'N/A'
         ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
       });
 

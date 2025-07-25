@@ -1,5 +1,5 @@
 const DB_NAME = 'ghl_funnel_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise;
 
@@ -233,6 +233,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
       createdAt: op.createdAt,
       sourceCategory: op.customFields?.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A',
       project: op.customFields?.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A',
+      team: op.customFields?.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A',
       contact: op.contact || { name: 'N/A', phone: 'N/A' },
       monetaryValue: op.monetaryValue || 0
     }));
@@ -306,6 +307,7 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
       createdAt: op.createdAt,
       sourceCategory: op.customFields?.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A',
       project: op.customFields?.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A',
+      team: op.customFields?.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A',
       contact: op.contact || { name: 'N/A', phone: 'N/A' },
       monetaryValue: op.monetaryValue || 0
     }));
@@ -386,6 +388,9 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
   }
   if (additionalFilters.agents && additionalFilters.agents.length > 0 && !additionalFilters.agents.includes('all')) {
     filtered = filtered.filter(op => op.assignedTo && additionalFilters.agents.includes(op.assignedTo));
+  }
+  if (additionalFilters.teams && additionalFilters.teams.length > 0 && !additionalFilters.teams.includes('all')) {
+    filtered = filtered.filter(op => op.team && additionalFilters.teams.includes(op.team));
   }
   if (additionalFilters.stageId) {
     filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
