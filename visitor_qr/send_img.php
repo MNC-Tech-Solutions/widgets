@@ -18,7 +18,7 @@ function loadUserData($phone_number, $log_file) {
     if (file_exists($filename)) {
         $data = json_decode(file_get_contents($filename), true);
         writeLog("Loaded user data for $phone_number: " . json_encode($data), $log_file);
-        return $data ?: ['visitor_name' => 'Unknown', 'image_url' => ''];
+        return $data ?: ['visitor_name' => 'Unknown', 'image_url' => '', 'visitation_date' => ''];
     }
     writeLog("No user data found for $phone_number", $log_file);
     return null;
@@ -37,10 +37,11 @@ function deleteUserData($phone_number, $log_file) {
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
-$twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201'; // Updated to match JSON
+$twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201';
 $twilio_auth_token = '9c048a45f4ec7ac08841b4ebeea37503';
 $twilio_whatsapp_number = '+60145500532';
-$messaging_service_sid = 'MGcbb564952ffcda04a57c4719d6e31cae'; // Match JSON if used
+$messaging_service_sid = 'MGcbb564952ffcda04a57c4719d6e31cae';
+$reply_template = 'HXa8d082b3f803b6449bc25fd608b42349';
 
 // Initialize Twilio client
 try {
@@ -57,37 +58,87 @@ writeLog("All POST vars: " . $all_post_vars, $log_file);
 
 // Get Twilio webhook data
 $from = $_POST['From'] ?? '';
+$button_payload = isset($_POST['ButtonPayload']) ? strtolower($_POST['ButtonPayload']) : '';
 $body = strtolower($_POST['Body'] ?? '');
 
 // Log incoming message
-writeLog("Received WhatsApp response from $from: $body", $log_file);
+writeLog("Received WhatsApp response from $from: ButtonPayload=$button_payload, Body=$body", $log_file);
 
-// Process reply if valid
-if ($from && in_array($body, ['yes', 'hi'])) {
+// Process response if valid
+if ($from && ($button_payload === 'yes')) {
     $phone_number = str_replace('whatsapp:', '', $from);
     $user_data = loadUserData($phone_number, $log_file);
-    if ($user_data) {
-        $visitor_name = $user_data['visitor_name'];
-        $image_url = $user_data['image_url'];
+    
+    if (!$user_data) {
+        writeLog("No user data found for $phone_number, cannot proceed", $log_file);
+        http_response_code(400);
+        exit;
+    }
 
-        try {
-            $message = $twilio->messages->create(
-                "whatsapp:$phone_number",
-                [
-                    'from' => "whatsapp:+60145500532",
-                    'body' => "Hello $visitor_name! Here's your QR code:",
-                    'mediaUrl' => [$image_url],
-                    'messagingServiceSid' => "MGcbb564952ffcda04a57c4719d6e31cae",
-                ]
-            );
-            writeLog("Image message sent successfully. Message SID: {$message->sid}", $log_file);
-            deleteUserData($phone_number, $log_file);
-        } catch (Exception $e) {
-            writeLog("Failed to send image message: {$e->getMessage()}", $log_file);
-        }
+    $visitor_name = $user_data['visitor_name'];
+    $image_url = $user_data['image_url'];
+
+    try {
+        // Send reply template
+        $template_message = $twilio->messages->create(
+            "whatsapp:$phone_number",
+            [
+                'contentSid' => $reply_template,
+                'from' => "whatsapp:$twilio_whatsapp_number",
+                'messagingServiceSid' => $messaging_service_sid
+            ]
+        );
+        writeLog("Reply template sent successfully. Message SID: {$template_message->sid}", $log_file);
+
+        // Send QR code image message
+        $image_message = $twilio->messages->create(
+            "whatsapp:$phone_number",
+            [
+                'from' => "whatsapp:$twilio_whatsapp_number",
+                'mediaUrl' => [$image_url],
+                'messagingServiceSid' => $messaging_service_sid,
+            ]
+        );
+        writeLog("Image message sent successfully. Message SID: {$image_message->sid}", $log_file);
+
+        // Delete user data after sending both messages
+        deleteUserData($phone_number, $log_file);
+    } catch (Exception $e) {
+        writeLog("Failed to send message: {$e->getMessage()}", $log_file);
+        http_response_code(500);
+        exit;
+    }
+} elseif ($from && $button_payload === 'no') {
+    $phone_number = str_replace('whatsapp:', '', $from);
+    $user_data = loadUserData($phone_number, $log_file);
+    
+    if (!$user_data) {
+        writeLog("No user data found for $phone_number, cannot proceed", $log_file);
+        http_response_code(400);
+        exit;
+    }
+
+    $visitor_name = $user_data['visitor_name'];
+
+    try {
+        // Send response for "No"
+        $message = $twilio->messages->create(
+            "whatsapp:$phone_number",
+            [
+                'from' => "whatsapp:$twilio_whatsapp_number",
+                'body' => "Thank you for letting us know. Please contact the resident to update your visitation details, or ignore this if not applicable.",
+                'messagingServiceSid' => $messaging_service_sid,
+            ]
+        );
+        writeLog("Response sent for 'No'. Message SID: {$message->sid}", $log_file);
+        deleteUserData($phone_number, $log_file);
+    } catch (Exception $e) {
+        writeLog("Failed to send 'No' response: {$e->getMessage()}", $log_file);
+        http_response_code(500);
+        exit;
     }
 } else {
-    writeLog("No action taken for response from $from: $body", $log_file);
+    writeLog("Invalid or no response from $from: ButtonPayload=$button_payload, Body=$body", $log_file);
 }
 
 http_response_code(200); // Acknowledge Twilio webhook
