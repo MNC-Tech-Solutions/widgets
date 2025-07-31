@@ -77,6 +77,10 @@ if ($from && ($button_payload === 'yes')) {
 
     $visitor_name = $user_data['visitor_name'];
     $image_url = $user_data['image_url'];
+    $visitation_date = $user_data['visitation_date'];
+    $project_name = $user_data['project_name'];
+    $unit_no = $user_data['unit_no'];
+    $car_plate_no = $user_data['car_plate_no'];
 
     try {
         // Send reply template
@@ -100,6 +104,26 @@ if ($from && ($button_payload === 'yes')) {
             ]
         );
         writeLog("Image message sent successfully. Message SID: {$image_message->sid}", $log_file);
+
+        sleep(2);
+
+        // Send additional message with visitation details
+        $details_message_body = "Project Name: $project_name\n" .
+                               "Unit No: $unit_no\n" .
+                               "Visitor Name: $visitor_name\n" .
+                               "Date & Time In: $visitation_date\n" .
+                               "Floor Level: $floor_level\n" .
+                               "Car Plate No: $car_plate_no";
+
+        $details_message = $twilio->messages->create(
+            "whatsapp:$phone_number",
+            [
+                'from' => "whatsapp:$twilio_whatsapp_number",
+                'body' => $details_message_body,
+                'messagingServiceSid' => $messaging_service_sid,
+            ]
+        );
+        writeLog("Details message sent successfully. Message SID: {$details_message->sid}", $log_file);
 
         // Delete user data after sending both messages
         deleteUserData($phone_number, $log_file);

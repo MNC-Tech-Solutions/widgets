@@ -13,11 +13,14 @@ function writeLog($message, $log_file) {
 }
 
 // Function to save user data
-function saveUserData($phone_number, $visitor_name, $image_url, $visitation_date) {
+function saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no) {
     $data = [
         'visitor_name' => $visitor_name,
         'image_url' => $image_url,
-        'visitation_date' => $visitation_date
+        'visitation_date' => $visitation_date,
+        'project_name' => $project_name,
+        'unit_no' => $unit_no,
+        'car_plate_no' => $car_plate_no
     ];
     $filename = __DIR__ . '/user_data/' . str_replace('+', '_', $phone_number) . '.json';
     if (!file_exists(__DIR__ . '/user_data')) {
@@ -68,6 +71,9 @@ $image_url = filter_var($input['image_url'], FILTER_VALIDATE_URL);
 $visitor_name = filter_var($input['visitor_name'], FILTER_SANITIZE_STRING);
 $phone_number = trim($input['phone_number']);
 $visitation_date = trim($input['visitation_date']);
+$project_name = trim($input['project_name']);
+$unit_no = trim($input['unit_no']);
+$car_plate_no = trim($input['car_plate_no']);
 
 // Log received data
 writeLog("Received data: image_url=$image_url, visitor_name=$visitor_name, phone_number=$phone_number, visitation_date=$visitation_date", $log_file);
@@ -94,7 +100,7 @@ try {
     writeLog("Attempting to send with from address: $from_address", $log_file);
 
     // Save user data
-    saveUserData($phone_number, $visitor_name, $image_url, $visitation_date);
+    saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no);
 
     // Initial template message with content variables
     $message = $twilio->messages->create(
