@@ -335,6 +335,33 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
   }
 }
 
+async function clearIndexedDB() {
+  const db = await openDB();
+  const transaction = db.transaction(['pipelines', 'users', 'opportunities'], 'readwrite');
+  
+  const pipelinesStore = transaction.objectStore('pipelines');
+  const usersStore = transaction.objectStore('users');
+  const opportunitiesStore = transaction.objectStore('opportunities');
+  
+  await Promise.all([
+    new Promise((resolve, reject) => {
+      const request = pipelinesStore.clear();
+      request.onsuccess = resolve;
+      request.onerror = reject;
+    }),
+    new Promise((resolve, reject) => {
+      const request = usersStore.clear();
+      request.onsuccess = resolve;
+      request.onerror = reject;
+    }),
+    new Promise((resolve, reject) => {
+      const request = opportunitiesStore.clear();
+      request.onsuccess = resolve;
+      request.onerror = reject;
+    })
+  ]);
+}
+
 function formatDateTimeWithOffset(utcDateString) {
   if (!utcDateString) return 'N/A';
   const date = new Date(utcDateString);
@@ -415,5 +442,6 @@ export {
   fetchAllOpportunities,
   fetchNewOpportunities,
   formatDateTimeWithOffset,
-  applyFilters
+  applyFilters,
+  clearIndexedDB
 };

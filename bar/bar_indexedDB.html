@@ -629,8 +629,8 @@
         bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
       });
 
-      document.getElementById('pipeline').addEventListener('change', renderTableAndChart);
-      await renderTableAndChart();
+      document.getElementById('pipeline').addEventListener('change', renderBarChart);
+      await renderBarChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
     }
 
@@ -642,7 +642,7 @@
           const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
           if (newOpps.length > 0) {
             console.log('New opportunities found, updating chart');
-            await renderTableAndChart();
+            await renderBarChart();
           } else {
             console.log('No new opportunities');
           }

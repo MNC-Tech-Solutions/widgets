@@ -339,11 +339,32 @@
     #dateSelectionModal .modal-dialog { max-width: 650px; }
     #dateSelectionModal .quick-selections { margin-top: 10px; }
     #dateSelectionModal .quick-selections button { margin-right: 5px; margin-bottom: 5px; }
-    #openDateModal {
-      max-width: 200px;
+    
+    /* Ensure buttons stay in one row */
+    .button-group {
+      display: flex;
+      flex-wrap: nowrap; /* Prevent wrapping */
+      gap: 10px; /* Consistent spacing */
+      align-items: center; /* Align vertically */
+      width: 100%;
+      justify-content: flex-end;
+    }
+    
+    .button-group .btn {
+      flex: 1; /* Distribute space equally */
+      max-width: 150px; /* Limit button width */
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
+      text-overflow: ellipsis; /* Truncate long text */
+      padding: 6px 12px; /* Consistent padding */
+      font-size: 14px; /* Consistent font size */
+    }
+    
+    @media (max-width: 768px) {
+      .button-group .btn {
+        max-width: 120px; /* Smaller buttons on mobile */
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -396,12 +417,15 @@
         </div>
       </div>
       
-      <!-- Date Range and Clear Button -->
+      <!-- Date Range, Clear, and Refresh Buttons -->
       <div class="row g-3 mt-1">
         <div class="col-md-12">
-          <div class="control-group w-100 d-flex gap-2 align-items-end">
-            <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
-            <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+          <div class="control-group w-100">
+            <div class="button-group">
+              <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+              <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+              <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
+            </div>
           </div>
         </div>
       </div>
@@ -462,6 +486,7 @@
             <table class="table">
               <thead>
                 <tr>
+                  <th>Opportunity ID</th>
                   <th>Opportunity Name</th>
                   <th>Primary Contact Name</th>
                   <th>Source</th>
@@ -507,7 +532,8 @@
       fetchAllOpportunities,
       fetchNewOpportunities,
       applyFilters,
-      formatDateTimeWithOffset
+      formatDateTimeWithOffset,
+      clearIndexedDB
     } from '../ghlData.js';
 
     // Global variables
@@ -527,7 +553,7 @@
     let sourceCategoryToSources = {};
     let sourceToCategories = {};
     let choicesInstances = {};
-    const BACKGROUND_REFRESH_INTERVAL = 1 * 60 * 1000; // 10 minutes
+    const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000; // 10 minutes
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
 
     // Show/hide widget loading spinner
@@ -768,6 +794,44 @@
 
       await renderFunnel();
     }
+
+    async function hardRefresh() {
+      showWidgetSpinner();
+      try {
+        // Clear all data from IndexedDB
+        await clearIndexedDB();
+        
+        // Fetch latest pipelines
+        pipelines = await fetchPipelines(CONFIG, locationId);
+        
+        // Fetch latest users
+        const users = await fetchAllUsers(CONFIG, locationId);
+        usersMap = new Map(users.map(user => [user.id, user.name]));
+        
+        // Update dropdowns with fresh data
+        updatePipelines();
+        const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
+        await updateChannels(pipelineId);
+        updateAgents();
+        choicesInstances.channel.removeActiveItems();
+        choicesInstances.sourceCategory.removeActiveItems();
+        choicesInstances.team.removeActiveItems();
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        selectedStartDate = null;
+        selectedEndDate = null;
+        dateRangePicker.clear();
+        
+        // Render funnel with latest data
+        await renderFunnel();
+      } catch (error) {
+        console.error('Hard refresh failed:', error);
+        alert('Failed to perform hard refresh. Please try again.');
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    document.getElementById('refresh').addEventListener('click', hardRefresh);
 
     // Update pipelines dropdown
     function updatePipelines() {
@@ -1205,6 +1269,7 @@
         const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
         const row = document.createElement('tr');
         row.innerHTML = `
+          <td>${op.id || 'N/A'}</td>
           <td>${op.name || 'N/A'}</td>
           <td>${op.contact?.name || 'N/A'}</td>
           <td>${op.source || 'N/A'}</td>
@@ -1230,6 +1295,7 @@
     // Export to CSV
     function exportToCSV(opportunities, stageLabel) {
       const headers = [
+        'Opportunity ID',
         'Opportunity Name',
         'Primary Contact Name',
         'Source',
@@ -1247,6 +1313,7 @@
         const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
         const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
         return [
+          op.id || 'N/A',
           op.name || 'N/A',
           op.contact?.name || 'N/A',
           op.source || 'N/A',
