@@ -179,9 +179,15 @@ async function fetchAllUsers(config, locationId) {
 }
 
 async function fetchAllOpportunities(config, locationId, pipelineId) {
-  let cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
-  if (cachedOpportunities.length > 0) {
+  let cachedOpportunities = [];
+  if (pipelineId) {
+    cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
     console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
+  } else {
+    cachedOpportunities = await getAllByIndex('opportunities', 'locationId', locationId);
+    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for locationId: ${locationId}`);
+  }
+  if (cachedOpportunities.length > 0) {
     return cachedOpportunities;
   }
 
@@ -190,12 +196,13 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
   let startAfterId = null;
   let hasMore = true;
   const limit = 100;
-  let totalFetched = 0; // Track cumulative total of fetched opportunities
+  let totalFetched = 0;
 
   try {
-    console.log(`Starting to fetch opportunities for locationId: ${locationId}, pipelineId: ${pipelineId}`);
+    console.log(`Starting to fetch opportunities for locationId: ${locationId}, pipelineId: ${pipelineId || 'all'}`);
     while (hasMore) {
       let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
+      if (pipelineId) url += `&pipelineId=${pipelineId}`;
       if (startAfter && startAfterId) url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
       else if (startAfterId) url += `&startAfterId=${startAfterId}`;
 
@@ -209,7 +216,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
       const batchOpportunities = data.opportunities || [];
       console.log(`Retrieved ${batchOpportunities.length} opportunities in this batch`);
       allOpportunities = allOpportunities.concat(batchOpportunities);
-      totalFetched += batchOpportunities.length; // Update cumulative total
+      totalFetched += batchOpportunities.length;
       console.log(`Cumulative total opportunities fetched: ${totalFetched}`);
 
       startAfter = data.meta?.startAfter || null;
@@ -222,21 +229,29 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
       return [];
     }
 
-    const processedOpportunities = allOpportunities.map(op => ({
-      id: op.id,
-      pipelineId: op.pipelineId,
-      pipelineStageId: op.pipelineStageId,
-      name: op.name,
-      assignedTo: op.assignedTo,
-      status: op.status,
-      source: op.source,
-      createdAt: op.createdAt,
-      sourceCategory: op.customFields?.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A',
-      project: op.customFields?.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A',
-      team: op.customFields?.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A',
-      contact: op.contact || { name: 'N/A', phone: 'N/A' },
-      monetaryValue: op.monetaryValue || 0
-    }));
+    const processedOpportunities = allOpportunities.map(op => {
+      const customFields = op.customFields || [];
+      const sourceCategory = customFields.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A';
+      const project = customFields.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A';
+      const team = customFields.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A';
+      console.log(`Processing opportunity ${op.id}: sourceCategory=${sourceCategory}, project=${project}, team=${team}`);
+      return {
+        id: op.id,
+        pipelineId: op.pipelineId,
+        pipelineStageId: op.pipelineStageId,
+        name: op.name,
+        assignedTo: op.assignedTo,
+        status: op.status,
+        source: op.source,
+        createdAt: op.createdAt,
+        sourceCategory,
+        project,
+        team,
+        contact: op.contact || { name: 'N/A', phone: 'N/A' },
+        monetaryValue: op.monetaryValue || 0,
+        customFields: { interestedProject: project, sourceCategory }
+      };
+    });
 
     const db = await openDB();
     const transaction = db.transaction('opportunities', 'readwrite');
@@ -252,7 +267,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
     });
     await new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
-        console.log(`Successfully added ${processedOpportunities.length} opportunities to IndexedDB for pipelineId: ${pipelineId}`);
+        console.log(`Successfully added ${processedOpportunities.length} opportunities to IndexedDB for pipelineId: ${pipelineId || 'all'}`);
         resolve();
       };
       transaction.onerror = () => {
@@ -273,7 +288,7 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
   let newOpportunities = [];
   let startAfter = null;
   let startAfterId = latestId;
-  let hasMore = !!startAfterId; // Only fetch if there's a latest ID
+  let hasMore = !!startAfterId;
   const limit = 100;
 
   try {
@@ -296,21 +311,29 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
 
     if (newOpportunities.length === 0) return [];
 
-    const processedOpportunities = newOpportunities.map(op => ({
-      id: op.id,
-      pipelineId: op.pipelineId,
-      pipelineStageId: op.pipelineStageId,
-      name: op.name,
-      assignedTo: op.assignedTo,
-      status: op.status,
-      source: op.source,
-      createdAt: op.createdAt,
-      sourceCategory: op.customFields?.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A',
-      project: op.customFields?.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A',
-      team: op.customFields?.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A',
-      contact: op.contact || { name: 'N/A', phone: 'N/A' },
-      monetaryValue: op.monetaryValue || 0
-    }));
+    const processedOpportunities = newOpportunities.map(op => {
+      const customFields = op.customFields || [];
+      const sourceCategory = customFields.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A';
+      const project = customFields.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A';
+      const team = customFields.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A';
+      console.log(`Processing new opportunity ${op.id}: sourceCategory=${sourceCategory}, project=${project}, team=${team}`);
+      return {
+        id: op.id,
+        pipelineId: op.pipelineId,
+        pipelineStageId: op.pipelineStageId,
+        name: op.name,
+        assignedTo: op.assignedTo,
+        status: op.status,
+        source: op.source,
+        createdAt: op.createdAt,
+        sourceCategory,
+        project,
+        team,
+        contact: op.contact || { name: 'N/A', phone: 'N/A' },
+        monetaryValue: op.monetaryValue || 0,
+        customFields: { interestedProject: project, sourceCategory }
+      };
+    });
 
     const db = await openDB();
     const transaction = db.transaction('opportunities', 'readwrite');
@@ -376,55 +399,78 @@ function formatDateTimeWithOffset(utcDateString) {
 
 function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProjects = new Set(), additionalFilters = {}) {
   let filtered = opportunities;
-  if (pipelineId) filtered = filtered.filter(op => op.pipelineId === pipelineId);
+  console.log('Applying filters:', { pipelineId, startDate, endDate, hiddenProjects, additionalFilters });
 
-  // Log and filter by formatted date in local timezone (+08)
+  if (pipelineId) {
+    filtered = filtered.filter(op => op.pipelineId === pipelineId);
+    console.log(`Filtered by pipelineId ${pipelineId}: ${filtered.length} opportunities`);
+  }
+
   if (startDate) {
-    // Parse startDate as local +08, set to start of day
     const start = new Date(startDate.includes(' ') ? startDate : `${startDate} 00:00:00`);
     start.setHours(0, 0, 0, 0);
-    console.log('Input startDate:', startDate);
-    console.log('Parsed Start Date (local):', start.toString(), 'ISO:', start.toISOString());
+    console.log('Filter start date (local):', start.toString(), 'ISO:', start.toISOString());
     filtered = filtered.filter(op => {
       const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
       const createdAtDate = new Date(createdAtFormatted);
-      console.log('Opportunity createdAt (raw):', op.createdAt, 'Formatted:', createdAtFormatted, 'Parsed:', createdAtDate.toString());
       return createdAtDate >= start;
     });
+    console.log(`Filtered by startDate ${startDate}: ${filtered.length} opportunities`);
   }
+
   if (endDate) {
-    // Parse endDate as local +08, set to end of day
     const end = new Date(endDate.includes(' ') ? endDate : `${endDate} 23:59:59.999`);
     end.setHours(23, 59, 59, 999);
-    console.log('Input endDate:', endDate);
-    console.log('Parsed End Date (local):', end.toString(), 'ISO:', end.toISOString());
+    console.log('Filter end date (local):', end.toString(), 'ISO:', end.toISOString());
     filtered = filtered.filter(op => {
       const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
       const createdAtDate = new Date(createdAtFormatted);
       return createdAtDate <= end;
     });
+    console.log(`Filtered by endDate ${endDate}: ${filtered.length} opportunities`);
   }
+
   if (hiddenProjects.size > 0) {
     filtered = filtered.filter(op => !hiddenProjects.has(op.project));
+    console.log(`Filtered by hiddenProjects: ${filtered.length} opportunities`);
   }
-  if (additionalFilters.channels && additionalFilters.channels.length > 0 && !additionalFilters.channels.includes('all')) {
-    filtered = filtered.filter(op => op.source && additionalFilters.channels.includes(op.source));
-  }
-  if (additionalFilters.sourceCategories && additionalFilters.sourceCategories.length > 0 && !additionalFilters.sourceCategories.includes('all')) {
-    filtered = filtered.filter(op => op.sourceCategory && additionalFilters.sourceCategories.includes(op.sourceCategory));
-  }
-  if (additionalFilters.agents && additionalFilters.agents.length > 0 && !additionalFilters.agents.includes('all')) {
-    filtered = filtered.filter(op => op.assignedTo && additionalFilters.agents.includes(op.assignedTo));
-  }
-  if (additionalFilters.teams && additionalFilters.teams.length > 0 && !additionalFilters.teams.includes('all')) {
-    filtered = filtered.filter(op => op.team && additionalFilters.teams.includes(op.team));
-  }
-  if (additionalFilters.stageId) {
-    filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
-  }
+
   if (additionalFilters.project) {
     filtered = filtered.filter(op => op.project === additionalFilters.project);
+    console.log(`Filtered by project ${additionalFilters.project}: ${filtered.length} opportunities`);
   }
+
+  if (additionalFilters.sourceCategory) {
+    filtered = filtered.filter(op => op.sourceCategory === additionalFilters.sourceCategory);
+    console.log(`Filtered by sourceCategory ${additionalFilters.sourceCategory}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.channels && additionalFilters.channels.length > 0 && !additionalFilters.channels.includes('all')) {
+    filtered = filtered.filter(op => op.source && additionalFilters.channels.includes(op.source));
+    console.log(`Filtered by channels ${additionalFilters.channels}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.sourceCategories && additionalFilters.sourceCategories.length > 0 && !additionalFilters.sourceCategories.includes('all')) {
+    filtered = filtered.filter(op => op.sourceCategory && additionalFilters.sourceCategories.includes(op.sourceCategory));
+    console.log(`Filtered by sourceCategories ${additionalFilters.sourceCategories}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.agents && additionalFilters.agents.length > 0 && !additionalFilters.agents.includes('all')) {
+    filtered = filtered.filter(op => op.assignedTo && additionalFilters.agents.includes(op.assignedTo));
+    console.log(`Filtered by agents ${additionalFilters.agents}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.teams && additionalFilters.teams.length > 0 && !additionalFilters.teams.includes('all')) {
+    filtered = filtered.filter(op => op.team && additionalFilters.teams.includes(op.team));
+    console.log(`Filtered by teams ${additionalFilters.teams}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.stageId) {
+    filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
+    console.log(`Filtered by stageId ${additionalFilters.stageId}: ${filtered.length} opportunities`);
+  }
+
+  console.log(`Final filtered opportunities: ${filtered.length}`);
   return filtered;
 }
 
