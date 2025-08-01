@@ -80,8 +80,16 @@
       font-size: 14px;
       background: white;
       min-height: 38px;
+      max-height: 100px;
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
-    
+
+    .choices__inner::-webkit-scrollbar {
+      display: none;
+    }
+
     .choices__list--multiple .choices__item {
       background-color: var(--primary);
       border: 1px solid var(--primary-dark);
@@ -89,12 +97,20 @@
       font-size: 12px;
       padding: 2px 8px;
       margin: 2px;
+      line-height: 1.4;
     }
     
     .choices__list--dropdown {
       border: 1px solid var(--border);
       border-radius: 4px;
       font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto !important;
+      z-index: 1000;
+    }
+
+    .choices__list--dropdown::-webkit-scrollbar {
+      display: none;
     }
     
     .choices__list--dropdown .choices__item--selectable.is-highlighted {
@@ -340,29 +356,28 @@
     #dateSelectionModal .quick-selections { margin-top: 10px; }
     #dateSelectionModal .quick-selections button { margin-right: 5px; margin-bottom: 5px; }
     
-    /* Ensure buttons stay in one row */
     .button-group {
       display: flex;
-      flex-wrap: nowrap; /* Prevent wrapping */
-      gap: 10px; /* Consistent spacing */
-      align-items: center; /* Align vertically */
+      flex-wrap: nowrap;
+      gap: 10px;
+      align-items: center;
       width: 100%;
       justify-content: flex-end;
     }
     
     .button-group .btn {
-      flex: 1; /* Distribute space equally */
-      max-width: 150px; /* Limit button width */
+      flex: 1;
+      max-width: 150px;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis; /* Truncate long text */
-      padding: 6px 12px; /* Consistent padding */
-      font-size: 14px; /* Consistent font size */
+      text-overflow: ellipsis;
+      padding: 6px 12px;
+      font-size: 14px;
     }
     
     @media (max-width: 768px) {
       .button-group .btn {
-        max-width: 120px; /* Smaller buttons on mobile */
+        max-width: 120px;
         font-size: 12px;
       }
     }
@@ -417,14 +432,13 @@
         </div>
       </div>
       
-      <!-- Date Range, Clear, and Refresh Buttons -->
       <div class="row g-3 mt-1">
         <div class="col-md-12">
           <div class="control-group w-100">
             <div class="button-group">
+              <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
               <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
               <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
-              <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
             </div>
           </div>
         </div>
@@ -437,7 +451,6 @@
     </div>
   </div>
   
-  <!-- Date Selection Modal -->
   <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -467,7 +480,6 @@
     </div>
   </div>
   
-  <!-- Opportunities Modal -->
   <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -500,7 +512,6 @@
                 </tr>
               </thead>
               <tbody id="opportunitiesTableBody">
-                <!-- Populated dynamically -->
               </tbody>
             </table>
           </div>
@@ -524,7 +535,6 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   <script type="module">
-    // Import necessary functions from ghlData.js
     import {
       loadConfig,
       fetchPipelines,
@@ -536,7 +546,6 @@
       clearIndexedDB
     } from '../ghlData.js';
 
-    // Global variables
     let CONFIG = {};
     let locationId = '';
     let pipelines = [];
@@ -553,10 +562,9 @@
     let sourceCategoryToSources = {};
     let sourceToCategories = {};
     let choicesInstances = {};
-    const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000; // 10 minutes
+    const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
 
-    // Show/hide widget loading spinner
     function showWidgetSpinner() {
       document.getElementById('widgetLoadingOverlay').style.display = 'flex';
     }
@@ -564,7 +572,6 @@
       document.getElementById('widgetLoadingOverlay').style.display = 'none';
     }
 
-    // Show/hide modal loading spinner
     function showModalSpinner() {
       document.getElementById('loadingOverlay').style.display = 'flex';
     }
@@ -572,7 +579,6 @@
       document.getElementById('loadingOverlay').style.display = 'none';
     }
 
-    // Initialize widget on DOM content loaded
     document.addEventListener('DOMContentLoaded', async () => {
       const { config, locationId: locId } = await loadConfig();
       if (!config) {
@@ -588,7 +594,6 @@
       updateHeight();
     });
 
-    // Background refresh
     async function backgroundRefresh() {
       console.log('Background refresh started');
       try {
@@ -608,9 +613,7 @@
       }
     }
 
-    // Initialize widget
     async function initWidget() {
-      // Hide team filter for non-specified locationId
       if (locationId !== 'rsdW1sEFWbzzULIapmdQ') {
         document.getElementById('teamFilter').classList.add('d-none');
       }
@@ -622,13 +625,72 @@
       const agentSelect = document.getElementById('agent');
       const teamSelect = document.getElementById('team');
 
-      // Initialize Choices.js with custom logic for multiselect
       const createChoicesInstance = (selectElement, placeholder) => {
-        return new Choices(selectElement, {
+        const choices = new Choices(selectElement, {
           removeItemButton: true,
           placeholderValue: placeholder,
           maxItemCount: -1,
           allowHTML: false,
+          searchEnabled: true,
+          searchResultLimit: 1000,
+          shouldSort: true,
+          renderSelected: false,
+          fuseOptions: {
+            threshold: 0.3,
+            ignoreLocation: true,
+            includeScore: false,
+            getFn: (obj, path) => {
+              return obj.label ? obj.label.toString().toLowerCase() : '';
+            }
+          },
+          callbackOnInit: function() {
+            const instance = this;
+            // Store the full list of choices when set
+            let fullChoices = [];
+            const originalSetChoices = instance.setChoices;
+            instance.setChoices = function(choicesArray, valueKey, labelKey, replace) {
+              if (replace) {
+                fullChoices = [...choicesArray];
+              }
+              return originalSetChoices.call(instance, choicesArray, valueKey, labelKey, replace);
+            };
+
+            // Handle search event to hide selected items
+            instance.passedElement.element.addEventListener('search', function(event) {
+              const selectedValues = instance.getValue(true);
+              instance._store.items.forEach(item => {
+                if (selectedValues.includes(item.value)) {
+                  item.active = false;
+                }
+              });
+            });
+
+            // Handle dropdown show to display all non-selected items when no search
+            instance.passedElement.element.addEventListener('showDropdown', function() {
+              const selectedValues = instance.getValue(true);
+              const searchInput = instance.input.element.value;
+              if (!searchInput) {
+                fullChoices.forEach(choice => {
+                  const item = instance._store.items.find(i => i.value === choice.value);
+                  if (item) {
+                    item.active = !selectedValues.includes(item.value);
+                  }
+                });
+              }
+            });
+
+            // Refresh dropdown after selection changes
+            instance.passedElement.element.addEventListener('change', function() {
+              const selectedValues = instance.getValue(true);
+              fullChoices.forEach(choice => {
+                const item = instance._store.items.find(i => i.value === choice.value);
+                if (item) {
+                  item.active = !selectedValues.includes(item.value);
+                }
+              });
+              instance.showDropdown();
+            });
+          },
           callbackOnChange: function() {
             const values = this.getValue(true);
             if (values.length > 0 && values.includes('all') && values.length > 1) {
@@ -636,6 +698,7 @@
             }
           }
         });
+        return choices;
       };
 
       choicesInstances.sourceCategory = createChoicesInstance(sourceCategorySelect, 'All Source Categories');
@@ -656,7 +719,6 @@
         }
       });
 
-      // Open Date Modal Button
       document.getElementById('openDateModal').addEventListener('click', function() {
         const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
         if (selectedStartDate && selectedEndDate) {
@@ -667,9 +729,7 @@
         modal.show();
       });
 
-      // Clear Filters Button
       document.getElementById('clearFilters').addEventListener('click', async function() {
-        // Reset pipeline to first option
         if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
           pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
         } else if (pipelines.length > 0) {
@@ -677,27 +737,21 @@
         } else {
           pipelineSelect.value = '';
         }
-        // Reset campaign
         campaignSelect.value = 'all';
-        // Clear all selected options from dropdowns
         choicesInstances.sourceCategory.removeActiveItems();
         choicesInstances.channel.removeActiveItems();
         choicesInstances.agent.removeActiveItems();
         choicesInstances.team.removeActiveItems();
-        // Reset date range
         selectedStartDate = null;
         selectedEndDate = null;
         document.getElementById('openDateModal').textContent = 'Select Date Range';
         dateRangePicker.clear();
-        // Update channels and agents for the first pipeline
         await updateChannels(pipelineSelect.value || pipelines[0]?.id);
         updateAgents();
         updateTeams();
-        // Render funnel with reset filters
         await renderFunnel();
       });
 
-      // Quick Selection Buttons
       document.querySelectorAll('.quick-selections button').forEach(button => {
         button.addEventListener('click', function() {
           const range = this.getAttribute('data-range');
@@ -734,6 +788,8 @@
         modal.hide();
         await renderFunnel();
       });
+
+      document.getElementById('refresh').addEventListener('click', hardRefresh);
 
       pipelineSelect.addEventListener('change', async () => {
         await updateChannels(pipelineSelect.value);
@@ -784,7 +840,6 @@
       updateTeams();
 
       if (pipelines.length > 0) {
-        // Set default pipeline based on locationId
         if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
           pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
         } else {
@@ -798,17 +853,10 @@
     async function hardRefresh() {
       showWidgetSpinner();
       try {
-        // Clear all data from IndexedDB
         await clearIndexedDB();
-        
-        // Fetch latest pipelines
         pipelines = await fetchPipelines(CONFIG, locationId);
-        
-        // Fetch latest users
         const users = await fetchAllUsers(CONFIG, locationId);
         usersMap = new Map(users.map(user => [user.id, user.name]));
-        
-        // Update dropdowns with fresh data
         updatePipelines();
         const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
         await updateChannels(pipelineId);
@@ -820,8 +868,6 @@
         selectedStartDate = null;
         selectedEndDate = null;
         dateRangePicker.clear();
-        
-        // Render funnel with latest data
         await renderFunnel();
       } catch (error) {
         console.error('Hard refresh failed:', error);
@@ -831,9 +877,6 @@
       }
     }
 
-    document.getElementById('refresh').addEventListener('click', hardRefresh);
-
-    // Update pipelines dropdown
     function updatePipelines() {
       const pipelineSelect = document.getElementById('pipeline');
       pipelineSelect.innerHTML = '';
@@ -845,7 +888,6 @@
       });
     }
 
-    // Populate source, source category, and team dropdowns
     async function updateChannels(pipelineId) {
       const channelChoices = choicesInstances.channel;
       const sourceCategoryChoices = choicesInstances.sourceCategory;
@@ -894,7 +936,6 @@
       }
     }
 
-    // Update agents dropdown
     function updateAgents() {
       const agentChoices = choicesInstances.agent;
       agentChoices.clearChoices();
@@ -904,7 +945,6 @@
       });
     }
 
-    // Update teams dropdown
     function updateTeams() {
       const teamChoices = choicesInstances.team;
       teamChoices.clearChoices();
@@ -914,7 +954,6 @@
       });
     }
 
-    // Update source dropdown
     function updateSourceDropdown() {
       const selectedCategories = choicesInstances.sourceCategory.getValue(true);
       const channelChoices = choicesInstances.channel;
@@ -938,7 +977,6 @@
       });
     }
 
-    // Calculate conversion rates
     function calculateConversionRates(stages) {
       if (stages.length === 0 || stages[0].value === 0) {
         return stages.map(stage => ({
@@ -961,14 +999,12 @@
       });
     }
 
-    // Compute funnel values
     function computeFunnelValues(stageCounts, stages) {
       return stages.map((stage, index) =>
         stages.slice(index).reduce((sum, s) => sum + (stageCounts[s.id] || 0), 0)
       );
     }
 
-    // Render funnel
     async function renderFunnel() {
       showWidgetSpinner();
       const pipelineId = document.getElementById('pipeline').value;
@@ -1000,7 +1036,6 @@
           return;
         }
 
-        // General Funnel (All Projects)
         const generalStageCounts = {};
         selectedPipeline.stages.forEach(stage => generalStageCounts[stage.id] = 0);
         filteredOpportunities.forEach(op => {
@@ -1026,7 +1061,6 @@
         container.appendChild(generalCard);
         drawChart(generalData, generalCard.querySelector('.card-body'));
 
-        // Funnels by Project
         const projectGroups = {};
         filteredOpportunities.forEach(op => {
           const project = op.project || 'N/A';
@@ -1034,7 +1068,6 @@
           projectGroups[project].push(op);
         });
 
-        // Define allowed projects for locationId tCDIsdPF3Em8dZW3fc0B
         const allowedProjects = [
           'Nexus Taman Pertama',
           'K2P3 Akina (Phase 2)',
@@ -1042,7 +1075,6 @@
           'Residensi Naluri'
         ];
 
-        // Filter projectGroups based on locationId
         const filteredProjectGroups = locationId === 'tCDIsdPF3Em8dZW3fc0B'
           ? Object.fromEntries(
               Object.entries(projectGroups).filter(([project]) => 
@@ -1087,7 +1119,6 @@
       }
     }
 
-    // Draw funnel chart
     function drawChart(stages, container = document.getElementById('funnel-container')) {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("width", "100%");
@@ -1215,7 +1246,6 @@
       container.appendChild(svg);
     }
 
-    // Show opportunities modal
     async function showOpportunitiesModal(stageId, stageLabel, project = null) {
       const pipelineId = document.getElementById('pipeline').value;
       let selectedChannels = choicesInstances.channel.getValue(true);
@@ -1254,7 +1284,6 @@
       }
     }
 
-    // Render modal table
     function renderModalTable() {
       const tbody = document.getElementById('opportunitiesTableBody');
       tbody.innerHTML = '';
@@ -1292,7 +1321,6 @@
       nextBtn.disabled = endIndex >= totalItems;
     }
 
-    // Export to CSV
     function exportToCSV(opportunities, stageLabel) {
       const headers = [
         'Opportunity ID',
@@ -1343,7 +1371,6 @@
       document.body.removeChild(link);
     }
 
-    // Calculate date ranges
     function getDateRange(range) {
       const today = new Date();
       let start, end;
@@ -1384,7 +1411,6 @@
       return { start, end };
     }
 
-    // Update widget height
     function updateHeight() {
       const height = document.documentElement.scrollHeight;
       try {
@@ -1394,7 +1420,6 @@
       }
     }
 
-    // Handle parent messages
     window.addEventListener('message', event => {
       if (event.data.type === 'ping') updateHeight();
     });
