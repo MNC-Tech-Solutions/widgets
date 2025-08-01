@@ -179,15 +179,9 @@ async function fetchAllUsers(config, locationId) {
 }
 
 async function fetchAllOpportunities(config, locationId, pipelineId) {
-  let cachedOpportunities = [];
-  if (pipelineId) {
-    cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
-    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
-  } else {
-    cachedOpportunities = await getAllByIndex('opportunities', 'locationId', locationId);
-    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for locationId: ${locationId}`);
-  }
+  let cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
   if (cachedOpportunities.length > 0) {
+    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
     return cachedOpportunities;
   }
 
@@ -199,10 +193,9 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
   let totalFetched = 0;
 
   try {
-    console.log(`Starting to fetch opportunities for locationId: ${locationId}, pipelineId: ${pipelineId || 'all'}`);
+    console.log(`Starting to fetch opportunities for locationId: ${locationId}, pipelineId: ${pipelineId}`);
     while (hasMore) {
       let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
-      if (pipelineId) url += `&pipelineId=${pipelineId}`;
       if (startAfter && startAfterId) url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
       else if (startAfterId) url += `&startAfterId=${startAfterId}`;
 
@@ -248,8 +241,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
         project,
         team,
         contact: op.contact || { name: 'N/A', phone: 'N/A' },
-        monetaryValue: op.monetaryValue || 0,
-        customFields: { interestedProject: project, sourceCategory }
+        monetaryValue: op.monetaryValue || 0
       };
     });
 
@@ -267,7 +259,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId) {
     });
     await new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
-        console.log(`Successfully added ${processedOpportunities.length} opportunities to IndexedDB for pipelineId: ${pipelineId || 'all'}`);
+        console.log(`Successfully added ${processedOpportunities.length} opportunities to IndexedDB for pipelineId: ${pipelineId}`);
         resolve();
       };
       transaction.onerror = () => {
@@ -330,8 +322,7 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
         project,
         team,
         contact: op.contact || { name: 'N/A', phone: 'N/A' },
-        monetaryValue: op.monetaryValue || 0,
-        customFields: { interestedProject: project, sourceCategory }
+        monetaryValue: op.monetaryValue || 0
       };
     });
 

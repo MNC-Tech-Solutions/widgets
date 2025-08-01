@@ -38,23 +38,19 @@
     .control-group {
       display: flex;
       flex-direction: column;
-      min-width: 200px;
-      max-width: 250px;
-    }
-    .control-group select,
-    .control-group button {
-      height: 38px;
-      font-size: 14px;
-      border-radius: 6px;
-    }
-    .control-group button {
-      padding: 0 15px;
+      width: 200px; /* Consistent width for all controls */
     }
     label {
       margin-bottom: 6px;
       font-weight: 600;
       color: var(--text);
       font-size: 14px;
+    }
+    .form-select, .form-control, .btn-sm {
+      height: 38px;
+      font-size: 14px;
+      width: 100%; /* Ensure consistent width */
+      box-sizing: border-box;
     }
     .chart-container {
       max-width: 1250px;
@@ -216,6 +212,10 @@
       width: 90%;
       margin: 1.75rem auto;
     }
+    .clear-filter-btn {
+      height: 38px;
+      align-self: flex-end;
+    }
   </style>
 </head>
 <body>
@@ -223,27 +223,37 @@
     <div class="controls">
       <div class="control-group">
         <label for="pipeline">Pipeline</label>
-        <select id="pipeline" class="form-select"></select>
+        <select id="pipeline" class="form-select">
+          <option value="">All Pipelines</option>
+        </select>
       </div>
       <div class="control-group">
-        <label for="openDateModal">Date Range</label>
-        <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+        <label for="dateRange">Date Range</label>
+        <select id="dateRange" class="form-select">
+          <option value="">All Dates</option>
+          <option value="thisWeek">This Week</option>
+          <option value="lastWeek">Last Week</option>
+          <option value="last7Days">Last 7 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="thisYear">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
       </div>
-      <div class="control-group" id="projectFilter" style="display: none;">
-        <label for="interestedProject">Interested Project</label>
-        <select id="interestedProject" class="form-select">
+      <div class="control-group">
+        <label for="project">Interested Project</label>
+        <select id="project" class="form-select">
           <option value="">All Projects</option>
         </select>
       </div>
-      <div class="control-group" id="sourceCategoryFilter" style="display: none;">
+      <div class="control-group">
         <label for="sourceCategory">Source Category</label>
         <select id="sourceCategory" class="form-select">
           <option value="">All Source Categories</option>
         </select>
       </div>
       <div class="control-group">
-        <label for="clearFilterBtn">Clear Filters</label>
-        <button id="clearFilterBtn" class="btn btn-outline-primary btn-sm">Clear Filters</button>
+        <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
 
@@ -260,7 +270,7 @@
       <div class="modal-dialog modal-wide">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+            <h5 class="modal-title" id="dateSelectionModalLabel">Select Custom Date Range</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -268,17 +278,10 @@
               <label for="modalDateRange" class="form-label">Date Range</label>
               <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
             </div>
-            <div class="quick-selections">
-              <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
-              <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
-              <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
-              <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
-              <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
-              <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
-            </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+            <button type="button" class="btn btn-secondary" id="clearDateFilter">Clear Date Filter</button>
+            <button type="button" class="btn btn-primary" id="applyDateFilter">Apply</button>
           </div>
         </div>
       </div>
@@ -302,6 +305,8 @@
                     <th>Source</th>
                     <th>Status</th>
                     <th>Created At</th>
+                    <th>Interested Project</th>
+                    <th>Source Category</th>
                   </tr>
                 </thead>
                 <tbody id="leadsTableBody"></tbody>
@@ -325,7 +330,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, applyFilters } from '../ghlData.js';
 
     let CONFIG = {};
     let locationId = '';
@@ -362,18 +367,18 @@
       return `${year}-${month}-${day}`;
     }
 
-    function updateDateRangeButton() {
-      const button = document.getElementById('openDateModal');
+    function updateDateRangeDisplay() {
+      const dateRangeSelect = document.getElementById('dateRange');
       if (selectedStartDate && selectedEndDate) {
-        button.textContent = `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`;
+        dateRangeSelect.value = 'custom';
       } else {
-        button.textContent = 'Select Date Range';
+        dateRangeSelect.value = dateRangeSelect.value || '';
       }
     }
 
     function updatePipelines() {
       const pipelineSelect = document.getElementById('pipeline');
-      pipelineSelect.innerHTML = '<option value="">Select Pipeline</option>';
+      pipelineSelect.innerHTML = '<option value="">All Pipelines</option>';
       pipelines.forEach(pipeline => {
         const option = document.createElement('option');
         option.value = pipeline.id;
@@ -382,8 +387,9 @@
       });
     }
 
-    function populateProjectFilter(projects) {
-      const projectSelect = document.getElementById('interestedProject');
+    function updateProjects() {
+      const projectSelect = document.getElementById('project');
+      const projects = [...new Set(allOpportunities.map(op => op.project).filter(p => p !== 'N/A'))].sort();
       projectSelect.innerHTML = '<option value="">All Projects</option>';
       projects.forEach(project => {
         const option = document.createElement('option');
@@ -393,10 +399,11 @@
       });
     }
 
-    function populateSourceCategoryFilter(categories) {
+    function updateSourceCategories() {
       const sourceCategorySelect = document.getElementById('sourceCategory');
+      const sourceCategories = [...new Set(allOpportunities.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
       sourceCategorySelect.innerHTML = '<option value="">All Source Categories</option>';
-      categories.forEach(category => {
+      sourceCategories.forEach(category => {
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
@@ -444,45 +451,45 @@
       return { start, end };
     }
 
-    async function clearFilters() {
+    function clearAllFilters() {
       const pipelineSelect = document.getElementById('pipeline');
-      pipelineSelect.value = pipelines.length > 0 ? pipelines[0].id : '';
-      dateRangePicker.clear();
+      const presalesPipeline = pipelines.find(p => p.name.toLowerCase() === 'presales');
+      pipelineSelect.value = presalesPipeline ? presalesPipeline.id : (pipelines.length > 0 ? pipelines[0].id : '');
+      document.getElementById('dateRange').value = '';
       selectedStartDate = null;
       selectedEndDate = null;
-      if (locationId === 'jH41Z47TXtote3u6rh92') {
-        document.getElementById('interestedProject').value = '';
-        document.getElementById('sourceCategory').value = '';
-      }
-      updateDateRangeButton();
-      await renderBarChart();
+      dateRangePicker.clear();
+      updateDateRangeDisplay();
+      document.getElementById('project').value = '';
+      document.getElementById('sourceCategory').value = '';
+      renderBarChart();
     }
 
     async function renderBarChart() {
       const pipelineId = document.getElementById('pipeline').value || null;
-      let interestedProject = null;
-      let sourceCategory = null;
-
-      if (locationId === 'jH41Z47TXtote3u6rh92') {
-        interestedProject = document.getElementById('interestedProject').value || null;
-        sourceCategory = document.getElementById('sourceCategory').value || null;
-      }
-
+      const dateRange = document.getElementById('dateRange').value;
+      const project = document.getElementById('project').value || null;
+      const sourceCategory = document.getElementById('sourceCategory').value || null;
       showSpinner();
       try {
         const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
-        const customFields = {};
-        if (interestedProject) customFields.project = interestedProject;
-        if (sourceCategory) customFields.sourceCategory = sourceCategory;
+        let startDate = null;
+        let endDate = null;
+        if (dateRange && dateRange !== 'custom') {
+          const dates = getDateRange(dateRange);
+          startDate = formatDateToLocalString(dates.start);
+          endDate = formatDateToLocalString(dates.end);
+        } else if (dateRange === 'custom' && selectedStartDate && selectedEndDate) {
+          startDate = formatDateToLocalString(selectedStartDate);
+          endDate = formatDateToLocalString(selectedEndDate);
+        }
+        allOpportunities = applyFilters(opportunities, pipelineId, startDate, endDate, new Set(), {
+          project: project,
+          sourceCategories: sourceCategory ? [sourceCategory] : []
+        });
 
-        allOpportunities = applyFilters(
-          opportunities,
-          pipelineId,
-          formatDateToLocalString(selectedStartDate),
-          formatDateToLocalString(selectedEndDate),
-          new Set(),
-          customFields
-        );
+        updateProjects();
+        updateSourceCategories();
 
         const hourlyCounts = Array(24).fill().map(() => ({ weekday: 0, weekend: 0 }));
         const hours = Array.from({ length: 24 }, (_, i) => {
@@ -577,6 +584,8 @@
         document.getElementById('totalLeads').textContent = `Total Leads: ${totalLeads}`;
       } catch (error) {
         console.error('Error rendering chart:', error);
+        document.getElementById('barChart').innerHTML = '<p>Error loading data. Please try again.</p>';
+        document.getElementById('totalLeads').textContent = 'Total Leads: 0';
       } finally {
         hideSpinner();
       }
@@ -606,6 +615,8 @@
             <td>${lead.source || 'N/A'}</td>
             <td>${lead.status || 'N/A'}</td>
             <td>${formatDateTimeWithOffset(lead.createdAt)}</td>
+            <td>${lead.project || 'N/A'}</td>
+            <td>${lead.sourceCategory || 'N/A'}</td>
           `;
           tbody.appendChild(row);
         });
@@ -651,6 +662,7 @@
       const { config, locationId: locId } = await loadConfig();
       if (!config) {
         document.getElementById('barChart').innerHTML = '<p>No configuration available for this location.</p>';
+        document.getElementById('totalLeads').textContent = 'Total Leads: 0';
         hideSpinner();
         return;
       }
@@ -661,76 +673,61 @@
       updatePipelines();
 
       const pipelineSelect = document.getElementById('pipeline');
-      if (pipelines.length > 0) {
-        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
-          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
-        } else {
-          pipelineSelect.value = pipelines[0].id;
-        }
-      }
-
-      if (locationId === 'jH41Z47TXtote3u6rh92') {
-        document.getElementById('projectFilter').style.display = 'block';
-        document.getElementById('sourceCategoryFilter').style.display = 'block';
-
-        const opportunities = await fetchAllOpportunities(CONFIG, locationId, null);
-        const projects = [...new Set(opportunities.map(op => op.customFields?.interestedProject).filter(Boolean))];
-        const sourceCategories = [...new Set(opportunities.map(op => op.customFields?.sourceCategory).filter(Boolean))];
-
-        populateProjectFilter(projects);
-        populateSourceCategoryFilter(sourceCategories);
-
-        document.getElementById('interestedProject').addEventListener('change', renderBarChart);
-        document.getElementById('sourceCategory').addEventListener('change', renderBarChart);
+      const presalesPipeline = pipelines.find(p => p.name.toLowerCase() === 'presales');
+      if (presalesPipeline) {
+        pipelineSelect.value = presalesPipeline.id;
+      } else if (pipelines.length > 0) {
+        pipelineSelect.value = pipelines[0].id;
       }
 
       dateRangePicker = flatpickr('#modalDateRange', {
         mode: "range",
         dateFormat: "Y/m/d",
-        onClose: async (dates) => {
+        onClose: (dates) => {
           if (dates.length === 2) {
             selectedStartDate = dates[0];
             selectedEndDate = dates[1];
-            updateDateRangeButton();
-            await renderBarChart();
+            updateDateRangeDisplay();
+            renderBarChart();
             bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
           }
         }
       });
 
-      document.getElementById('openDateModal').addEventListener('click', () => {
-        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
-        modal.show();
-      });
-
-      document.querySelectorAll('.quick-selections button').forEach(button => {
-        button.addEventListener('click', async function() {
-          const range = this.dataset.range;
-          const dates = getDateRange(range);
-          dateRangePicker.setDate([dates.start, dates.end]);
-          selectedStartDate = dates.start;
-          selectedEndDate = dates.end;
-          updateDateRangeButton();
+      document.getElementById('dateRange').addEventListener('change', async function() {
+        const range = this.value;
+        if (range === 'custom') {
+          const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+          modal.show();
+        } else {
+          selectedStartDate = null;
+          selectedEndDate = null;
+          dateRangePicker.clear();
           await renderBarChart();
-          bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
-        });
+        }
       });
 
-      document.getElementById('clearFilter').addEventListener('click', async () => {
+      document.getElementById('clearDateFilter').addEventListener('click', async () => {
         dateRangePicker.clear();
         selectedStartDate = null;
         selectedEndDate = null;
-        if (locationId === 'jH41Z47TXtote3u6rh92') {
-          document.getElementById('interestedProject').value = '';
-          document.getElementById('sourceCategory').value = '';
-        }
-        updateDateRangeButton();
+        document.getElementById('dateRange').value = '';
         await renderBarChart();
         bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
       });
 
+      document.getElementById('applyDateFilter').addEventListener('click', async () => {
+        if (selectedStartDate && selectedEndDate) {
+          await renderBarChart();
+          bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+        }
+      });
+
       document.getElementById('pipeline').addEventListener('change', renderBarChart);
-      document.getElementById('clearFilterBtn').addEventListener('click', clearFilters);
+      document.getElementById('project').addEventListener('change', renderBarChart);
+      document.getElementById('sourceCategory').addEventListener('change', renderBarChart);
+      document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+
       await renderBarChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
     }
