@@ -161,6 +161,10 @@
       padding: 15px;
       font-size: 14px;
     }
+
+    .download-button {
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -182,7 +186,8 @@
       <span class="pagination-info" id="paginationInfo">Showing 0 to 0 of 0</span>
       <div class="pagination-buttons">
         <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
-        <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+        <button class="btn btn-outline-primary btn-sm me-2" id="nextPageBtn" disabled>Next</button>
+        <button class="btn btn-primary btn-sm download-button" id="downloadBtn">Download CSV</button>
       </div>
     </div>
     <div class="loading-overlay" id="loadingOverlay" style="display: flex;">
@@ -229,12 +234,13 @@
     let stages = [];
     let usersMap = new Map();
     let opportunities = [];
+    let userRoles = new Map(); // Store user roles
 
     // Initialize widget on page load
     document.addEventListener('DOMContentLoaded', async function() {
       // Load config
       try {
-        const response = await fetch('./config.json');
+        const response = await fetch('../config.json');
         if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
         const configs = await response.json();
         console.log('Configs loaded:', configs);
@@ -279,6 +285,7 @@
         // Fetch data
         await fetchPipelines();
         await fetchAllUsers();
+        await fetchUserRoles(); // Fetch user roles
         opportunities = await fetchAllOpportunities();
 
         // Render table
@@ -298,6 +305,9 @@
             renderTable();
           }
         });
+
+        // Set up download button event listener
+        document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
       } catch (error) {
         console.error('Error initializing widget:', error);
         document.getElementById('tableBody').innerHTML = '<tr><td colspan="1" class="error-message">Error loading data. Please try again later.</td></tr>';
@@ -337,6 +347,42 @@
         console.log('Users fetched:', usersMap.size);
       } catch (error) {
         console.error('Error fetching users:', error);
+      }
+    }
+
+    // Fetch user roles from users API
+    async function fetchUserRoles() {
+      try {
+        const response = await fetch(`https://services.leadconnectorhq.com/users/?locationId=${locationId}`, {
+          headers: {
+            'Authorization': `Bearer ${CONFIG.accessToken}`,
+            'Version': '2021-07-28',
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.warn(`User data not found for locationId: ${locationId}. Displaying all users without admin filtering.`);
+            return; // Continue without filtering admins
+          }
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        data.users.forEach(user => {
+          if (user.roles && user.roles.role) {
+            userRoles.set(user.id, user.roles.role); // Map userId to role
+          }
+        });
+        // Filter out admins from usersMap
+        usersMap.forEach((name, userId) => {
+          if (userRoles.get(userId)?.toLowerCase() === 'admin') {
+            usersMap.delete(userId);
+          }
+        });
+        console.log('Users after filtering admins:', usersMap.size);
+      } catch (error) {
+        console.error('Error fetching user roles:', error);
+        console.warn('Proceeding without admin filtering due to error.');
       }
     }
 
@@ -443,11 +489,51 @@
 
       // If no users, show message
       if (totalItems === 0) {
-        tableBody.innerHTML = '<tr><td colspan="' + (stages.length + 1) + '" class="error-message">No users available.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="' + (stages.length + 1) + '" class="error-message">No non-admin users available.</td></tr>';
         paginationSection.style.display = 'none';
       }
 
       updateHeight();
+    }
+
+    // Download table data as CSV
+    function downloadCSV() {
+      // Prepare CSV headers
+      const headers = ['User', ...stages.map(stage => stage.name)];
+      const csvRows = [headers];
+
+      // Prepare CSV data
+      const opportunityCounts = new Map();
+      usersMap.forEach((name, userId) => {
+        opportunityCounts.set(userId, new Map(stages.map(s => [s.id, 0])));
+      });
+
+      opportunities.forEach(op => {
+        const userId = op.assignedTo;
+        const stageId = op.pipelineStageId;
+        if (userId && stageId && opportunityCounts.has(userId) && opportunityCounts.get(userId).has(stageId)) {
+          opportunityCounts.get(userId).set(stageId, opportunityCounts.get(userId).get(stageId) + 1);
+        }
+      });
+
+      usersMap.forEach((name, userId) => {
+        const row = [name, ...stages.map(stage => opportunityCounts.get(userId).get(stage.id) || 0)];
+        csvRows.push(row);
+      });
+
+      // Convert to CSV string
+      const csvString = csvRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+      // Create and trigger download
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'opportunities_by_user_and_stage.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
 
     // Update widget height
