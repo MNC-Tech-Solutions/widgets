@@ -580,18 +580,22 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const { config, locationId: locId } = await loadConfig();
-      if (!config) {
-        document.getElementById('funnel-container').innerHTML = '<p>No configuration available for this location.</p>';
-        hideWidgetSpinner();
-        return;
-      }
-      CONFIG = config;
-      locationId = locId;
+      showWidgetSpinner();
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) {
+          document.getElementById('funnel-container').innerHTML = '<p>No configuration available for this location.</p>';
+          return;
+        }
+        CONFIG = config;
+        locationId = locId;
 
-      await initWidget();
-      setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
-      updateHeight();
+        await initWidget();
+        setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        updateHeight();
+      } finally {
+        hideWidgetSpinner();
+      }
     });
 
     async function backgroundRefresh() {
@@ -730,26 +734,31 @@
       });
 
       document.getElementById('clearFilters').addEventListener('click', async function() {
-        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
-          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
-        } else if (pipelines.length > 0) {
-          pipelineSelect.value = pipelines[0].id;
-        } else {
-          pipelineSelect.value = '';
+        showWidgetSpinner();
+        try {
+          if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+            pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+          } else if (pipelines.length > 0) {
+            pipelineSelect.value = pipelines[0].id;
+          } else {
+            pipelineSelect.value = '';
+          }
+          campaignSelect.value = 'all';
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          dateRangePicker.clear();
+          await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+          updateAgents();
+          updateTeams();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
         }
-        campaignSelect.value = 'all';
-        choicesInstances.sourceCategory.removeActiveItems();
-        choicesInstances.channel.removeActiveItems();
-        choicesInstances.agent.removeActiveItems();
-        choicesInstances.team.removeActiveItems();
-        selectedStartDate = null;
-        selectedEndDate = null;
-        document.getElementById('openDateModal').textContent = 'Select Date Range';
-        dateRangePicker.clear();
-        await updateChannels(pipelineSelect.value || pipelines[0]?.id);
-        updateAgents();
-        updateTeams();
-        await renderFunnel();
       });
 
       document.querySelectorAll('.quick-selections button').forEach(button => {
@@ -763,58 +772,109 @@
       });
 
       document.getElementById('doneButton').addEventListener('click', async () => {
-        const selectedDates = dateRangePicker.selectedDates;
-        const dateButton = document.getElementById('openDateModal');
-        if (selectedDates.length === 2) {
-          selectedStartDate = flatpickr.formatDate(selectedDates[0], "Y-m-d");
-          selectedEndDate = flatpickr.formatDate(selectedDates[1], "Y-m-d");
-          dateButton.textContent = `${selectedStartDate} - ${selectedEndDate}`;
-        } else {
-          selectedStartDate = null;
-          selectedEndDate = null;
-          dateButton.textContent = 'Select Date Range';
+        showWidgetSpinner();
+        try {
+          const selectedDates = dateRangePicker.selectedDates;
+          const dateButton = document.getElementById('openDateModal');
+          if (selectedDates.length === 2) {
+            selectedStartDate = flatpickr.formatDate(selectedDates[0], "Y-m-d");
+            selectedEndDate = flatpickr.formatDate(selectedDates[1], "Y-m-d");
+            dateButton.textContent = `${selectedStartDate} - ${selectedEndDate}`;
+          } else {
+            selectedStartDate = null;
+            selectedEndDate = null;
+            dateButton.textContent = 'Select Date Range';
+          }
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
         }
-        const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
-        modal.hide();
-        await renderFunnel();
       });
 
       document.getElementById('clearFilter').addEventListener('click', async () => {
-        dateRangePicker.clear();
-        selectedStartDate = null;
-        selectedEndDate = null;
-        document.getElementById('openDateModal').textContent = 'Select Date Range';
-        const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
-        modal.hide();
-        await renderFunnel();
+        showWidgetSpinner();
+        try {
+          dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
       });
 
       document.getElementById('refresh').addEventListener('click', hardRefresh);
 
       pipelineSelect.addEventListener('change', async () => {
-        await updateChannels(pipelineSelect.value);
-        updateAgents();
-        updateTeams();
-        choicesInstances.agent.removeActiveItems();
-        choicesInstances.channel.removeActiveItems();
-        choicesInstances.sourceCategory.removeActiveItems();
-        choicesInstances.team.removeActiveItems();
-        campaignSelect.value = 'all';
-        selectedStartDate = null;
-        selectedEndDate = null;
-        document.getElementById('openDateModal').textContent = 'Select Date Range';
-        await renderFunnel();
+        showWidgetSpinner();
+        try {
+          await updateChannels(pipelineSelect.value);
+          updateAgents();
+          updateTeams();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          campaignSelect.value = 'all';
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
       });
 
-      sourceCategorySelect.addEventListener('change', () => {
-        updateSourceDropdown();
-        renderFunnel();
+      sourceCategorySelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          updateSourceDropdown();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
       });
 
-      channelSelect.addEventListener('change', renderFunnel);
-      campaignSelect.addEventListener('change', renderFunnel);
-      agentSelect.addEventListener('change', renderFunnel);
-      teamSelect.addEventListener('change', renderFunnel);
+      channelSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      campaignSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      agentSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      teamSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
 
       document.getElementById('prevPageBtn').addEventListener('click', () => {
         if (currentPage > 1) {

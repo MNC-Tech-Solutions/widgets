@@ -251,6 +251,9 @@
                 <tbody id="reportTableBody"></tbody>
             </table>
         </div>
+        <div class="loading-overlay" id="mainLoadingOverlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
     </div>
 
     <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
@@ -320,9 +323,26 @@
         let CONFIG = {};
         let locationId = '';
 
+        function showMainSpinner() {
+            document.getElementById('mainLoadingOverlay').style.display = 'flex';
+        }
+
+        function hideMainSpinner() {
+            document.getElementById('mainLoadingOverlay').style.display = 'none';
+        }
+
+        function showModalSpinner() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideModalSpinner() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
         async function generateReport() {
             const reportTableBody = document.getElementById('reportTableBody');
             const errorMessage = document.getElementById('errorMessage');
+            showMainSpinner();
 
             try {
                 const { config, locationId: locId } = await loadConfig();
@@ -399,15 +419,9 @@
                 console.error('Error generating report:', error);
                 errorMessage.textContent = 'An error occurred while generating the report.';
                 errorMessage.classList.add('visible');
+            } finally {
+                hideMainSpinner();
             }
-        }
-
-        function showModalSpinner() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-
-        function hideModalSpinner() {
-            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         async function showOpportunitiesModal(pipelineId, stageId, stageName) {
