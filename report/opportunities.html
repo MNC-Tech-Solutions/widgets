@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Stages Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #91AEC4;
+            --primary-dark: #2667cc;
+            --text: #374151;
+            --border: #d1d5db;
+            --funnel-grey: #e5e7eb;
+        }
+        body {
+            font-family: 'Cem Seui', Tahoma, sans-serif;
+            background: white;
+            margin: 0;
+            padding: 15px;
+        }
+        .ghl-report-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .ghl-report-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .ghl-error-message {
+            display: none;
+            text-align: center;
+            padding: 16px;
+            color: #e53e3e;
+            font-weight: 500;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .ghl-error-message.visible {
+            display: block;
+        }
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        .ghl-report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .ghl-report-table th {
+            background: #f8f9fa;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px;
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .ghl-report-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text);
+        }
+        .pipeline-row {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--primary);
+            background: #f8f9fa;
+            padding-top: 16px;
+            padding-bottom: 8px;
+        }
+        .stage-row:hover {
+            background: #f1f5f9;
+            cursor: pointer;
+        }
+        .stage-row td:first-child {
+            padding-left: 30px;
+        }
+        .modal-dialog {
+            max-width: 90%;
+            margin: 1.75rem auto;
+        }
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            background: #fff;
+        }
+        .modal-header {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .modal-header .btn {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
+        .modal-body {
+            padding: 20px 30px;
+            position: relative;
+        }
+        .modal-body .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .modal-body h6 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+        .modal-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .modal-table thead th {
+            background: #f8f9fa;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .modal-table tbody tr {
+            transition: background 0.2s ease;
+        }
+        .modal-table tbody tr:hover {
+            background: #f1f5f9;
+        }
+        .modal-table tbody td {
+            font-size: 13px;
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            color: #4b5563;
+            white-space: nowrap;
+        }
+        .table-container::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 6px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .pagination-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .pagination-info {
+            font-size: 0.95rem;
+            color: #6b7280;
+        }
+        .pagination-buttons .btn {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .pagination-buttons .btn-outline-primary {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .pagination-buttons .btn-outline-primary:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .pagination-buttons .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="ghl-report-container">
+        <div id="errorMessage" class="ghl-error-message"></div>
+        <div class="table-container">
+            <table id="reportTable" class="ghl-report-table">
+                <thead>
+                    <tr>
+                        <th>Pipelines</th>
+                        <th>Stages</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="opportunitiesModalLabel">Records</h5>
+                    <div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="header-row">
+                        <h6>Funnel</h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
+                    </div>
+                    <div class="table-container">
+                        <table class="modal-table table">
+                            <thead>
+                                <tr>
+                                    <th>Opportunity ID</th>
+                                    <th>Opportunity Name</th>
+                                    <th>Source</th>
+                                    <th>Assigned User</th>
+                                    <th>Status</th>
+                                    <th>Phone Number</th>
+                                    <th>Lead Value</th>
+                                    <th>Project</th>
+                                    <th>Contact Created</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="opportunitiesTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-section d-flex justify-content-between align-items-center">
+                        <span class="pagination-info" id="paginationInfo">Showing 0 to 0 of 0</span>
+                        <div class="pagination-buttons">
+                            <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
+                            <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+                        </div>
+                    </div>
+                    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+    <script type="module">
+        import {
+            loadConfig,
+            fetchPipelines,
+            fetchAllOpportunities,
+            fetchAllUsers,
+            formatDateTimeWithOffset
+        } from '../ghlData.js';
+
+        let usersMap = new Map();
+        let currentOpportunities = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let pipelines = [];
+        let CONFIG = {};
+        let locationId = '';
+
+        async function generateReport() {
+            const reportTableBody = document.getElementById('reportTableBody');
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const { config, locationId: locId } = await loadConfig();
+                if (!config || !locId) {
+                    errorMessage.textContent = 'Failed to load configuration or location ID.';
+                    errorMessage.classList.add('visible');
+                    return;
+                }
+                CONFIG = config;
+                locationId = locId;
+
+                const users = await fetchAllUsers(CONFIG, locationId);
+                usersMap = new Map(users.map(user => [user.id, user.name]));
+
+                pipelines = await fetchPipelines(CONFIG, locationId);
+                if (!pipelines.length) {
+                    errorMessage.textContent = 'No pipelines found for this location.';
+                    errorMessage.classList.add('visible');
+                    return;
+                }
+
+                const reportData = [];
+                for (const pipeline of pipelines) {
+                    const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipeline.id);
+                    const totalCount = opportunities.length;
+                    const stageCounts = {};
+
+                    for (const stage of pipeline.stages) {
+                        stageCounts[stage.id] = { name: stage.name, count: 0 };
+                    }
+
+                    for (const opportunity of opportunities) {
+                        if (stageCounts[opportunity.pipelineStageId]) {
+                            stageCounts[opportunity.pipelineStageId].count++;
+                        }
+                    }
+
+                    reportData.push({ type: 'pipeline', name: pipeline.name, totalCount });
+                    for (const stage of pipeline.stages) {
+                        reportData.push({
+                            type: 'stage',
+                            pipelineId: pipeline.id,
+                            stageId: stage.id,
+                            stageName: stage.name,
+                            count: stageCounts[stage.id].count
+                        });
+                    }
+                }
+
+                reportTableBody.innerHTML = '';
+                reportData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    if (row.type === 'pipeline') {
+                        tr.className = 'pipeline-row';
+                        tr.innerHTML = `
+                            <td>${row.name}</td>
+                            <td></td>
+                            <td></td>
+                        `;
+                    } else {
+                        tr.className = 'stage-row';
+                        tr.innerHTML = `
+                            <td></td>
+                            <td>${row.stageName}</td>
+                            <td>${row.count}</td>
+                        `;
+                        tr.addEventListener('click', () => showOpportunitiesModal(row.pipelineId, row.stageId, row.stageName));
+                    }
+                    reportTableBody.appendChild(tr);
+                });
+
+                errorMessage.classList.remove('visible');
+            } catch (error) {
+                console.error('Error generating report:', error);
+                errorMessage.textContent = 'An error occurred while generating the report.';
+                errorMessage.classList.add('visible');
+            }
+        }
+
+        function showModalSpinner() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideModalSpinner() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        async function showOpportunitiesModal(pipelineId, stageId, stageName) {
+            showModalSpinner();
+            try {
+                const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+                currentOpportunities = opportunities.filter(op => op.pipelineStageId === stageId);
+                currentOpportunities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                currentPage = 1;
+
+                document.getElementById('opportunitiesModalLabel').textContent = `Records - ${stageName}`;
+                renderModalTable();
+
+                document.getElementById('exportBtn').onclick = () => exportToCSV(currentOpportunities, stageName);
+
+                const modal = new bootstrap.Modal(document.getElementById('opportunitiesModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Error loading modal data:', error);
+                document.getElementById('errorMessage').textContent = 'Error loading opportunities for stage.';
+                document.getElementById('errorMessage').classList.add('visible');
+            } finally {
+                hideModalSpinner();
+            }
+        }
+
+        function renderModalTable() {
+            const tbody = document.getElementById('opportunitiesTableBody');
+            tbody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, currentOpportunities.length);
+            const totalItems = currentOpportunities.length;
+
+            for (let i = startIndex; i < endIndex; i++) {
+                const op = currentOpportunities[i];
+                const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+                const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${op.id || 'N/A'}</td>
+                    <td>${op.name || 'N/A'}</td>
+                    <td>${op.source || 'N/A'}</td>
+                    <td>${assignedUserName}</td>
+                    <td>${op.status || 'N/A'}</td>
+                    <td>${op.contact?.phone || 'N/A'}</td>
+                    <td>${op.monetaryValue || 0}</td>
+                    <td>${op.project || 'N/A'}</td>
+                    <td>${createdAtFormatted}</td>
+                    <td>${op.status}</td>
+                `;
+                tbody.appendChild(row);
+            }
+
+            document.getElementById('paginationInfo').textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems}`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = endIndex >= totalItems;
+        }
+
+        function exportToCSV(opportunities, stageName) {
+            const headers = [
+                'Opportunity ID',
+                'Opportunity Name',
+                'Source',
+                'Assigned User',
+                'Pipeline Name',
+                'Status',
+                'Phone Number',
+                'Lead Value',
+                'Project',
+                'Contact Created'
+            ];
+            const rows = opportunities.map(op => {
+                const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+                const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+                return [
+                    op.id || 'N/A',
+                    op.name || 'N/A',
+                    op.source || 'N/A',
+                    assignedUserName,
+                    pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
+                    op.status || 'N/A',
+                    op.contact?.phone || 'N/A',
+                    op.monetaryValue || 0,
+                    op.project || 'N/A',
+                    createdAtFormatted
+                ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
+            });
+
+            const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `opportunities_${stageName}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        document.getElementById('prevPageBtn').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderModalTable();
+            }
+        });
+
+        document.getElementById('nextPageBtn').addEventListener('click', () => {
+            if (currentPage < Math.ceil(currentOpportunities.length / itemsPerPage)) {
+                currentPage++;
+                renderModalTable();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', generateReport);
+    </script>
+</body>
+</html>
