@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --secondary: #64748b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s ease;
+    }
+    
+    .chart-container:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .date-filter {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 3px solid rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      border-top-color: #3b82f6;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">    
+    <!-- Date Filter Section -->
+    <div class="date-filter max-w-3xl mx-auto mb-10 p-6">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="w-full sm:w-auto">
+          <h2 class="text-lg font-semibold text-gray-800 mb-4">Filter by Date Range</h2>
+          <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div class="w-full">
+              <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input type="date" id="startDate" value="2025-07-05" 
+                     class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="w-full">
+              <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input type="date" id="endDate" value="2025-08-04" 
+                     class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+        <button onclick="generateTeamCharts()" id="generateBtn" 
+                class="mt-2 sm:mt-7 px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center min-w-[120px]">
+          <span id="btnText">Generate</span>
+          <span id="btnSpinner" class="loading-spinner ml-2 hidden"></span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="space-y-8">
+      <div class="chart-container p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+          Team 1 (KL Kyra)
+        </h2>
+        <div class="chart-wrapper">
+          <canvas id="chart-1" height="300px"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-container p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+          Team 2 (OCR Agent)
+        </h2>
+        <div class="chart-wrapper">
+          <canvas id="chart-2" height="300px"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-container p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+          Team 3 (Priya Kuantan)
+        </h2>
+        <div class="chart-wrapper">
+          <canvas id="chart-3" height="300px"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      loadConfig,
+      fetchPipelines,
+      fetchAllUsers,
+      fetchAllOpportunities,
+      applyFilters,
+      clearIndexedDB
+    } from '../ghlData.js';
+
+    const teams = {
+      'Team 1 (KL Kyra)': ['Shafiqah', 'Nurul Ain', 'Shah', 'Haikal', 'Hazim', 'Najmi'],
+      'Team 2 (OCR Agent)': ['Benjamin', 'Benovan'],
+      'Team 3 (Priya Kuantan)': ['Norul Hudai']
+    };
+
+    function cleanUserName(name) {
+      return name.replace(/\s*\([^)]+\)/, '').trim();
+    }
+
+    // Store chart instances to update them
+    const charts = {};
+
+    async function generateTeamCharts() {
+      try {
+        // Show loading state
+        const generateBtn = document.getElementById('generateBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+        
+        generateBtn.disabled = true;
+        btnText.textContent = 'Generating...';
+        btnSpinner.classList.remove('hidden');
+
+        // Clear existing charts
+        Object.values(charts).forEach(chart => chart.destroy());
+        Object.keys(charts).forEach(key => delete charts[key]);
+
+        // Clear IndexedDB cache for fresh data
+        await clearIndexedDB();
+        console.log('IndexedDB cache cleared');
+
+        // Load configuration
+        const { config, locationId } = await loadConfig();
+        if (!config) {
+          console.error('Configuration not found. Check config.json at /your_project_directory/config.json and locationId:', locationId);
+          alert('Configuration error. Please check console for details.');
+          resetButtonState();
+          return;
+        }
+        console.log('Loaded config:', config, 'Location ID:', locationId);
+
+        // Fetch pipelines and select first pipeline ID
+        const pipelines = await fetchPipelines(config, locationId);
+        console.log('Available pipelines (use one of these IDs if first pipeline is incorrect):', pipelines.map(p => ({ id: p.id, name: p.name })));
+        if (!pipelines || pipelines.length === 0) {
+          console.error('No pipelines found. Check GHL API credentials and locationId:', locationId);
+          alert('No pipelines found. Please check your configuration.');
+          resetButtonState();
+          return;
+        }
+        const pipelineId = pipelines[0].id; // Use first pipeline ID
+        console.log('Selected pipelineId:', pipelineId);
+        const pipeline = pipelines.find(p => p.id === pipelineId);
+        if (!pipeline) {
+          console.error('Pipeline not found for ID:', pipelineId);
+          alert('Pipeline not found. Please check your configuration.');
+          resetButtonState();
+          return;
+        }
+        const stages = pipeline.stages && pipeline.stages.length > 0
+          ? pipeline.stages.map(s => ({ id: s.id, name: s.name }))
+          : [
+              { id: 'stage1', name: 'New Lead' },
+              { id: 'stage2', name: 'In Progress' },
+              { id: 'stage3', name: 'Won' },
+              { id: 'stage4', name: 'Lost' }
+            ];
+        console.log('Fetched stages (check for Renurture, Prequalified):', stages);
+
+        // Fetch users
+        const users = await fetchAllUsers(config, locationId);
+        const userMap = users.reduce((map, user) => {
+          map[user.id] = user.name;
+          return map;
+        }, {});
+        console.log('Fetched users (ensure team names match these):', userMap);
+
+        // Fetch opportunities
+        let opportunities = await fetchAllOpportunities(config, locationId, pipelineId);
+        console.log('Fetched opportunities:', opportunities);
+
+        // Get date filter values
+        const startDateInput = document.getElementById('startDate').value;
+        const endDateInput = document.getElementById('endDate').value;
+        const startDate = startDateInput ? new Date(startDateInput + 'T00:00:00+08:00') : new Date('2025-07-05T00:00:00+08:00');
+        const endDate = endDateInput ? new Date(endDateInput + 'T23:59:59+08:00') : new Date('2025-08-04T23:59:59+08:00');
+        if (startDate > endDate) {
+          console.error('Start date cannot be after end date');
+          alert('Error: Start date cannot be after end date');
+          resetButtonState();
+          return;
+        }
+        opportunities = applyFilters(opportunities, pipelineId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+        console.log('Filtered opportunities:', opportunities);
+        console.log('Opportunities per user:', opportunities.map(op => ({ userId: op.assignedTo, stageId: op.pipelineStageId, userName: userMap[op.assignedTo] || 'Unassigned' })));
+
+        // Process data for each team
+        const stageCounts = {};
+        Object.keys(teams).forEach(team => {
+          stageCounts[team] = teams[team].reduce((acc, userName) => {
+            acc[userName] = stages.reduce((stageAcc, stage) => {
+              stageAcc[stage.name] = 0;
+              return stageAcc;
+            }, {});
+            acc[userName]['Unknown'] = 0;
+            return acc;
+          }, {});
+        });
+
+        opportunities.forEach(op => {
+          const userId = op.assignedTo;
+          const userName = userMap[userId] ? cleanUserName(userMap[userId]) : null;
+          const team = Object.keys(teams).find(t => teams[t].includes(userName));
+          if (team && stageCounts[team][userName]) {
+            const stage = stages.find(s => s.id === op.pipelineStageId)?.name || 'Unknown';
+            stageCounts[team][userName][stage]++;
+          }
+        });
+        console.log('Processed stage counts:', stageCounts);
+
+        // Generate charts
+        const colors = [
+          'rgba(59, 130, 246, 0.8)',   // Blue (New Lead)
+          'rgba(16, 185, 129, 0.8)',    // Green (Won)
+          'rgba(239, 68, 68, 0.8)',     // Red (Lost)
+          'rgba(245, 158, 11, 0.8)',    // Yellow (In Progress)
+          'rgba(139, 92, 246, 0.8)',    // Purple (Renurture)
+          'rgba(14, 165, 233, 0.8)',    // Sky (Prequalified)
+          'rgba(100, 116, 139, 0.8)',   // Gray (Unknown)
+          'rgba(244, 63, 94, 0.8)'      // Pink (additional stage)
+        ];
+
+        Object.keys(teams).forEach((team, teamIndex) => {
+          const chartData = {
+            type: 'bar',
+            data: {
+              labels: teams[team], // Y-axis: team members
+              datasets: stages.concat({ id: 'unknown', name: 'Unknown' }).map((stage, stageIndex) => ({
+                label: stage.name,
+                data: teams[team].map(userName => stageCounts[team][userName][stage.name] || 0),
+                backgroundColor: colors[stageIndex % colors.length],
+                borderRadius: 4,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)'
+              }))
+            },
+            options: {
+              indexAxis: 'y', // Team members on y-axis
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                title: {
+                  display: true,
+                  text: `${team} Opportunities by Stage`,
+                  font: {
+                    size: 16,
+                    weight: '600'
+                  },
+                  padding: {
+                    bottom: 20
+                  }
+                },
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 12,
+                    padding: 20,
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#1e293b',
+                  titleFont: {
+                    size: 14,
+                    weight: '600'
+                  },
+                  bodyFont: {
+                    size: 13
+                  },
+                  padding: 12,
+                  cornerRadius: 8,
+                  displayColors: true,
+                  usePointStyle: true
+                }
+              },
+              scales: {
+                x: {
+                  stacked: true,
+                  title: {
+                    display: true,
+                    text: 'Number of Opportunities',
+                    font: {
+                      weight: '500'
+                    }
+                  },
+                  beginAtZero: true,
+                  grid: {
+                    display: true,
+                    color: 'rgba(226, 232, 240, 0.5)'
+                  },
+                  ticks: {
+                    stepSize: 1
+                  }
+                },
+                y: {
+                  stacked: true,
+                  title: {
+                    display: true,
+                    text: 'Team Members',
+                    font: {
+                      weight: '500'
+                    }
+                  },
+                  grid: {
+                    display: false
+                  }
+                }
+              },
+              animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+              }
+            }
+          };
+
+          const canvasId = `chart-${teamIndex + 1}`;
+          const canvas = document.getElementById(canvasId);
+          if (canvas) {
+            charts[canvasId] = new Chart(canvas.getContext('2d'), chartData);
+          } else {
+            console.warn(`Canvas element with ID ${canvasId} not found`);
+          }
+        });
+
+        // Update button state
+        resetButtonState();
+        
+      } catch (error) {
+        console.error('Error generating charts:', error);
+        alert('Error generating charts. Please check console for details.');
+        resetButtonState();
+      }
+    }
+
+    function resetButtonState() {
+      const generateBtn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      
+      generateBtn.disabled = false;
+      btnText.textContent = 'Generate';
+      btnSpinner.classList.add('hidden');
+    }
+
+    window.generateTeamCharts = generateTeamCharts; // Expose function for button
+    window.onload = generateTeamCharts;
+  </script>
+</body>
+</html>
