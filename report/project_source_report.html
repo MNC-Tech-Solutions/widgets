@@ -4,11 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Opportunities Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --text: #374151;
+      --border: #d1d5db;
+      --funnel-grey: #e5e7eb;
+    }
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-family: 'Cem Seui', Tahoma, sans-serif;
       margin: 0;
       padding: 15px;
       background: #f5f6fa;
@@ -35,7 +43,7 @@
     label {
       margin-bottom: 6px;
       font-weight: 600;
-      color: #374151;
+      color: var(--text);
       font-size: 14px;
     }
     .chart-container {
@@ -95,7 +103,7 @@
       width: 40px;
       height: 40px;
       border: 4px solid #f3f3f3;
-      border-top: 4px solid #007bff;
+      border-top: 4px solid var(--primary);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -103,25 +111,134 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .modal-dialog {
+      max-width: 90%;
+      margin: 1.75rem auto;
+    }
+    .modal-dialog.date-selection {
+      max-width: 500px; /* Slimmer width for date selection modal */
+    }
     .modal-content {
-      border-radius: 10px;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      background: #fff;
     }
     .modal-header {
-      border-bottom: 1px solid #eaeaea;
-    }
-    .modal-footer {
-      border-top: 1px solid #eaeaea;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      padding: 15px 25px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .quick-selections {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
     }
-    /* Improved Table Styling */
+    .modal-body {
+      padding: 20px 30px;
+      position: relative;
+    }
+    .modal-body .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .modal-body h6 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+    .modal-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      margin-bottom: 0;
+    }
+    .modal-table thead th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .modal-table tbody tr {
+      transition: background 0.2s ease;
+    }
+    .modal-table tbody tr:hover {
+      background: #f1f5f9;
+    }
+    .modal-table tbody td {
+      font-size: 13px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .table-container {
+      max-height: 95%;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+    }
+    .table-container::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+      background: #adb5bd;
+      border-radius: 6px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+    .pagination-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .pagination-info {
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+    .pagination-buttons .btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .pagination-buttons .btn-outline-primary {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .pagination-buttons .btn-outline-primary:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .pagination-buttons .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .opportunities-table {
       width: 100%;
       border-collapse: separate;
@@ -182,42 +299,6 @@
     .opportunities-table tr.project-row:not(:first-child) {
       border-top: 1px solid #e0e3e7;
     }
-    /* Lead Details Table Styling */
-    .lead-details-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-    .lead-details-table th {
-      background-color: #f1f3f5;
-      color: #374151;
-      font-weight: 600;
-      padding: 4px;
-      text-align: left;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .lead-details-table td {
-      padding: 4px;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .lead-details-table tr:nth-child(even) {
-      background-color: #f9fafb;
-    }
-    .lead-details-table tr:hover {
-      background-color: #f1f5f9;
-    }
-    .pagination-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .pagination-controls button {
-      font-size: 12px;
-    }
-    .pagination-info {
-      font-size: 12px;
-      color: #374151;
-    }
   </style>
 </head>
 <body>
@@ -252,7 +333,7 @@
   </div>
   <!-- Date Selection Modal -->
   <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog date-selection">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
@@ -280,62 +361,77 @@
   </div>
   <!-- Lead Details Modal -->
   <div class="modal fade" id="leadDetailsModal" tabindex="-1" aria-labelledby="leadDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="leadDetailsModalLabel">Lead Details</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="leadDetailsModalLabel">Records</h5>
+          <div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
         </div>
         <div class="modal-body">
-          <table class="lead-details-table">
-            <thead>
-              <tr>
-                <th>Opportunity Name</th>
-                <th>Contact Name</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="leadDetailsTableBody"></tbody>
-          </table>
-        </div>
-        <div class="modal-footer">
-          <div class="pagination-controls">
-            <button class="btn btn-outline-primary btn-sm" id="prevPage" disabled>Previous</button>
-            <span class="pagination-info" id="paginationInfo"></span>
-            <button class="btn btn-outline-primary btn-sm" id="nextPage" disabled>Next</button>
+          <div class="header-row">
+            <h6>Project-Source</h6>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
           </div>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <div class="table-container">
+            <table class="modal-table table">
+              <thead>
+                <tr>
+                  <th>Opportunity ID</th>
+                  <th>Opportunity Name</th>
+                  <th>Primary Contact Name</th>
+                  <th>Source</th>
+                  <th>Assigned User</th>
+                  <th>Status</th>
+                  <th>Phone Number</th>
+                  <th>Lead Value</th>
+                  <th>Project</th>
+                  <th>Contact Created</th>
+                </tr>
+              </thead>
+              <tbody id="leadDetailsTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-section d-flex justify-content-between align-items-center">
+            <span class="pagination-info" id="paginationInfo">Showing 0 to 0 of 0</span>
+            <div class="pagination-buttons">
+              <button class="btn btn-outline-primary btn-sm me-2" id="prevPage" disabled>Previous</button>
+              <button class="btn btn-outline-primary btn-sm" id="nextPage" disabled>Next</button>
+            </div>
+          </div>
+          <div class="loading-overlay" id="modalLoadingOverlay" style="display: none;">
+            <div class="spinner"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module">
-    // Import necessary functions from ghlData.js
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, fetchAllUsers, formatDateTimeWithOffset } from '../ghlData.js';
 
-    // Global variables
     let CONFIG = {};
     let locationId = '';
     let pipelines = [];
+    let usersMap = new Map();
     let selectedStartDate = null;
     let selectedEndDate = null;
     let dateRangePicker;
     let colorMap = new Map();
     let hiddenProjects = new Set();
     let allProjects = new Set();
-    let allOpportunities = []; // Store opportunities globally for modal filtering
-    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
-    const LEADS_PER_PAGE = 20;
+    let allOpportunities = [];
+    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000;
+    const LEADS_PER_PAGE = 10;
     let currentPage = 1;
     let currentFilteredOpportunities = [];
     let currentProject = '';
     let currentSource = null;
 
-    // Utility functions
     function escapeSingleQuotes(str) {
       return str.replace(/'/g, "\\'");
     }
@@ -346,6 +442,14 @@
 
     function hideSpinner() {
       document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function showModalSpinner() {
+      document.getElementById('modalLoadingOverlay').style.display = 'flex';
+    }
+
+    function hideModalSpinner() {
+      document.getElementById('modalLoadingOverlay').style.display = 'none';
     }
 
     function formatDate(date) {
@@ -362,7 +466,6 @@
       }
     }
 
-    // Update pipelines dropdown
     function updatePipelines() {
       const pipelineSelect = document.getElementById('pipeline');
       pipelineSelect.innerHTML = '<option value="">Select Pipeline</option>';
@@ -374,7 +477,6 @@
       });
     }
 
-    // Calculate date ranges
     function getDateRange(range) {
       const today = new Date();
       let start, end;
@@ -415,7 +517,6 @@
       return { start, end };
     }
 
-    // Render lead details table for the current page
     function renderLeadDetailsTable() {
       const tbody = document.getElementById('leadDetailsTableBody');
       const paginationInfo = document.getElementById('paginationInfo');
@@ -423,73 +524,118 @@
       const nextButton = document.getElementById('nextPage');
       tbody.innerHTML = '';
 
-      // Calculate pagination
       const totalLeads = currentFilteredOpportunities.length;
-      const totalPages = Math.ceil(totalLeads / LEADS_PER_PAGE);
       const startIndex = (currentPage - 1) * LEADS_PER_PAGE;
-      const endIndex = startIndex + LEADS_PER_PAGE;
+      const endIndex = Math.min(startIndex + LEADS_PER_PAGE, totalLeads);
       const displayLeads = currentFilteredOpportunities.slice(startIndex, endIndex);
 
-      // Populate table
       if (displayLeads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">No leads found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11">No leads found</td></tr>';
       } else {
         displayLeads.forEach(op => {
+          const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+          const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
           const row = document.createElement('tr');
           row.innerHTML = `
+            <td>${op.id || 'N/A'}</td>
             <td>${op.name || 'N/A'}</td>
             <td>${op.contact?.name || 'N/A'}</td>
+            <td>${op.source || 'N/A'}</td>
+            <td>${assignedUserName}</td>
             <td>${op.status || 'N/A'}</td>
+            <td>${op.contact?.phone || 'N/A'}</td>
+            <td>${op.monetaryValue || 0}</td>
+            <td>${op.project || 'N/A'}</td>
+            <td>${createdAtFormatted}</td>
           `;
           tbody.appendChild(row);
         });
       }
 
-      // Update pagination info
-      paginationInfo.textContent = totalLeads > 0 
-        ? `Page ${currentPage} of ${totalPages} (${totalLeads} leads)`
-        : 'No leads';
-
-      // Enable/disable buttons
+      paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalLeads}`;
       prevButton.disabled = currentPage === 1;
-      nextButton.disabled = currentPage === totalPages || totalPages === 0;
+      nextButton.disabled = endIndex >= totalLeads;
     }
 
-    // Show lead details in modal
+    function exportToCSV(opportunities, title) {
+      const headers = [
+        'Opportunity ID',
+        'Opportunity Name',
+        'Primary Contact Name',
+        'Source',
+        'Assigned User',
+        'Pipeline Name',
+        'Status',
+        'Phone Number',
+        'Lead Value',
+        'Project',
+        'Contact Created'
+      ];
+      const rows = opportunities.map(op => {
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        return [
+          op.id || 'N/A',
+          op.name || 'N/A',
+          op.contact?.name || 'N/A',
+          op.source || 'N/A',
+          assignedUserName,
+          pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
+          op.status || 'N/A',
+          op.contact?.phone || 'N/A',
+          op.monetaryValue || 0,
+          op.project || 'N/A',
+          createdAtFormatted
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
+      });
+
+      const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `leads_${title}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     async function showLeadDetails(project, source = null) {
-      const modal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
-      const modalTitle = document.getElementById('leadDetailsModalLabel');
-      
-      // Set modal title
-      modalTitle.textContent = source 
-        ? `Leads for ${project} - ${source}`
-        : `Leads for ${project}`;
+      showModalSpinner();
+      try {
+        const modal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
+        const modalTitle = document.getElementById('leadDetailsModalLabel');
+        modalTitle.textContent = source ? `Records - ${project} (${source})` : `Records - ${project}`;
 
-      // Store current filters
-      currentProject = project;
-      currentSource = source;
-      currentPage = 1;
+        currentProject = project;
+        currentSource = source;
+        currentPage = 1;
 
-      // Filter opportunities
-      const filters = { project };
-      if (source) filters.source = source;
-      const pipelineId = document.getElementById('pipeline').value || null;
-      currentFilteredOpportunities = applyFilters(
-        allOpportunities,
-        pipelineId,
-        selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null,
-        selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null,
-        hiddenProjects,
-        filters
-      );
+        const filters = { project };
+        if (source) filters.channels = [source];
+        const pipelineId = document.getElementById('pipeline').value || null;
+        currentFilteredOpportunities = applyFilters(
+          allOpportunities,
+          pipelineId,
+          selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null,
+          selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null,
+          hiddenProjects,
+          filters
+        );
 
-      // Render table for the current page
-      renderLeadDetailsTable();
+        currentFilteredOpportunities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderLeadDetailsTable();
 
-      modal.show();
+        document.getElementById('exportBtn').onclick = () => exportToCSV(currentFilteredOpportunities, source ? `${project}_${source}` : project);
+
+        modal.show();
+      } catch (error) {
+        console.error('Error loading lead details:', error);
+      } finally {
+        hideModalSpinner();
+      }
     }
 
-    // Handle pagination navigation
     function setupPaginationListeners() {
       document.getElementById('prevPage').addEventListener('click', () => {
         if (currentPage > 1) {
@@ -499,15 +645,13 @@
       });
 
       document.getElementById('nextPage').addEventListener('click', () => {
-        const totalPages = Math.ceil(currentFilteredOpportunities.length / LEADS_PER_PAGE);
-        if (currentPage < totalPages) {
+        if (currentPage < Math.ceil(currentFilteredOpportunities.length / LEADS_PER_PAGE)) {
           currentPage++;
           renderLeadDetailsTable();
         }
       });
     }
 
-    // Render main table
     async function renderTable() {
       console.log('Rendering table with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
       const pipelineId = document.getElementById('pipeline').value || null;
@@ -517,7 +661,6 @@
         const opportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, {});
         const projectSourceCounts = {};
 
-        // Aggregate data
         opportunities.forEach(op => {
           const project = op.project;
           const source = op.source || 'Unknown';
@@ -526,7 +669,6 @@
           projectSourceCounts[project][source] = (projectSourceCounts[project][source] || 0) + 1;
         });
 
-        // Assign colors for legend
         const colorScale = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
                            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
         Object.keys(projectSourceCounts).forEach((project, i) => {
@@ -535,7 +677,6 @@
           }
         });
 
-        // Update legend
         const legend = document.getElementById('legend');
         legend.innerHTML = Array.from(allProjects).map(project => {
           const isHidden = hiddenProjects.has(project);
@@ -547,7 +688,6 @@
           `;
         }).join('');
 
-        // Render table
         const tbody = document.querySelector('#opportunitiesTable tbody');
         tbody.innerHTML = '';
         let totalOpportunities = 0;
@@ -556,7 +696,6 @@
           const total = Object.values(sources).reduce((a, b) => a + b, 0);
           totalOpportunities += total;
 
-          // Project row
           const projectRow = document.createElement('tr');
           projectRow.className = `project-row ${hiddenProjects.has(project) ? 'hidden' : ''}`;
           projectRow.innerHTML = `
@@ -567,7 +706,6 @@
           projectRow.onclick = () => showLeadDetails(project);
           tbody.appendChild(projectRow);
 
-          // Source rows
           Object.entries(sources).forEach(([source, count]) => {
             const sourceRow = document.createElement('tr');
             sourceRow.className = `source-row ${hiddenProjects.has(project) ? 'hidden' : ''}`;
@@ -581,7 +719,6 @@
           });
         });
 
-        // Add total row
         const totalRow = document.createElement('tr');
         totalRow.className = 'project-row total-row';
         totalRow.innerHTML = `
@@ -600,7 +737,6 @@
       }
     }
 
-    // Toggle project visibility
     window.toggleProject = function(project) {
       if (hiddenProjects.has(project)) {
         hiddenProjects.delete(project);
@@ -610,9 +746,7 @@
       renderTable();
     }
 
-    // Initialize widget
     async function initWidget() {
-      // Load config and locationId using ghlData.js
       const { config, locationId: locId } = await loadConfig();
       if (!config) {
         document.querySelector('#opportunitiesTable tbody').innerHTML = '<tr><td colspan="3">No configuration available for this location.</td></tr>';
@@ -622,10 +756,12 @@
       CONFIG = config;
       locationId = locId;
 
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(user => [user.id, user.name]));
+
       pipelines = await fetchPipelines(CONFIG, locationId);
       updatePipelines();
 
-      // Preselect the first pipeline if available
       const pipelineSelect = document.getElementById('pipeline');
       if (pipelines.length > 0) {
         if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
