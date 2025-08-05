@@ -116,7 +116,7 @@
       margin: 1.75rem auto;
     }
     .modal-dialog.date-selection {
-      max-width: 500px; /* Slimmer width for date selection modal */
+      max-width: 500px;
     }
     .modal-content {
       border: none;
@@ -425,7 +425,7 @@
     let hiddenProjects = new Set();
     let allProjects = new Set();
     let allOpportunities = [];
-    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000;
+    const BACKGROUND_REFRESH_INTERVAL = 1 * 60 * 1000;
     const LEADS_PER_PAGE = 10;
     let currentPage = 1;
     let currentFilteredOpportunities = [];
@@ -530,7 +530,7 @@
       const displayLeads = currentFilteredOpportunities.slice(startIndex, endIndex);
 
       if (displayLeads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11">No leads found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10">No leads found</td></tr>';
       } else {
         displayLeads.forEach(op => {
           const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
@@ -540,7 +540,7 @@
             <td>${op.id || 'N/A'}</td>
             <td>${op.name || 'N/A'}</td>
             <td>${op.contact?.name || 'N/A'}</td>
-            <td>${op.source || 'N/A'}</td>
+            <td>${op.source || 'Unknown'}</td>
             <td>${assignedUserName}</td>
             <td>${op.status || 'N/A'}</td>
             <td>${op.contact?.phone || 'N/A'}</td>
@@ -578,7 +578,7 @@
           op.id || 'N/A',
           op.name || 'N/A',
           op.contact?.name || 'N/A',
-          op.source || 'N/A',
+          op.source || 'Unknown',
           assignedUserName,
           pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
           op.status || 'N/A',
@@ -612,7 +612,9 @@
         currentPage = 1;
 
         const filters = { project };
-        if (source) filters.channels = [source];
+        if (source) {
+          filters.channels = source === 'Unknown' ? ['Unknown', null, undefined] : [source];
+        }
         const pipelineId = document.getElementById('pipeline').value || null;
         currentFilteredOpportunities = applyFilters(
           allOpportunities,
@@ -631,6 +633,7 @@
         modal.show();
       } catch (error) {
         console.error('Error loading lead details:', error);
+        document.getElementById('leadDetailsTableBody').innerHTML = '<tr><td colspan="10">Error loading data</td></tr>';
       } finally {
         hideModalSpinner();
       }
@@ -662,7 +665,7 @@
         const projectSourceCounts = {};
 
         opportunities.forEach(op => {
-          const project = op.project;
+          const project = op.project || 'N/A';
           const source = op.source || 'Unknown';
           allProjects.add(project);
           if (!projectSourceCounts[project]) projectSourceCounts[project] = {};
@@ -692,7 +695,7 @@
         tbody.innerHTML = '';
         let totalOpportunities = 0;
 
-        Object.entries(projectSourceCounts).forEach(([project, sources]) => {
+        Object.entries(projectSourceCounts).sort(([a], [b]) => a.localeCompare(b)).forEach(([project, sources]) => {
           const total = Object.values(sources).reduce((a, b) => a + b, 0);
           totalOpportunities += total;
 
@@ -706,7 +709,7 @@
           projectRow.onclick = () => showLeadDetails(project);
           tbody.appendChild(projectRow);
 
-          Object.entries(sources).forEach(([source, count]) => {
+          Object.entries(sources).sort(([a], [b]) => a.localeCompare(b)).forEach(([source, count]) => {
             const sourceRow = document.createElement('tr');
             sourceRow.className = `source-row ${hiddenProjects.has(project) ? 'hidden' : ''}`;
             sourceRow.innerHTML = `
@@ -747,78 +750,82 @@
     }
 
     async function initWidget() {
-      const { config, locationId: locId } = await loadConfig();
-      if (!config) {
-        document.querySelector('#opportunitiesTable tbody').innerHTML = '<tr><td colspan="3">No configuration available for this location.</td></tr>';
-        hideSpinner();
-        return;
-      }
-      CONFIG = config;
-      locationId = locId;
-
-      const users = await fetchAllUsers(CONFIG, locationId);
-      usersMap = new Map(users.map(user => [user.id, user.name]));
-
-      pipelines = await fetchPipelines(CONFIG, locationId);
-      updatePipelines();
-
-      const pipelineSelect = document.getElementById('pipeline');
-      if (pipelines.length > 0) {
-        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
-          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
-        } else {
-          pipelineSelect.value = pipelines[0].id;
+      showSpinner();
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) {
+          document.querySelector('#opportunitiesTable tbody').innerHTML = '<tr><td colspan="3">No configuration available for this location.</td></tr>';
+          return;
         }
-      }
+        CONFIG = config;
+        locationId = locId;
 
-      dateRangePicker = flatpickr('#modalDateRange', {
-        mode: "range",
-        dateFormat: "Y/m/d",
-        onClose: async (dates) => {
-          if (dates.length === 2) {
-            selectedStartDate = dates[0];
-            selectedEndDate = dates[1];
-            console.log('Date range selected:', selectedStartDate, selectedEndDate);
+        const users = await fetchAllUsers(CONFIG, locationId);
+        usersMap = new Map(users.map(user => [user.id, user.name]));
+
+        pipelines = await fetchPipelines(CONFIG, locationId);
+        updatePipelines();
+
+        const pipelineSelect = document.getElementById('pipeline');
+        if (pipelines.length > 0) {
+          if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+            pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+          } else {
+            pipelineSelect.value = pipelines[0].id;
+          }
+        }
+
+        dateRangePicker = flatpickr('#modalDateRange', {
+          mode: "range",
+          dateFormat: "Y/m/d",
+          onClose: async (dates) => {
+            if (dates.length === 2) {
+              selectedStartDate = dates[0];
+              selectedEndDate = dates[1];
+              console.log('Date range selected:', selectedStartDate, selectedEndDate);
+              updateDateRangeButton();
+              await renderTable();
+              bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+            }
+          }
+        });
+
+        document.getElementById('openDateModal').addEventListener('click', () => {
+          const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+          modal.show();
+        });
+
+        document.querySelectorAll('.quick-selections button').forEach(button => {
+          button.addEventListener('click', async function() {
+            const range = this.dataset.range;
+            const dates = getDateRange(range);
+            dateRangePicker.setDate([dates.start, dates.end]);
+            selectedStartDate = dates.start;
+            selectedEndDate = dates.end;
+            console.log('Quick selection:', range, selectedStartDate, selectedEndDate);
             updateDateRangeButton();
             await renderTable();
             bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
-          }
-        }
-      });
+          });
+        });
 
-      document.getElementById('openDateModal').addEventListener('click', () => {
-        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
-        modal.show();
-      });
-
-      document.querySelectorAll('.quick-selections button').forEach(button => {
-        button.addEventListener('click', async function() {
-          const range = this.dataset.range;
-          const dates = getDateRange(range);
-          dateRangePicker.setDate([dates.start, dates.end]);
-          selectedStartDate = dates.start;
-          selectedEndDate = dates.end;
-          console.log('Quick selection:', range, selectedStartDate, selectedEndDate);
+        document.getElementById('clearFilter').addEventListener('click', async () => {
+          dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          console.log('Filter cleared');
           updateDateRangeButton();
           await renderTable();
           bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
         });
-      });
 
-      document.getElementById('clearFilter').addEventListener('click', async () => {
-        dateRangePicker.clear();
-        selectedStartDate = null;
-        selectedEndDate = null;
-        console.log('Filter cleared');
-        updateDateRangeButton();
+        document.getElementById('pipeline').addEventListener('change', renderTable);
+        setupPaginationListeners();
         await renderTable();
-        bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
-      });
-
-      document.getElementById('pipeline').addEventListener('change', renderTable);
-      setupPaginationListeners();
-      await renderTable();
-      setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+      } finally {
+        hideSpinner();
+      }
     }
 
     async function backgroundRefresh() {
