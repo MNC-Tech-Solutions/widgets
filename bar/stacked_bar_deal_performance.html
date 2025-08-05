@@ -115,30 +115,48 @@
           <div class="spinner"></div>
       </div>
       <div class="chart-container p-6" id="chart-container-1" style="display: none;">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-          <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-          Team 1 (KL Kyra)
-        </h2>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+            <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+            Team 1 (KL Kyra)
+          </h2>
+          <button onclick="downloadChart('chart-1', 'Team 1 (KL Kyra) Opportunities')" 
+                  class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            Download
+          </button>
+        </div>
         <div class="chart-wrapper">
           <canvas id="chart-1" height="300px"></canvas>
         </div>
       </div>
       
       <div class="chart-container p-6" id="chart-container-2" style="display: none;">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-          <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-          Team 2 (OCR Agent)
-        </h2>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+            Team 2 (OCR Agent)
+          </h2>
+          <button onclick="downloadChart('chart-2', 'Team 2 (OCR Agent) Opportunities')" 
+                  class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            Download
+          </button>
+        </div>
         <div class="chart-wrapper">
           <canvas id="chart-2" height="300px"></canvas>
         </div>
       </div>
       
       <div class="chart-container p-6" id="chart-container-3" style="display: none;">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-          <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-          Team 3 (Priya Kuantan)
-        </h2>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+            <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+            Team 3 (Priya Kuantan)
+          </h2>
+          <button onclick="downloadChart('chart-3', 'Team 3 (Priya Kuantan) Opportunities')" 
+                  class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            Download
+          </button>
+        </div>
         <div class="chart-wrapper">
           <canvas id="chart-3" height="300px"></canvas>
         </div>
@@ -185,6 +203,20 @@
 
     function hideMainSpinner() {
         document.getElementById('mainLoadingOverlay').style.display = 'none';
+    }
+
+    // Function to download chart as PNG
+    function downloadChart(canvasId, chartTitle) {
+      const canvas = document.getElementById(canvasId);
+      if (canvas) {
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `${chartTitle}.png`;
+        link.click();
+      } else {
+        console.error(`Canvas with ID ${canvasId} not found`);
+        alert('Error: Chart not found for download');
+      }
     }
 
     // Show chart container based on teamId, or all if teamId is invalid/missing
@@ -449,7 +481,8 @@
       btnSpinner.classList.add('hidden');
     }
 
-    window.generateTeamCharts = generateTeamCharts; // Expose function for button
+    window.generateTeamCharts = generateTeamCharts;
+    window.downloadChart = downloadChart;
     window.onload = generateTeamCharts;
   </script>
 </body>
