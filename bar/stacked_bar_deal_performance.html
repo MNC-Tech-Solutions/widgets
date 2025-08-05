@@ -54,6 +54,31 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        animation: spin1 1s linear infinite;
+    }
+    @keyframes spin1 {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -86,7 +111,10 @@
     
     <!-- Charts Section -->
     <div class="space-y-8">
-      <div class="chart-container p-6">
+      <div class="loading-overlay" id="mainLoadingOverlay" style="display: none;">
+          <div class="spinner"></div>
+      </div>
+      <div class="chart-container p-6" id="chart-container-1" style="display: none;">
         <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
           <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
           Team 1 (KL Kyra)
@@ -96,7 +124,7 @@
         </div>
       </div>
       
-      <div class="chart-container p-6">
+      <div class="chart-container p-6" id="chart-container-2" style="display: none;">
         <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
           <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
           Team 2 (OCR Agent)
@@ -106,7 +134,7 @@
         </div>
       </div>
       
-      <div class="chart-container p-6">
+      <div class="chart-container p-6" id="chart-container-3" style="display: none;">
         <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
           <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
           Team 3 (Priya Kuantan)
@@ -138,10 +166,47 @@
       return name.replace(/\s*\([^)]+\)/, '').trim();
     }
 
+    const searchParams = new URLSearchParams(window.location.search);
+    const teamId = searchParams.get("team");
+
     // Store chart instances to update them
     const charts = {};
 
+    // Map teamId to team name and chart container
+    const teamConfig = {
+      '1': { name: 'Team 1 (KL Kyra)', containerId: 'chart-container-1', canvasId: 'chart-1' },
+      '2': { name: 'Team 2 (OCR Agent)', containerId: 'chart-container-2', canvasId: 'chart-2' },
+      '3': { name: 'Team 3 (Priya Kuantan)', containerId: 'chart-container-3', canvasId: 'chart-3' }
+    };
+
+    function showMainSpinner() {
+        document.getElementById('mainLoadingOverlay').style.display = 'flex';
+    }
+
+    function hideMainSpinner() {
+        document.getElementById('mainLoadingOverlay').style.display = 'none';
+    }
+
+    // Show chart container based on teamId, or all if teamId is invalid/missing
+    function updateChartVisibility() {
+      Object.keys(teamConfig).forEach(id => {
+        const container = document.getElementById(teamConfig[id].containerId);
+        if (container) {
+          container.style.display = teamId && teamConfig[teamId] && teamConfig[teamId].containerId === container.id ? 'block' : 'none';
+        }
+      });
+      // If teamId is invalid or missing, show all charts
+      if (!teamId || !teamConfig[teamId]) {
+        Object.keys(teamConfig).forEach(id => {
+          const container = document.getElementById(teamConfig[id].containerId);
+          if (container) container.style.display = 'block';
+        });
+      }
+    }
+
     async function generateTeamCharts() {
+      showMainSpinner();
+
       try {
         // Show loading state
         const generateBtn = document.getElementById('generateBtn');
@@ -188,14 +253,7 @@
           resetButtonState();
           return;
         }
-        const stages = pipeline.stages && pipeline.stages.length > 0
-          ? pipeline.stages.map(s => ({ id: s.id, name: s.name }))
-          : [
-              { id: 'stage1', name: 'New Lead' },
-              { id: 'stage2', name: 'In Progress' },
-              { id: 'stage3', name: 'Won' },
-              { id: 'stage4', name: 'Lost' }
-            ];
+        const stages = pipeline.stages?.length && pipeline.stages.map(s => ({ id: s.id, name: s.name }));
         console.log('Fetched stages (check for Renurture, Prequalified):', stages);
 
         // Fetch users
@@ -249,7 +307,8 @@
         });
         console.log('Processed stage counts:', stageCounts);
 
-        // Generate charts
+        // Generate charts for the selected team or all teams
+        const teamsToRender = teamId && teamConfig[teamId] ? [teamConfig[teamId].name] : Object.keys(teams);
         const colors = [
           'rgba(59, 130, 246, 0.8)',   // Blue (New Lead)
           'rgba(16, 185, 129, 0.8)',    // Green (Won)
@@ -261,7 +320,9 @@
           'rgba(244, 63, 94, 0.8)'      // Pink (additional stage)
         ];
 
-        Object.keys(teams).forEach((team, teamIndex) => {
+        teamsToRender.forEach((team, index) => {
+          const teamIndex = Object.keys(teams).indexOf(team);
+          const canvasId = `chart-${teamIndex + 1}`;
           const chartData = {
             type: 'bar',
             data: {
@@ -355,7 +416,6 @@
             }
           };
 
-          const canvasId = `chart-${teamIndex + 1}`;
           const canvas = document.getElementById(canvasId);
           if (canvas) {
             charts[canvasId] = new Chart(canvas.getContext('2d'), chartData);
@@ -364,6 +424,9 @@
           }
         });
 
+        // Update chart visibility
+        updateChartVisibility();
+
         // Update button state
         resetButtonState();
         
@@ -371,6 +434,8 @@
         console.error('Error generating charts:', error);
         alert('Error generating charts. Please check console for details.');
         resetButtonState();
+      } finally {
+        hideMainSpinner();
       }
     }
 
