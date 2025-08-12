@@ -23,6 +23,7 @@
         }
         
         .dashboard-header {
+            display: none;
             background: linear-gradient(120deg, var(--primary), var(--secondary));
             color: white;
             border-radius: 16px;
@@ -213,24 +214,6 @@
             letter-spacing: 1px;
         }
         
-        .back-button {
-            background: linear-gradient(120deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 10px 25px;
-            font-weight: 600;
-            margin: 30px auto 10px;
-            display: block;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
-        }
-        
-        .back-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
-        }
-        
         .search-container {
             background: white;
             border-radius: 50px;
@@ -284,16 +267,6 @@
             font-size: 3rem;
             margin-bottom: 15px;
             color: #ced4da;
-        }
-        
-        .pill {
-            background: rgba(67, 97, 238, 0.1);
-            color: var(--primary);
-            border-radius: 50px;
-            padding: 3px 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 8px;
         }
         
         .progress-tooltip {
@@ -358,183 +331,183 @@
         }
 
         .modal-dialog {
-      max-width: 90%;
-      margin: 1.75rem auto;
-    }
+            max-width: 90%;
+            margin: 1.75rem auto;
+        }
     
-    .modal-content {
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-      background: #fff;
-    }
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            background: #fff;
+        }
     
-    .modal-header {
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      padding: 15px 25px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        .modal-header {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
     
-    .modal-title {
-      font-size: 20px;
-      font-weight: 600;
-    }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
     
-    .modal-header .btn {
-      font-size: 0.9rem;
-      padding: 0.5rem 1rem;
-    }
+        .modal-header .btn {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
     
-    .modal-body {
-      padding: 20px 30px;
-      position: relative;
-    }
+        .modal-body {
+            padding: 20px 30px;
+            position: relative;
+        }
     
-    .modal-body .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
+        .modal-body .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
     
-    .modal-body h6 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #374151;
-      margin: 0;
-    }
+        .modal-body h6 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+        }
     
-    .table-container {
-      max-height: 95%;
-      overflow-y: auto;
-      overflow-x: auto;
-      position: relative;
-    }
+        .table-container {
+            max-height: 95%;
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+        }
     
-    .table {
-      border-collapse: separate;
-      border-spacing: 0;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      width: 100%;
-      margin-bottom: 0;
-    }
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 0;
+        }
     
-    .table thead th {
-      background: #f8f9fa;
-      color: #374151;
-      font-weight: 600;
-      font-size: 13px;
-      padding: 10px;
-      border-bottom: 2px solid #e5e7eb;
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
+        .table thead th {
+            background: #f8f9fa;
+            color: #374151;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
     
-    .table tbody tr {
-      transition: background 0.2s ease;
-    }
+        .table tbody tr {
+            transition: background 0.2s ease;
+        }
     
-    .table tbody tr:hover {
-      background: #f1f5f9;
-    }
+        .table tbody tr:hover {
+            background: #f1f5f9;
+        }
     
-    .table tbody td {
-      font-size: 13px;
-      padding: 10px;
-      border-top: 1px solid #e5e7eb;
-      color: #4b5563;
-      white-space: nowrap;
-    }
+        .table tbody td {
+            font-size: 13px;
+            padding: 10px;
+            border-top: 1px solid #e5e7eb;
+            color: #4b5563;
+            white-space: nowrap;
+        }
     
-    .table-container::-webkit-scrollbar {
-      width: 12px;
-      height: 12px;
-    }
+        .table-container::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
     
-    .table-container::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 6px;
-    }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
     
-    .table-container::-webkit-scrollbar-thumb {
-      background: #adb5bd;
-      border-radius: 6px;
-    }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 6px;
+        }
     
-    .table-container::-webkit-scrollbar-thumb:hover {
-      background: #6b7280;
-    }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
     
-    .pagination-section {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
+        .pagination-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
     
-    .pagination-info {
-      font-size: 0.95rem;
-      color: #6b7280;
-    }
+        .pagination-info {
+            font-size: 0.95rem;
+            color: #6b7280;
+        }
     
-    .pagination-buttons .btn {
-      padding: 0.5rem 1.5rem;
-      font-size: 0.95rem;
-      font-weight: 500;
-      border-radius: 6px;
-      transition: all 0.2s ease;
-    }
+        .pagination-buttons .btn {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
     
-    .pagination-buttons .btn-outline-primary {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
+        .pagination-buttons .btn-outline-primary {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
     
-    .pagination-buttons .btn-outline-primary:hover {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
+        .pagination-buttons .btn-outline-primary:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
     
-    .pagination-buttons .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+        .pagination-buttons .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     
-    .loading-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
     
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         
         @media (max-width: 768px) {
             .header-row, .bar-row {
@@ -600,8 +573,17 @@
                             </select>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center my-">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-auto">
+                            <label for="category-filter" class="col-form-label">Filter by Source Category</label>
+                        </div>
+                        <div class="col">
+                            <select id="category-filter" class="form-select">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
                         <h2 class="card-title mb-0">Source Overview</h2>
                         <div class="d-flex">
                             <button class="btn btn-sm btn-outline-primary me-2" id="export-btn">
@@ -612,7 +594,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="header-row">
                         <div class="header-label">Source</div>
                         <div class="header-container"></div>
@@ -621,108 +602,85 @@
                                 <i class="bi bi-arrow-down"></i>
                             </button>
                         </div>
-                        <div class="header-date">Created 
+                        <div class="header-date">Last Lead Entry 
                             <button class="sort-button" data-sort="date">
                                 <i class="bi bi-arrow-up"></i>
                             </button>
                         </div>
                     </div>
-                    <div id="sources-list"></div>
+                    <div id="sources-list">
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
                     <div class="pagination-container">
                         <ul class="pagination" id="pagination"></ul>
                     </div>
-                </div>
-                
-                <div id="categories-container" style="display: none;">
-                    <h2 id="source-title" class="card-title text-center mb-4">Categories for <span class="text-primary"></span></h2>
-                    
-                    <div class="header-row">
-                        <div class="header-label">Category</div>
-                        <div class="header-container"></div>
-                        <div class="header-count">Count 
-                            <button class="sort-button" data-sort="count">
-                                <i class="bi bi-arrow-down"></i>
-                            </button>
-                        </div>
-                        <div class="header-date">Created 
-                            <button class="sort-button" data-sort="date">
-                                <i class="bi bi-arrow-up"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div id="categories-list"></div>
-                    
-                    <button class="btn back-button" onclick="backToSources()">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Sources
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="opportunitiesModalLabel">Records</h5>
-          <div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-        </div>
-        <div class="modal-body">
-          <div class="header-row">
-            <h6 id="modalTableTitle">Records</h6>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
-          </div>
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Opportunity ID</th>
-                  <th>Opportunity Name</th>
-                  <th>Primary Contact Name</th>
-                  <th>Source</th>
-                  <th>Assigned User</th>
-                  <th>Status</th>
-                  <th>Phone Number</th>
-                  <th>Lead Value</th>
-                  <th>Project</th>
-                  <th>Contact Created</th>
-                  <th>Team</th>
-                </tr>
-              </thead>
-              <tbody id="opportunitiesTableBody">
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination-section d-flex justify-content-between align-items-center">
-            <span class="pagination-info" id="paginationInfo">Showing 1 to 0 of 0</span>
-            <div class="pagination-buttons">
-              <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
-              <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="opportunitiesModalLabel">Records</h5>
+                    <div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="header-row">
+                        <h6 id="modalTableTitle">Records</h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Opportunity ID</th>
+                                    <th>Opportunity Name</th>
+                                    <th>Primary Contact Name</th>
+                                    <th>Source</th>
+                                    <th>Assigned User</th>
+                                    <th>Status</th>
+                                    <th>Phone Number</th>
+                                    <th>Lead Value</th>
+                                    <th>Project</th>
+                                    <th>Contact Created</th>
+                                    <th>Team</th>
+                                </tr>
+                            </thead>
+                            <tbody id="opportunitiesTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-section d-flex justify-content-between align-items-center">
+                        <span class="pagination-info" id="paginationInfo">Showing 1 to 0 of 0</span>
+                        <div class="pagination-buttons">
+                            <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
+                            <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+                        </div>
+                    </div>
+                    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div class="loading-overlay" id="loadingOverlay" style="display: none;">
-            <div class="spinner"></div>
-          </div>
         </div>
-      </div>
     </div>
-  </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module">
         import * as ghl from '../ghlData.js';
 
         let sourceData = {};
-        let currentSource = null;
         let opportunities = [];
-        let sourceSortBy = 'count';
-        let sourceSortOrder = 'desc';
-        let categorySortBy = 'count';
-        let categorySortOrder = 'desc';
+        let allOpportunities = [];
+        let sortBy = 'count';
+        let sortOrder = 'desc';
         let selectedPipelineId = null;
+        let selectedCategory = '';
         let config = null;
         let locationId = null;
         let currentPage = 1;
@@ -733,24 +691,40 @@
         let currentOpportunities = [];
 
         function showModalSpinner() {
-      document.getElementById('loadingOverlay').style.display = 'flex';
-    }
-    function hideModalSpinner() {
-      document.getElementById('loadingOverlay').style.display = 'none';
-    }
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideModalSpinner() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
 
         async function init() {
+            const sourcesList = document.getElementById('sources-list');
+            sourcesList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+
             const loadResult = await ghl.loadConfig();
             config = loadResult.config;
             locationId = loadResult.locationId;
             if (!config || !locationId) {
                 console.error('Failed to load config or locationId');
+                sourcesList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <h5>Error</h5>
+                        <p>Unable to load configuration</p>
+                    </div>`;
                 return;
             }
 
             const pipelines = await ghl.fetchPipelines(config, locationId);
             if (pipelines.length === 0) {
                 console.error('No pipelines found');
+                sourcesList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <h5>No Pipelines</h5>
+                        <p>No pipelines available</p>
+                    </div>`;
                 return;
             }
 
@@ -759,7 +733,6 @@
 
             populatePipelineSelect(pipelines);
 
-            // Select the first pipeline by default
             selectedPipelineId = pipelines[0].id;
             document.getElementById('pipeline-select').value = selectedPipelineId;
             await loadOpportunities();
@@ -776,12 +749,37 @@
             });
         }
 
+        function populateCategoryFilter() {
+            const select = document.getElementById('category-filter');
+            select.innerHTML = '<option value="">All Categories</option>';
+            const uniqueCategories = [...new Set(allOpportunities.map(op => op.sourceCategory || 'Unknown'))].sort();
+            uniqueCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+        }
+
         async function loadOpportunities() {
+            const sourcesList = document.getElementById('sources-list');
+            sourcesList.innerHTML = `<div class="loading-spinner"><div class="spinner"></div></div>`;
+
             if (!selectedPipelineId) return;
-            opportunities = await ghl.fetchAllOpportunities(config, locationId, selectedPipelineId);
+            allOpportunities = await ghl.fetchAllOpportunities(config, locationId, selectedPipelineId);
+            populateCategoryFilter();
+            filterOpportunities();
+        }
+
+        function filterOpportunities() {
+            opportunities = allOpportunities;
+            if (selectedCategory) {
+                opportunities = opportunities.filter(op => op.sourceCategory === selectedCategory);
+            }
             sourceData = aggregateData(opportunities);
-            currentPage = 1; // Reset to first page on new data load
+            currentPage = 1;
             renderSources();
+            updateStats();
         }
 
         function aggregateData(opps) {
@@ -789,21 +787,12 @@
             opps.forEach(op => {
                 const source = op.source || 'Unknown';
                 if (!map[source]) {
-                    map[source] = { count: 0, lastCreated: new Date(0), categories: {} };
+                    map[source] = { count: 0, lastCreated: new Date(0) };
                 }
                 map[source].count++;
                 const created = new Date(op.createdAt);
                 if (created > map[source].lastCreated) {
                     map[source].lastCreated = created;
-                }
-
-                const cat = op.sourceCategory || 'Unknown';
-                if (!map[source].categories[cat]) {
-                    map[source].categories[cat] = { count: 0, lastCreated: new Date(0) };
-                }
-                map[source].categories[cat].count++;
-                if (created > map[source].categories[cat].lastCreated) {
-                    map[source].categories[cat].lastCreated = created;
                 }
             });
             return map;
@@ -813,15 +802,6 @@
             return Object.entries(sourceData).map(([source, data]) => ({
                 source,
                 count: data.count,
-                lastCreated: data.lastCreated,
-                categories: data.categories
-            }));
-        }
-
-        function getCategoryArray(categories) {
-            return Object.entries(categories).map(([cat, data]) => ({
-                category: cat,
-                count: data.count,
                 lastCreated: data.lastCreated
             }));
         }
@@ -829,7 +809,6 @@
         function sortArray(arr, by, order) {
             return arr.sort((a, b) => {
                 let valA, valB;
-                
                 if (by === 'count') {
                     valA = a.count;
                     valB = b.count;
@@ -837,7 +816,6 @@
                     valA = a.lastCreated.getTime();
                     valB = b.lastCreated.getTime();
                 }
-                
                 return order === 'desc' ? valB - valA : valA - valB;
             });
         }
@@ -873,42 +851,26 @@
             items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'bar-row';
-                
-                if (item.source) {
-                    row.onclick = () => showCategories(item.source);
-                } else {
-                    row.onclick = () => showOpportunitiesModal(currentSource, item.category);
-                }
+                row.onclick = () => showOpportunitiesModal(item.source);
                 
                 const label = document.createElement('div');
                 label.className = 'bar-label';
-                
-                let iconClass = 'folder';
-                if (item.source) {
-                    const icons = {
-                        'Website': 'globe',
-                        'Facebook Ads': 'facebook',
-                        'Google Ads': 'google',
-                        'LinkedIn': 'linkedin',
-                        'Email Campaign': 'envelope',
-                        'Referral': 'person',
-                        'Event': 'megaphone'
-                    };
-                    iconClass = icons[item.source] || 'folder';
-                    label.innerHTML = `
-                        <div class="source-icon">
-                            <i class="bi bi-${iconClass}"></i>
-                        </div>
-                        ${item.source}
-                    `;
-                } else {
-                    label.innerHTML = `
-                        <div class="source-icon" style="background: linear-gradient(45deg, #6096B4, #93BFCF);">
-                            <i class="bi bi-files"></i>
-                        </div>
-                        ${item.category}
-                    `;
-                }
+                const icons = {
+                    'Website': 'globe',
+                    'Facebook Ads': 'facebook',
+                    'Google Ads': 'google',
+                    'LinkedIn': 'linkedin',
+                    'Email Campaign': 'envelope',
+                    'Referral': 'person',
+                    'Event': 'megaphone'
+                };
+                const iconClass = icons[item.source] || 'folder';
+                label.innerHTML = `
+                    <div class="source-icon">
+                        <i class="bi bi-${iconClass}"></i>
+                    </div>
+                    ${item.source}
+                `;
                 
                 const barContainer = document.createElement('div');
                 barContainer.className = 'bar-container';
@@ -946,13 +908,11 @@
             pagination.innerHTML = '';
             const pageCount = Math.ceil(totalItems / rowsPerPage);
 
-            // Previous button
             const prevItem = document.createElement('li');
             prevItem.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
             prevItem.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">Previous</a>`;
             pagination.appendChild(prevItem);
 
-            // Page numbers
             for (let i = 1; i <= pageCount; i++) {
                 const pageItem = document.createElement('li');
                 pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
@@ -960,7 +920,6 @@
                 pagination.appendChild(pageItem);
             }
 
-            // Next button
             const nextItem = document.createElement('li');
             nextItem.className = `page-item ${currentPage === pageCount ? 'disabled' : ''}`;
             nextItem.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">Next</a>`;
@@ -975,10 +934,9 @@
 
         function renderSources() {
             const sources = getSourceArray();
-            const sortedSources = sortArray(sources, sourceSortBy, sourceSortOrder);
+            const sortedSources = sortArray(sources, sortBy, sortOrder);
             const maxCount = findMaxCount(sortedSources);
 
-            // Apply pagination
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             const paginatedSources = sortedSources.slice(start, end);
@@ -986,78 +944,40 @@
             renderBars('sources-list', paginatedSources, maxCount);
             renderPagination(sortedSources.length);
             
-            // Update sort button states
             document.querySelectorAll('#sources-container .sort-button').forEach(btn => {
                 btn.classList.remove('active');
-                if (btn.dataset.sort === sourceSortBy) {
+                if (btn.dataset.sort === sortBy) {
                     btn.classList.add('active');
-                    btn.innerHTML = sourceSortOrder === 'desc' ? 
+                    btn.innerHTML = sortOrder === 'desc' ? 
                         '<i class="bi bi-arrow-down"></i>' : 
                         '<i class="bi bi-arrow-up"></i>';
                 }
             });
-        }
-        
-        function sortSourcesBy(field) {
-            if (sourceSortBy === field) {
-                sourceSortOrder = sourceSortOrder === 'desc' ? 'asc' : 'desc';
-            } else {
-                sourceSortBy = field;
-                sourceSortOrder = 'desc';
-            }
-            currentPage = 1; // Reset to first page on sort
-            renderSources();
-        }
-        
-        function renderCategories() {
-            if (!currentSource) return;
-            
-            const categories = getCategoryArray(sourceData[currentSource].categories);
-            const sortedCategories = sortArray(categories, categorySortBy, categorySortOrder);
-            const maxCount = findMaxCount(sortedCategories);
-            renderBars('categories-list', sortedCategories, maxCount);
-            
-            // Update sort button states
-            document.querySelectorAll('#categories-container .sort-button').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.sort === categorySortBy) {
-                    btn.classList.add('active');
-                    btn.innerHTML = categorySortOrder === 'desc' ? 
-                        '<i class="bi bi-arrow-down"></i>' : 
-                        '<i class="bi bi-arrow-up"></i>';
-                }
-            });
-        }
-        
-        function sortCategoriesBy(field) {
-            if (categorySortBy === field) {
-                categorySortOrder = categorySortOrder === 'desc' ? 'asc' : 'desc';
-            } else {
-                categorySortBy = field;
-                categorySortOrder = 'desc';
-            }
-            renderCategories();
-        }
-        
-        function showCategories(source) {
-            currentSource = source;
-            document.getElementById('source-title').innerHTML = `Categories for <span class="text-primary">${source}</span>`;
-            document.getElementById('sources-container').style.display = 'none';
-            document.getElementById('categories-container').style.display = 'block';
-            renderCategories();
-        }
-        
-        function backToSources() {
-            document.getElementById('sources-container').style.display = 'block';
-            document.getElementById('categories-container').style.display = 'none';
         }
 
-        function showOpportunitiesModal(source, category = null) {
+        function sortSourcesBy(field) {
+            if (sortBy === field) {
+                sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                sortBy = field;
+                sortOrder = 'desc';
+            }
+            currentPage = 1;
+            renderSources();
+        }
+
+        function updateStats() {
+            document.getElementById('total-opps-value').textContent = opportunities.length;
+            document.getElementById('unique-sources-value').textContent = Object.keys(sourceData).length;
+            document.querySelector('.dashboard-header').classList.remove('d-none');
+        }
+
+        function showOpportunitiesModal(source) {
             showModalSpinner();
-            const filtered = opportunities.filter(op => op.source === source && (!category || op.sourceCategory === category));
+            let filtered = opportunities.filter(op => op.source === source);
             currentOpportunities = filtered;
             modalCurrentPage = 1;
-            const title = `Leads for ${source}` + (category ? ` - ${category}` : '');
+            const title = `Leads for ${source}${selectedCategory ? ` - Category: ${selectedCategory}` : ''}`;
             document.getElementById('opportunitiesModalLabel').textContent = title;
             document.getElementById('modalTableTitle').textContent = title;
             renderModalTable();
@@ -1081,17 +1001,17 @@
                 const createdAtFormatted = ghl.formatDateTimeWithOffset(op.createdAt);
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                  <td>${op.id || 'N/A'}</td>
-                  <td>${op.name || 'N/A'}</td>
-                  <td>${op.contact?.name || 'N/A'}</td>
-                  <td>${op.source || 'N/A'}</td>
-                  <td>${assignedUserName}</td>
-                  <td>${op.status || 'N/A'}</td>
-                  <td>${op.contact?.phone || 'N/A'}</td>
-                  <td>${op.monetaryValue || 0}</td>
-                  <td>${op.project || 'N/A'}</td>
-                  <td>${createdAtFormatted}</td>
-                  <td>${op.team || 'N/A'}</td>
+                    <td>${op.id || 'N/A'}</td>
+                    <td>${op.name || 'N/A'}</td>
+                    <td>${op.contact?.name || 'N/A'}</td>
+                    <td>${op.source || 'N/A'}</td>
+                    <td>${assignedUserName}</td>
+                    <td>${op.status || 'N/A'}</td>
+                    <td>${op.contact?.phone || 'N/A'}</td>
+                    <td>${op.monetaryValue || 0}</td>
+                    <td>${op.project || 'N/A'}</td>
+                    <td>${createdAtFormatted}</td>
+                    <td>${op.team || 'N/A'}</td>
                 `;
                 tbody.appendChild(row);
             }
@@ -1123,17 +1043,17 @@
                 const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
                 const createdAtFormatted = ghl.formatDateTimeWithOffset(op.createdAt);
                 return [
-                  op.id || 'N/A',
-                  op.name || 'N/A',
-                  op.contact?.name || 'N/A',
-                  op.source || 'N/A',
-                  assignedUserName,
-                  op.status || 'N/A',
-                  op.contact?.phone || 'N/A',
-                  op.monetaryValue || 0,
-                  op.project || 'N/A',
-                  createdAtFormatted,
-                  op.team || 'N/A'
+                    op.id || 'N/A',
+                    op.name || 'N/A',
+                    op.contact?.name || 'N/A',
+                    op.source || 'N/A',
+                    assignedUserName,
+                    op.status || 'N/A',
+                    op.contact?.phone || 'N/A',
+                    op.monetaryValue || 0,
+                    op.project || 'N/A',
+                    createdAtFormatted,
+                    op.team || 'N/A'
                 ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
             });
 
@@ -1155,21 +1075,28 @@
         document.addEventListener('DOMContentLoaded', function() {
             init();
 
-            // Pipeline select change
             document.getElementById('pipeline-select').addEventListener('change', async (e) => {
                 selectedPipelineId = e.target.value;
-                currentPage = 1; // Reset to first page on pipeline change
+                selectedCategory = '';
+                document.getElementById('category-filter').value = '';
+                currentPage = 1;
                 await loadOpportunities();
             });
 
-            // Refresh button
+            document.getElementById('category-filter').addEventListener('change', (e) => {
+                selectedCategory = e.target.value;
+                currentPage = 1;
+                filterOpportunities();
+            });
+
             document.getElementById('refresh-btn').addEventListener('click', async () => {
                 await ghl.clearIndexedDB();
-                currentPage = 1; // Reset to first page on refresh
+                selectedCategory = '';
+                document.getElementById('category-filter').value = '';
+                currentPage = 1;
                 await loadOpportunities();
             });
 
-            // Export button (simple CSV export for sources)
             document.getElementById('export-btn').addEventListener('click', () => {
                 const sources = getSourceArray();
                 let csv = 'Source,Count,Last Created\n';
@@ -1180,29 +1107,21 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'sources.csv';
+                a.download = `sources_${new Date().toISOString().split('T')[0]}.csv`;
                 a.click();
             });
 
-            // Sort buttons
             document.querySelectorAll('.sort-button').forEach(button => {
                 button.addEventListener('click', function() {
-                    const isSourcesView = document.getElementById('sources-container').style.display !== 'none';
-                    const sortType = this.dataset.sort;
-                    if (isSourcesView) {
-                        sortSourcesBy(sortType);
-                    } else {
-                        sortCategoriesBy(sortType);
-                    }
+                    sortSourcesBy(this.dataset.sort);
                 });
             });
-            
-            // Search functionality
+
             document.getElementById('search-input').addEventListener('input', function(e) {
                 const searchTerm = e.target.value.toLowerCase();
                 const sources = getSourceArray();
                 const filteredSources = sources.filter(s => s.source.toLowerCase().includes(searchTerm));
-                const sortedSources = sortArray(filteredSources, sourceSortBy, sourceSortOrder);
+                const sortedSources = sortArray(filteredSources, sortBy, sortOrder);
                 const start = (currentPage - 1) * rowsPerPage;
                 const end = start + rowsPerPage;
                 const paginatedSources = sortedSources.slice(start, end);
@@ -1210,7 +1129,6 @@
                 renderPagination(filteredSources.length);
             });
 
-            // Modal pagination
             document.getElementById('prevPageBtn').addEventListener('click', () => {
                 if (modalCurrentPage > 1) {
                     modalCurrentPage--;
@@ -1225,12 +1143,8 @@
                 }
             });
         });
-        
-        // Expose functions to global scope for button clicks
+
         window.sortSourcesBy = sortSourcesBy;
-        window.sortCategoriesBy = sortCategoriesBy;
-        window.backToSources = backToSources;
-        window.showCategories = showCategories;
         window.goToPage = goToPage;
     </script>
 </body>
