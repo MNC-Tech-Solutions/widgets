@@ -26,6 +26,7 @@
       flex-wrap: wrap;
       gap: 20px;
       margin-bottom: 25px;
+      align-items: flex-end;
     }
     .control-group {
       display: flex;
@@ -37,6 +38,12 @@
       font-weight: 600;
       color: #374151;
       font-size: 14px;
+    }
+    .form-select, .btn-sm {
+      height: 38px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
     }
     .chart-container {
       max-width: 1000px;
@@ -118,6 +125,10 @@
       gap: 10px;
       margin-top: 10px;
     }
+    .clear-filter-btn {
+      height: 38px;
+      align-self: flex-end;
+    }
   </style>
 </head>
 <body>
@@ -125,11 +136,34 @@
     <div class="controls">
       <div class="control-group">
         <label for="pipeline">Pipeline</label>
-        <select id="pipeline" class="form-select"></select>
+        <select id="pipeline" class="form-select">
+          <option value="">Select Pipeline</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="project">Interested Project</label>
+        <select id="project" class="form-select">
+          <option value="">All Projects</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="sourceCategory">Source Category</label>
+        <select id="sourceCategory" class="form-select">
+          <option value="">All Source Categories</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="source">Source</label>
+        <select id="source" class="form-select">
+          <option value="">All Sources</option>
+        </select>
       </div>
       <div class="control-group">
         <label for="openDateModal">Date Range</label>
         <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+      </div>
+      <div class="control-group">
+        <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
 
@@ -141,6 +175,7 @@
       <div class="spinner"></div>
     </div>
   </div>
+
   <!-- Date Selection Modal -->
   <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -175,10 +210,8 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    // Import necessary functions from ghlData.js
     import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters } from '../ghlData.js';
 
-    // Global variables (unchanged)
     let CONFIG = {};
     let locationId = '';
     let pipelines = [];
@@ -188,9 +221,10 @@
     let colorMap = new Map();
     let hiddenProjects = new Set();
     let allProjects = new Set();
-    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 5 minutes
+    let allSources = [];
+    let allSourceCategories = [];
+    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
-    // Utility functions (unchanged)
     function escapeSingleQuotes(str) {
       return str.replace(/'/g, "\\'");
     }
@@ -217,9 +251,9 @@
       }
     }
 
-    // Update pipelines dropdown (unchanged)
     function updatePipelines() {
       const pipelineSelect = document.getElementById('pipeline');
+      const currentValue = pipelineSelect.value;
       pipelineSelect.innerHTML = '<option value="">Select Pipeline</option>';
       pipelines.forEach(pipeline => {
         const option = document.createElement('option');
@@ -227,9 +261,54 @@
         option.textContent = pipeline.name;
         pipelineSelect.appendChild(option);
       });
+      pipelineSelect.value = currentValue || (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf') ? 'QXOLzVjXSw1VQajFLuzf' : pipelines.length > 0 ? pipelines[0].id : '');
     }
 
-    // Calculate date ranges (unchanged)
+    function updateProjects() {
+      const projectSelect = document.getElementById('project');
+      const currentValue = projectSelect.value;
+      projectSelect.innerHTML = '<option value="">All Projects</option>';
+      allProjects.forEach(project => {
+        if (project && project !== 'N/A') {
+          const option = document.createElement('option');
+          option.value = project;
+          option.textContent = project;
+          projectSelect.appendChild(option);
+        }
+      });
+      projectSelect.value = currentValue || '';
+    }
+
+    function updateSourceCategories() {
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const currentValue = sourceCategorySelect.value;
+      sourceCategorySelect.innerHTML = '<option value="">All Source Categories</option>';
+      allSourceCategories.forEach(category => {
+        if (category && category !== 'N/A') {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          sourceCategorySelect.appendChild(option);
+        }
+      });
+      sourceCategorySelect.value = currentValue || '';
+    }
+
+    function updateSources() {
+      const sourceSelect = document.getElementById('source');
+      const currentValue = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">All Sources</option>';
+      allSources.forEach(source => {
+        if (source && source !== 'N/A' && source.trim() !== '') {
+          const option = document.createElement('option');
+          option.value = source;
+          option.textContent = source;
+          sourceSelect.appendChild(option);
+        }
+      });
+      sourceSelect.value = currentValue || '';
+    }
+
     function getDateRange(range) {
       const today = new Date();
       let start, end;
@@ -270,20 +349,51 @@
       return { start, end };
     }
 
-    // Render sunburst chart (modified to use ghlData.js)
+    function clearAllFilters() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelineSelect.value = locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf') ? 'QXOLzVjXSw1VQajFLuzf' : pipelines.length > 0 ? pipelines[0].id : '';
+      document.getElementById('project').value = '';
+      document.getElementById('sourceCategory').value = '';
+      document.getElementById('source').value = '';
+      dateRangePicker.clear();
+      selectedStartDate = null;
+      selectedEndDate = null;
+      hiddenProjects.clear();
+      updateDateRangeButton();
+      renderTableAndChart();
+    }
+
     async function renderTableAndChart() {
       console.log('Rendering chart with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
       const pipelineId = document.getElementById('pipeline').value || null;
+      const project = document.getElementById('project').value || null;
+      const sourceCategory = document.getElementById('sourceCategory').value || null;
+      const source = document.getElementById('source').value || null;
       showSpinner();
       try {
         const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
-        const opportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, {});
-        const projectSourceCounts = {};
+        allProjects = new Set(allOpportunities.map(op => op.project).filter(p => p && p !== 'N/A'));
+        allSourceCategories = [...new Set(allOpportunities.map(op => op.sourceCategory).filter(sc => sc && sc !== 'N/A'))].sort();
+        allSources = [...new Set(allOpportunities.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+        console.log('All sources:', allSources);
 
+        updateProjects();
+        updateSourceCategories();
+        updateSources();
+
+        const customFields = {
+          project: project,
+          sourceCategory: sourceCategory,
+          channels: source ? [source] : [],
+          sourceCategories: sourceCategory ? [sourceCategory] : []
+        };
+
+        const opportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, customFields);
+
+        const projectSourceCounts = {};
         opportunities.forEach(op => {
-          const project = op.project;
-          const source = op.sourceCategory;
-          allProjects.add(project);
+          const project = op.project || 'N/A';
+          const source = op.sourceCategory || 'N/A';
           if (!projectSourceCounts[project]) projectSourceCounts[project] = {};
           projectSourceCounts[project][source] = (projectSourceCounts[project][source] || 0) + 1;
         });
@@ -302,7 +412,6 @@
           parents.push('');
           values.push(total);
           ids.push(project);
-          
           if (!colorMap.has(project)) {
             colorMap.set(project, colorScale[i % colorScale.length]);
           }
@@ -365,12 +474,12 @@
         Plotly.newPlot('sunburstChart', data, layout);
       } catch (error) {
         console.error('Error rendering chart:', error);
+        document.getElementById('sunburstChart').innerHTML = '<p>Error loading data. Please try again.</p>';
       } finally {
         hideSpinner();
       }
     }
 
-    // Toggle project visibility (unchanged)
     function toggleProject(project) {
       if (hiddenProjects.has(project)) {
         hiddenProjects.delete(project);
@@ -380,9 +489,7 @@
       renderTableAndChart();
     }
 
-    // Initialize widget (modified to use ghlData.js)
     async function initWidget() {
-      // Load config and locationId using ghlData.js
       const { config, locationId: locId } = await loadConfig();
       if (!config) {
         document.getElementById('sunburstChart').innerHTML = '<p>No configuration available for this location.</p>';
@@ -395,10 +502,9 @@
       pipelines = await fetchPipelines(CONFIG, locationId);
       updatePipelines();
 
-      // Preselect the first pipeline if available
       const pipelineSelect = document.getElementById('pipeline');
       if (pipelines.length > 0) {
-         if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
           pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
         } else {
           pipelineSelect.value = pipelines[0].id;
@@ -418,7 +524,6 @@
             bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
           }
         }
-        
       });
 
       document.getElementById('openDateModal').addEventListener('click', () => {
@@ -444,13 +549,21 @@
         dateRangePicker.clear();
         selectedStartDate = null;
         selectedEndDate = null;
-        console.log('Filter cleared');
+        console.log('Date filter cleared');
         updateDateRangeButton();
         await renderTableAndChart();
         bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
       });
 
       document.getElementById('pipeline').addEventListener('change', renderTableAndChart);
+      document.getElementById('project').addEventListener('change', renderTableAndChart);
+      document.getElementById('sourceCategory').addEventListener('change', renderTableAndChart);
+      document.getElementById('source').addEventListener('change', () => {
+        console.log('Source filter changed:', document.getElementById('source').value);
+        renderTableAndChart();
+      });
+      document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+
       await renderTableAndChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
     }
