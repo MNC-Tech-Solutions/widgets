@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHL Funnel Widget</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --funnel-1: #91aec4;
+      --funnel-2: #b7d0e1;
+      --funnel-3: #cadeed;
+      --funnel-4: #dbecf4;
+      --funnel-grey: #e5e7eb;
+      --text: #374151;
+      --border: #d1d5db;
+      --background: #f8fafc;
+    }
+    
+    body {
+      font-family: 'Cem Seui', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: white;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .widget {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 15px;
+      position: relative;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+    
+    label {
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    select, input[type="text"], input[type="date"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    
+    select:focus, input[type="text"]:focus, input[type="date"]:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    
+    select[multiple] {
+      padding: 0;
+    }
+    
+    .choices {
+      margin-bottom: 0;
+    }
+    
+    .choices__inner {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      min-height: 38px;
+      max-height: 100px;
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .choices__inner::-webkit-scrollbar {
+      display: none;
+    }
+
+    .choices__list--multiple .choices__item {
+      background-color: var(--primary);
+      border: 1px solid var(--primary-dark);
+      color: white;
+      font-size: 12px;
+      padding: 2px 8px;
+      margin: 2px;
+      line-height: 1.4;
+      border-radius: 4px;
+    }
+    
+    .choices__list--dropdown {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto !important;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .choices__list--dropdown::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+      background-color: var(--funnel-grey);
+    }
+    
+    #funnel-container {
+      width: 100%;
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: flex-start;
+    }
+    
+    .funnel-card {
+      flex: 0 0 calc(50% - 20px);
+      min-width: 600px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      background: white;
+      overflow: hidden;
+    }
+    
+    .funnel-card .card-header {
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 15px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .funnel-card .card-body {
+      padding: 15px;
+    }
+    
+    rect, path {
+      cursor: pointer;
+      transition: opacity 0.2s ease, fill 0.2s ease;
+    }
+    
+    rect:hover, path:hover {
+      opacity: 0.9;
+    }
+    
+    .modal-dialog {
+      max-width: 90%;
+      margin: 1.75rem auto;
+    }
+    
+    .modal-content {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      background: #fff;
+    }
+    
+    .modal-header {
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    
+    .modal-header .btn {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+    }
+    
+    .modal-body {
+      padding: 20px 30px;
+      position: relative;
+    }
+    
+    .modal-body .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .modal-body h6 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+    
+    .table-container {
+      max-height: 95%;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+    }
+    
+    .table {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      width: 100%;
+      margin-bottom: 0;
+    }
+    
+    .table thead th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border-bottom: 2px solid #e5e7eb;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    
+    .table tbody tr {
+      transition: background 0.2s ease;
+    }
+    
+    .table tbody tr:hover {
+      background: #f1f5f9;
+    }
+    
+    .table tbody td {
+      font-size: 13px;
+      padding: 10px;
+      border-top: 1px solid #e5e7eb;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    
+    .table-container::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+      background: #adb5bd;
+      border-radius: 6px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+    
+    .pagination-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .pagination-info {
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+    
+    .pagination-buttons .btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .pagination-buttons .btn-outline-primary {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    
+    .pagination-buttons .btn-outline-primary:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    .pagination-buttons .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .widget-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    #dateSelectionModal .modal-dialog { max-width: 650px; }
+    #dateSelectionModal .quick-selections { margin-top: 10px; }
+    #dateSelectionModal .quick-selections button { margin-right: 5px; margin-bottom: 5px; }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+      justify-content: flex-end;
+    }
+    
+    .button-group .btn {
+      flex: 1;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+    
+    @media (max-width: 768px) {
+      .button-group .btn {
+        max-width: 120px;
+        font-size: 12px;
+      }
+      .funnel-card {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="container-fluid">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="pipeline">Pipeline</label>
+            <select id="pipeline" class="form-select"></select>
+          </div>
+        </div>
+        <div class="col-md-2 d-none">
+          <div class="control-group">
+            <label for="campaign">Campaign</label>
+            <select id="campaign" class="form-select">
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="sourceCategory">Source Category</label>
+            <select id="sourceCategory" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="channel">Source</label>
+            <select id="channel" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="control-group">
+            <label for="agent">Agent</label>
+            <select id="agent" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6" id="teamFilter">
+          <div class="control-group">
+            <label for="team">Assigned Team</label>
+            <select id="team" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row g-3 mt-1">
+        <div class="col-md-12">
+          <div class="control-group w-100">
+            <div class="button-group">
+              <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
+              <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+              <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="funnel-container"></div>
+    <div class="widget-loading-overlay" id="widgetLoadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modalDateRange" class="form-label">Date Range</label>
+            <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+          </div>
+          <div class="quick-selections">
+            <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+          <button type="button" class="btn btn-primary" id="doneButton">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="opportunitiesModal" tabindex="-1" aria-labelledby="opportunitiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="opportunitiesModalLabel">Records</h5>
+          <div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="header-row">
+            <h6>Funnel</h6>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button>
+          </div>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Opportunity ID</th>
+                  <th>Opportunity Name</th>
+                  <th>Primary Contact Name</th>
+                  <th>Source</th>
+                  <th>Assigned User</th>
+                  <th>Status</th>
+                  <th>Phone Number</th>
+                  <th>Lead Value</th>
+                  <th>Project</th>
+                  <th>Contact Created</th>
+                  <th>Team</th>
+                </tr>
+              </thead>
+              <tbody id="opportunitiesTableBody">
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination-section d-flex justify-content-between align-items-center">
+            <span class="pagination-info" id="paginationInfo">Showing 1 to 0 of 0</span>
+            <div class="pagination-buttons">
+              <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
+              <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+            </div>
+          </div>
+          <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script type="module">
+    import {
+      loadConfig,
+      fetchPipelines,
+      fetchAllUsers,
+      fetchAllOpportunities,
+      fetchNewOpportunities,
+      applyFilters,
+      formatDateTimeWithOffset,
+      clearIndexedDB
+    } from '../ghlData.js';
+
+    let CONFIG = {};
+    let locationId = '';
+    let pipelines = [];
+    let currentOpportunities = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let usersMap = new Map();
+    let sourcesSet = new Set();
+    let sourceCategoriesSet = new Set();
+    let teamsSet = new Set();
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+    let sourceCategoryToSources = {};
+    let sourceToCategories = {};
+    let choicesInstances = {};
+    const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
+    const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
+
+    function showWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'flex';
+    }
+    function hideWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'none';
+    }
+
+    function showModalSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+    function hideModalSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      showWidgetSpinner();
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) {
+          document.getElementById('funnel-container').innerHTML = '<p>No configuration available for this location.</p>';
+          return;
+        }
+        CONFIG = config;
+        locationId = locId;
+
+        await initWidget();
+        setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        updateHeight();
+      } finally {
+        hideWidgetSpinner();
+      }
+    });
+
+    async function backgroundRefresh() {
+      console.log('Background refresh started');
+      try {
+        const pipelineId = document.getElementById('pipeline').value;
+        if (pipelineId) {
+          const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
+          if (newOpps.length > 0) {
+            console.log('New opportunities found, updating chart');
+            await updateChannels(pipelineId);
+            await renderFunnel();
+          } else {
+            console.log('No new opportunities');
+          }
+        }
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
+    }
+
+    async function initWidget() {
+      if (locationId !== 'rsdW1sEFWbzzULIapmdQ') {
+        document.getElementById('teamFilter').classList.add('d-none');
+      }
+
+      const pipelineSelect = document.getElementById('pipeline');
+      const campaignSelect = document.getElementById('campaign');
+      const channelSelect = document.getElementById('channel');
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const agentSelect = document.getElementById('agent');
+      const teamSelect = document.getElementById('team');
+
+      const createChoicesInstance = (selectElement, placeholder) => {
+        const choices = new Choices(selectElement, {
+          removeItemButton: true,
+          placeholderValue: placeholder,
+          maxItemCount: -1,
+          allowHTML: false,
+          searchEnabled: true,
+          searchResultLimit: 1000,
+          shouldSort: true,
+          renderSelected: false,
+          fuseOptions: {
+            threshold: 0.3,
+            ignoreLocation: true,
+            includeScore: false,
+            getFn: (obj, path) => {
+              return obj.label ? obj.label.toString().toLowerCase() : '';
+            }
+          },
+          callbackOnInit: function() {
+            const instance = this;
+            let fullChoices = [];
+            const originalSetChoices = instance.setChoices;
+            instance.setChoices = function(choicesArray, valueKey, labelKey, replace) {
+              if (replace) {
+                fullChoices = [...choicesArray];
+              }
+              return originalSetChoices.call(instance, choicesArray, valueKey, labelKey, replace);
+            };
+
+            instance.passedElement.element.addEventListener('search', function(event) {
+              const selectedValues = instance.getValue(true);
+              instance._store.items.forEach(item => {
+                if (selectedValues.includes(item.value)) {
+                  item.active = false;
+                }
+              });
+            });
+
+            instance.passedElement.element.addEventListener('showDropdown', function() {
+              const selectedValues = instance.getValue(true);
+              const searchInput = instance.input.element.value;
+              if (!searchInput) {
+                fullChoices.forEach(choice => {
+                  const item = instance._store.items.find(i => i.value === choice.value);
+                  if (item) {
+                    item.active = !selectedValues.includes(item.value);
+                  }
+                });
+              }
+            });
+
+            instance.passedElement.element.addEventListener('change', function() {
+              const selectedValues = instance.getValue(true);
+              fullChoices.forEach(choice => {
+                const item = instance._store.items.find(i => i.value === choice.value);
+                if (item) {
+                  item.active = !selectedValues.includes(item.value);
+                }
+              });
+              instance.showDropdown();
+            });
+          },
+          callbackOnChange: function() {
+            const values = this.getValue(true);
+            if (values.length > 0 && values.includes('all') && values.length > 1) {
+              this.removeActiveItemsByValue('all');
+            }
+          }
+        });
+        return choices;
+      };
+
+      choicesInstances.sourceCategory = createChoicesInstance(sourceCategorySelect, 'All Source Categories');
+      choicesInstances.channel = createChoicesInstance(channelSelect, 'All Sources');
+      choicesInstances.agent = createChoicesInstance(agentSelect, 'All Agents');
+      choicesInstances.team = createChoicesInstance(teamSelect, 'All Teams');
+
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode: "range",
+        dateFormat: "Y/m/d",
+        numberOfMonths: 2,
+        onClose: function(selectedDates, dateStr, instance) {
+          if (selectedDates.length === 2) {
+            const start = flatpickr.formatDate(selectedDates[0], "Y/m/d");
+            const end = flatpickr.formatDate(selectedDates[1], "Y/m/d");
+            instance.input.value = `${start} - ${end}`;
+          }
+        }
+      });
+
+      document.getElementById('openDateModal').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+        if (selectedStartDate && selectedEndDate) {
+          dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
+        } else {
+          dateRangePicker.clear();
+        }
+        modal.show();
+      });
+
+      document.getElementById('clearFilters').addEventListener('click', async function() {
+        showWidgetSpinner();
+        try {
+          if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+            pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+          } else if (pipelines.length > 0) {
+            pipelineSelect.value = pipelines[0].id;
+          } else {
+            pipelineSelect.value = '';
+          }
+          campaignSelect.value = 'all';
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          dateRangePicker.clear();
+          await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+          updateAgents();
+          updateTeams();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.querySelectorAll('.quick-selections button').forEach(button => {
+        button.addEventListener('click', function() {
+          const range = this.getAttribute('data-range');
+          const { start, end } = getDateRange(range);
+          if (start && end) {
+            dateRangePicker.setDate([start, end], false);
+          }
+        });
+      });
+
+      document.getElementById('doneButton').addEventListener('click', async () => {
+        showWidgetSpinner();
+        try {
+          const selectedDates = dateRangePicker.selectedDates;
+          const dateButton = document.getElementById('openDateModal');
+          if (selectedDates.length === 2) {
+            selectedStartDate = flatpickr.formatDate(selectedDates[0], "Y-m-d");
+            selectedEndDate = flatpickr.formatDate(selectedDates[1], "Y-m-d");
+            dateButton.textContent = `${selectedStartDate} - ${selectedEndDate}`;
+          } else {
+            selectedStartDate = null;
+            selectedEndDate = null;
+            dateButton.textContent = 'Select Date Range';
+          }
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.getElementById('clearFilter').addEventListener('click', async () => {
+        showWidgetSpinner();
+        try {
+          dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.getElementById('refresh').addEventListener('click', hardRefresh);
+
+      pipelineSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await updateChannels(pipelineSelect.value);
+          updateAgents();
+          updateTeams();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          campaignSelect.value = 'all';
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      sourceCategorySelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          updateSourceDropdown();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      channelSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      campaignSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      agentSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      teamSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderModalTable();
+        }
+      });
+
+      document.getElementById('nextPageBtn').addEventListener('click', () => {
+        if (currentPage < Math.ceil(currentOpportunities.length / itemsPerPage)) {
+          currentPage++;
+          renderModalTable();
+        }
+      });
+
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(user => [user.id, user.name]));
+
+      updatePipelines();
+      await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+      updateAgents();
+      updateTeams();
+
+      if (pipelines.length > 0) {
+        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+        } else {
+          pipelineSelect.value = pipelines[0].id;
+        }
+      }
+
+      await renderFunnel();
+    }
+
+    async function hardRefresh() {
+      showWidgetSpinner();
+      try {
+        await clearIndexedDB();
+        pipelines = await fetchPipelines(CONFIG, locationId);
+        const users = await fetchAllUsers(CONFIG, locationId);
+        usersMap = new Map(users.map(user => [user.id, user.name]));
+        updatePipelines();
+        const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
+        await updateChannels(pipelineId);
+        updateAgents();
+        choicesInstances.channel.removeActiveItems();
+        choicesInstances.sourceCategory.removeActiveItems();
+        choicesInstances.team.removeActiveItems();
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        selectedStartDate = null;
+        selectedEndDate = null;
+        dateRangePicker.clear();
+        await renderFunnel();
+      } catch (error) {
+        console.error('Hard refresh failed:', error);
+        alert('Failed to perform hard refresh. Please try again.');
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    function updatePipelines() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelineSelect.innerHTML = '';
+      pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+      });
+    }
+
+    async function updateChannels(pipelineId) {
+      const channelChoices = choicesInstances.channel;
+      const sourceCategoryChoices = choicesInstances.sourceCategory;
+      const teamChoices = choicesInstances.team;
+      
+      channelChoices.clearChoices();
+      sourceCategoryChoices.clearChoices();
+      teamChoices.clearChoices();
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+      sourceCategoryChoices.setChoices([{ value: 'all', label: 'All Source Categories' }], 'value', 'label', true);
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
+      sourcesSet.clear();
+      sourceCategoriesSet.clear();
+      teamsSet.clear();
+      sourceCategoryToSources = {};
+      sourceToCategories = {};
+
+      if (pipelineId) {
+        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        opportunities.forEach(op => {
+          const source = op.source;
+          const sourceCategory = op.sourceCategory;
+          const team = op.team;
+
+          if (source) sourcesSet.add(source);
+          if (sourceCategory) sourceCategoriesSet.add(sourceCategory);
+          if (team) teamsSet.add(team);
+
+          if (source && sourceCategory) {
+            if (!sourceCategoryToSources[sourceCategory]) sourceCategoryToSources[sourceCategory] = new Set();
+            sourceCategoryToSources[sourceCategory].add(source);
+            if (!sourceToCategories[source]) sourceToCategories[source] = new Set();
+            sourceToCategories[source].add(sourceCategory);
+          }
+        });
+
+        Array.from(sourcesSet).sort().forEach(source => {
+          channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+        });
+        Array.from(sourceCategoriesSet).sort().forEach(category => {
+          sourceCategoryChoices.setChoices([{ value: category, label: category }], 'value', 'label', false);
+        });
+        Array.from(teamsSet).sort().forEach(team => {
+          teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+        });
+      }
+    }
+
+    function updateAgents() {
+      const agentChoices = choicesInstances.agent;
+      agentChoices.clearChoices();
+      agentChoices.setChoices([{ value: 'all', label: 'All Agents' }], 'value', 'label', true);
+      usersMap.forEach((name, userId) => {
+        agentChoices.setChoices([{ value: userId, label: name }], 'value', 'label', false);
+      });
+    }
+
+    function updateTeams() {
+      const teamChoices = choicesInstances.team;
+      teamChoices.clearChoices();
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
+      Array.from(teamsSet).sort().forEach(team => {
+        teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+      });
+    }
+
+    function updateSourceDropdown() {
+      const selectedCategories = choicesInstances.sourceCategory.getValue(true);
+      const channelChoices = choicesInstances.channel;
+      const sourcesToShow = new Set();
+
+      channelChoices.clearChoices();
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+
+      if (selectedCategories.includes('all') || selectedCategories.length === 0) {
+        sourcesSet.forEach(source => sourcesToShow.add(source));
+      } else {
+        selectedCategories.forEach(category => {
+          if (sourceCategoryToSources[category]) {
+            sourceCategoryToSources[category].forEach(source => sourcesToShow.add(source));
+          }
+        });
+      }
+
+      Array.from(sourcesToShow).sort().forEach(source => {
+        channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+      });
+    }
+
+    function calculateConversionRates(stages) {
+      if (stages.length === 0 || stages[0].value === 0) {
+        return stages.map(stage => ({
+          ...stage,
+          cumulativeConversion: "0.00",
+          nextStepConversion: "0.00"
+        }));
+      }
+      
+      const firstStageValue = stages[0].value;
+      return stages.map((stage, index) => {
+        const currentStageValue = stage.value;
+        const cumulativeConversion = (currentStageValue / firstStageValue) * 100;
+        let nextStepConversion = index === 0 ? 100.0 : (stages[index - 1].value > 0 ? (currentStageValue / stages[index - 1].value) * 100 : 0);
+        return {
+          ...stage,
+          cumulativeConversion: cumulativeConversion.toFixed(2),
+          nextStepConversion: nextStepConversion.toFixed(2)
+        };
+      });
+    }
+
+    function computeCumulativeValues(stageCounts, stages) {
+      return stages.map((_, index) =>
+        stages.slice(index).reduce((sum, s) => sum + (stageCounts[s.id] || 0), 0)
+      );
+    }
+
+    function computeCurrentValues(stageCounts, stages) {
+      return stages.map(stage => stageCounts[stage.id] || 0);
+    }
+
+    async function renderFunnel() {
+      showWidgetSpinner();
+      const pipelineId = document.getElementById('pipeline').value;
+      const campaign = document.getElementById('campaign').value;
+      let selectedChannels = choicesInstances.channel.getValue(true);
+      let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
+      let selectedAgents = choicesInstances.agent.getValue(true);
+      let selectedTeams = choicesInstances.team.getValue(true);
+      const container = document.getElementById('funnel-container');
+      container.innerHTML = '';
+
+      try {
+        if (!pipelineId) {
+          drawChart([]);
+          return;
+        }
+
+        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        const filteredOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), {
+          channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
+          sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],
+          agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : [],
+          teams: selectedTeams.length > 0 && !selectedTeams.includes('all') ? selectedTeams : []
+        });
+
+        const selectedPipeline = pipelines.find(p => p.id === pipelineId);
+        if (!selectedPipeline) {
+          drawChart([]);
+          return;
+        }
+
+        const generalStageCounts = {};
+        selectedPipeline.stages.forEach(stage => generalStageCounts[stage.id] = 0);
+        filteredOpportunities.forEach(op => {
+          const stageId = op.pipelineStageId;
+          if (stageId && generalStageCounts.hasOwnProperty(stageId)) {
+            generalStageCounts[stageId]++;
+          }
+        });
+
+        const generalCumulativeValues = computeCumulativeValues(generalStageCounts, selectedPipeline.stages);
+        const generalCurrentValues = computeCurrentValues(generalStageCounts, selectedPipeline.stages);
+        let generalData = selectedPipeline.stages.map((stage, index) => ({
+          label: stage.name,
+          value: generalCumulativeValues[index],
+          current: generalCurrentValues[index],
+          color: stageColors[index % stageColors.length],
+          stageId: stage.id,
+          project: null
+        }));
+        generalData = calculateConversionRates(generalData);
+
+        const generalCard = document.createElement('div');
+        generalCard.className = 'funnel-card';
+        generalCard.innerHTML = `<div class="card-header">All Projects</div><div class="card-body"></div>`;
+        container.appendChild(generalCard);
+        drawChart(generalData, generalCard.querySelector('.card-body'));
+
+        const projectGroups = {};
+        filteredOpportunities.forEach(op => {
+          const project = op.project || 'N/A';
+          if (!projectGroups[project]) projectGroups[project] = [];
+          projectGroups[project].push(op);
+        });
+
+        const allowedProjects = [
+          'Nexus Taman Pertama',
+          'K2P3 Akina (Phase 2)',
+          'Gaya Residency',
+          'Residensi Naluri'
+        ];
+
+        const filteredProjectGroups = locationId === 'tCDIsdPF3Em8dZW3fc0B'
+          ? Object.fromEntries(
+              Object.entries(projectGroups).filter(([project]) => 
+                allowedProjects.includes(project)
+              )
+            )
+          : projectGroups;
+
+        for (const [project, projectOpps] of Object.entries(filteredProjectGroups)) {
+          const projectStageCounts = {};
+          selectedPipeline.stages.forEach(stage => projectStageCounts[stage.id] = 0);
+          projectOpps.forEach(op => {
+            const stageId = op.pipelineStageId;
+            if (stageId && projectStageCounts.hasOwnProperty(stageId)) {
+              projectStageCounts[stageId]++;
+            }
+          });
+
+          const projectCumulativeValues = computeCumulativeValues(projectStageCounts, selectedPipeline.stages);
+          const projectCurrentValues = computeCurrentValues(projectStageCounts, selectedPipeline.stages);
+          let projectData = selectedPipeline.stages.map((stage, index) => ({
+            label: stage.name,
+            value: projectCumulativeValues[index],
+            current: projectCurrentValues[index],
+            color: stageColors[index % stageColors.length],
+            stageId: stage.id,
+            project: project
+          }));
+          projectData = calculateConversionRates(projectData);
+
+          const projectCard = document.createElement('div');
+          projectCard.className = 'funnel-card';
+          projectCard.innerHTML = `<div class="card-header">Project: ${project}</div><div class="card-body"></div>`;
+          container.appendChild(projectCard);
+          drawChart(projectData, projectCard.querySelector('.card-body'));
+        }
+
+        updateHeight();
+      } catch (error) {
+        console.error('Error rendering funnel:', error);
+        drawChart([], container);
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    function drawChart(stages, container = document.getElementById('funnel-container')) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "300px");
+      svg.setAttribute("viewBox", "0 0 600 350");
+
+      const fixedWidth = 550;
+      const fixedHeight = 300;
+      const topPadding = 30;
+      const bottomPadding = 10;
+      const leftPadding = 150;
+      const rightPadding = 120;
+      const funnelMaxWidth = fixedWidth - leftPadding - rightPadding;
+      const availableHeight = fixedHeight - topPadding - bottomPadding;
+      const stageHeight = stages.length > 0 ? availableHeight / stages.length : availableHeight;
+      const barHeight = stageHeight * 0.7;
+
+      const maxCount = stages.length > 0 ? Math.max(...stages.map(s => s.current)) : 1;
+      const scaleFactor = funnelMaxWidth / maxCount;
+
+      // Draw grid lines and scale
+      const step = maxCount > 0 ? Math.ceil(maxCount / 4) : 1;
+      for (let i = 0; i <= 4; i++) {
+        const x = leftPadding + (i * funnelMaxWidth) / 4;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x);
+        line.setAttribute("y1", topPadding);
+        line.setAttribute("x2", x);
+        line.setAttribute("y2", fixedHeight - bottomPadding);
+        line.setAttribute("stroke", "#e5e7eb");
+        line.setAttribute("stroke-width", "1");
+        line.setAttribute("stroke-dasharray", "2,2");
+        svg.appendChild(line);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", topPadding - 10);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "#6b7280");
+        text.setAttribute("font-size", "12px");
+        text.textContent = i * step;
+        svg.appendChild(text);
+      }
+
+      // Conversion rate headers
+      const cumulativeHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      cumulativeHeader.setAttribute("x", fixedWidth - rightPadding + 70);
+      cumulativeHeader.setAttribute("y", topPadding - 10);
+      cumulativeHeader.setAttribute("text-anchor", "middle");
+      cumulativeHeader.setAttribute("fill", "#374151");
+      cumulativeHeader.setAttribute("font-size", "12px");
+      cumulativeHeader.setAttribute("font-weight", "bold");
+      cumulativeHeader.textContent = "Cumulative";
+      svg.appendChild(cumulativeHeader);
+
+      const nextStepHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      nextStepHeader.setAttribute("x", fixedWidth - rightPadding + 150);
+      nextStepHeader.setAttribute("y", topPadding - 10);
+      nextStepHeader.setAttribute("text-anchor", "middle");
+      nextStepHeader.setAttribute("fill", "#374151");
+      nextStepHeader.setAttribute("font-size", "12px");
+      nextStepHeader.setAttribute("font-weight", "bold");
+      nextStepHeader.textContent = "Next-Step";
+      svg.appendChild(nextStepHeader);
+
+      stages.forEach((stage, i) => {
+        const y = topPadding + i * stageHeight;
+        const barWidth = stage.current * scaleFactor;
+        const barX = leftPadding + (funnelMaxWidth - barWidth) / 2;
+
+        // Stage label
+        const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        labelText.setAttribute("x", leftPadding - 20);
+        labelText.setAttribute("y", y + barHeight / 2);
+        labelText.setAttribute("text-anchor", "end");
+        labelText.setAttribute("fill", "#374151");
+        labelText.setAttribute("font-size", "14px");
+        labelText.setAttribute("font-weight", "500");
+        labelText.setAttribute("dy", "0.35em");
+        labelText.textContent = stage.label;
+        svg.appendChild(labelText);
+        
+        // Draw rectangle
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", barX);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", barWidth);
+        rect.setAttribute("height", barHeight);
+        rect.setAttribute("fill", stage.color);
+        rect.setAttribute("rx", "4");
+        rect.setAttribute("stroke", "#d1d5db");
+        rect.setAttribute("stroke-width", "1");
+        rect.addEventListener('click', () => showOpportunitiesModal(stage.stageId, stage.label, stage.project));
+        svg.appendChild(rect);
+
+        // Current stage count
+        const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const textX = barWidth > 100 ? barX + barWidth / 2 : barX + barWidth + 10;
+        const textAnchor = barWidth > 100 ? "middle" : "start";
+        countText.setAttribute("x", textX);
+        countText.setAttribute("y", y + barHeight / 2);
+        countText.setAttribute("text-anchor", textAnchor);
+        countText.setAttribute("fill", barWidth > 100 ? "#ffffff" : "#374151");
+        countText.setAttribute("font-size", "14px");
+        countText.setAttribute("font-weight", "600");
+        countText.setAttribute("dy", "0.35em");
+        countText.textContent = stage.current;
+        svg.appendChild(countText);
+
+        // Cumulative conversion rate
+        const cumulativeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        cumulativeText.setAttribute("x", fixedWidth - rightPadding + 70);
+        cumulativeText.setAttribute("y", y + barHeight / 2);
+        cumulativeText.setAttribute("text-anchor", "middle");
+        cumulativeText.setAttribute("fill", "#6b7280");
+        cumulativeText.setAttribute("font-size", "12px");
+        cumulativeText.setAttribute("dy", "0.35em");
+        cumulativeText.textContent = `${stage.cumulativeConversion}%`;
+        svg.appendChild(cumulativeText);
+
+        // Next-step conversion rate
+        const nextStepText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        nextStepText.setAttribute("x", fixedWidth - rightPadding + 150);
+        nextStepText.setAttribute("y", y + barHeight / 2);
+        nextStepText.setAttribute("text-anchor", "middle");
+        nextStepText.setAttribute("fill", "#6b7280");
+        nextStepText.setAttribute("font-size", "12px");
+        nextStepText.setAttribute("dy", "0.35em");
+        nextStepText.textContent = `${stage.nextStepConversion}%`;
+        svg.appendChild(nextStepText);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(svg);
+    }
+
+    async function showOpportunitiesModal(stageId, stageLabel, project = null) {
+      const pipelineId = document.getElementById('pipeline').value;
+      let selectedChannels = choicesInstances.channel.getValue(true);
+      let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
+      let selectedAgents = choicesInstances.agent.getValue(true);
+      let selectedTeams = choicesInstances.team.getValue(true);
+      if (!pipelineId) return;
+
+      showModalSpinner();
+      try {
+        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        currentOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), {
+          channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
+          sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],
+          agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : [],
+          teams: selectedTeams.length > 0 && !selectedTeams.includes('all') ? selectedTeams : [],
+          stageId: stageId,
+          project: project
+        });
+
+        currentOpportunities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        currentPage = 1;
+
+        const modalTitle = project ? `Records - ${stageLabel} (Project: ${project})` : `Records - ${stageLabel}`;
+        document.getElementById('opportunitiesModalLabel').textContent = modalTitle;
+        renderModalTable();
+
+        document.getElementById('exportBtn').onclick = () => exportToCSV(currentOpportunities, stageLabel + (project ? `_Project_${project}` : ''));
+
+        const modal = new bootstrap.Modal(document.getElementById('opportunitiesModal'));
+        modal.show();
+      } catch (error) {
+        console.error('Error loading modal data:', error);
+      } finally {
+        hideModalSpinner();
+      }
+    }
+
+    function renderModalTable() {
+      const tbody = document.getElementById('opportunitiesTableBody');
+      tbody.innerHTML = '';
+
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, currentOpportunities.length);
+      const totalItems = currentOpportunities.length;
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const op = currentOpportunities[i];
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${op.id || 'N/A'}</td>
+          <td>${op.name || 'N/A'}</td>
+          <td>${op.contact?.name || 'N/A'}</td>
+          <td>${op.source || 'N/A'}</td>
+          <td>${assignedUserName}</td>
+          <td>${op.status || 'N/A'}</td>
+          <td>${op.contact?.phone || 'N/A'}</td>
+          <td>${op.monetaryValue || 0}</td>
+          <td>${op.project || 'N/A'}</td>
+          <td>${createdAtFormatted}</td>
+          <td>${op.team || 'N/A'}</td>
+        `;
+        tbody.appendChild(row);
+      }
+
+      document.getElementById('paginationInfo').textContent = `Showing ${startIndex + 1} to ${endIndex} of ${totalItems}`;
+
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = endIndex >= totalItems;
+    }
+
+    function exportToCSV(opportunities, stageLabel) {
+      const headers = [
+        'Opportunity ID',
+        'Opportunity Name',
+        'Primary Contact Name',
+        'Source',
+        'Assigned User',
+        'Pipeline Name',
+        'Status',
+        'Phone Number',
+        'Lead Value',
+        'Project',
+        'Contact Created',
+        'Team'
+      ];
+
+      const rows = opportunities.map(op => {
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        return [
+          op.id || 'N/A',
+          op.name || 'N/A',
+          op.contact?.name || 'N/A',
+          op.source || 'N/A',
+          assignedUserName,
+          pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
+          op.status || 'N/A',
+          op.contact?.phone || 'N/A',
+          op.monetaryValue || 0,
+          op.project || 'N/A',
+          createdAtFormatted,
+          op.team || 'N/A'
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
+      });
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `opportunities_${stageLabel}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function getDateRange(range) {
+      const today = new Date();
+      let start, end;
+      switch (range) {
+        case 'thisWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay());
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'lastWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 7);
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'last7Days':
+          start = new Date(today);
+          start.setDate(today.getDate() - 7);
+          end = new Date(today);
+          break;
+        case 'thisMonth':
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case 'lastMonth':
+          start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 0);
+          break;
+        case 'thisYear':
+          start = new Date(today.getFullYear(), 0, 1);
+          end = new Date(today.getFullYear(), 11, 31);
+          break;
+        default:
+          start = null;
+          end = null;
+      }
+      return { start, end };
+    }
+
+    function updateHeight() {
+      const height = document.documentElement.scrollHeight;
+      try {
+        window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+      } catch (e) {
+        console.log("Parent communication not available");
+      }
+    }
+
+    window.addEventListener('message', event => {
+      if (event.data.type === 'ping') updateHeight();
+    });
+  </script>
+</body>
+</html>
