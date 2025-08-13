@@ -38,7 +38,7 @@
     .control-group {
       display: flex;
       flex-direction: column;
-      width: 200px; /* Consistent width for all controls */
+      width: 200px;
     }
     label {
       margin-bottom: 6px;
@@ -49,11 +49,11 @@
     .form-select, .form-control, .btn-sm {
       height: 38px;
       font-size: 14px;
-      width: 100%; /* Ensure consistent width */
+      width: 100%;
       box-sizing: border-box;
     }
     .chart-container {
-      max-width: 1250px;
+      max-width: 1550px;
       margin: 20px auto;
       background: #fff;
       padding: 20px;
@@ -253,6 +253,12 @@
         </select>
       </div>
       <div class="control-group">
+        <label for="source">Source</label>
+        <select id="source" class="form-select">
+          <option value="">All Sources</option>
+        </select>
+      </div>
+      <div class="control-group">
         <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
@@ -330,7 +336,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, applyFilters } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, applyFilters, clearIndexedDB } from '../ghlData.js';
 
     let CONFIG = {};
     let locationId = '';
@@ -339,6 +345,9 @@
     let selectedEndDate = null;
     let dateRangePicker;
     let allOpportunities = [];
+    let allProjects = [];
+    let allSourceCategories = [];
+    let allSources = [];
     let currentPage = 1;
     const leadsPerPage = 10;
     const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
@@ -378,6 +387,7 @@
 
     function updatePipelines() {
       const pipelineSelect = document.getElementById('pipeline');
+      const currentValue = pipelineSelect.value;
       pipelineSelect.innerHTML = '<option value="">All Pipelines</option>';
       pipelines.forEach(pipeline => {
         const option = document.createElement('option');
@@ -385,30 +395,46 @@
         option.textContent = pipeline.name;
         pipelineSelect.appendChild(option);
       });
+      pipelineSelect.value = currentValue || '';
     }
 
     function updateProjects() {
       const projectSelect = document.getElementById('project');
-      const projects = [...new Set(allOpportunities.map(op => op.project).filter(p => p !== 'N/A'))].sort();
+      const currentValue = projectSelect.value;
       projectSelect.innerHTML = '<option value="">All Projects</option>';
-      projects.forEach(project => {
+      allProjects.forEach(project => {
         const option = document.createElement('option');
         option.value = project;
         option.textContent = project;
         projectSelect.appendChild(option);
       });
+      projectSelect.value = currentValue || '';
     }
 
     function updateSourceCategories() {
       const sourceCategorySelect = document.getElementById('sourceCategory');
-      const sourceCategories = [...new Set(allOpportunities.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
+      const currentValue = sourceCategorySelect.value;
       sourceCategorySelect.innerHTML = '<option value="">All Source Categories</option>';
-      sourceCategories.forEach(category => {
+      allSourceCategories.forEach(category => {
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
         sourceCategorySelect.appendChild(option);
       });
+      sourceCategorySelect.value = currentValue || '';
+    }
+
+    function updateSources() {
+      const sourceSelect = document.getElementById('source');
+      const currentValue = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">All Sources</option>';
+      allSources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source;
+        option.textContent = source;
+        sourceSelect.appendChild(option);
+      });
+      sourceSelect.value = currentValue || '';
     }
 
     function getDateRange(range) {
@@ -462,7 +488,12 @@
       updateDateRangeDisplay();
       document.getElementById('project').value = '';
       document.getElementById('sourceCategory').value = '';
+      document.getElementById('source').value = '';
       renderBarChart();
+    }
+
+    async function refreshData() {
+      await renderBarChart();
     }
 
     async function renderBarChart() {
@@ -470,9 +501,17 @@
       const dateRange = document.getElementById('dateRange').value;
       const project = document.getElementById('project').value || null;
       const sourceCategory = document.getElementById('sourceCategory').value || null;
+      const source = document.getElementById('source').value || null;
+      console.log('Selected filters:', { pipelineId, dateRange, project, sourceCategory, source });
       showSpinner();
       try {
         const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        // Store unfiltered lists for dropdowns
+        allProjects = [...new Set(opportunities.map(op => op.project).filter(p => p !== 'N/A'))].sort();
+        allSourceCategories = [...new Set(opportunities.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
+        allSources = [...new Set(opportunities.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+        console.log('All sources:', allSources);
+
         let startDate = null;
         let endDate = null;
         if (dateRange && dateRange !== 'custom') {
@@ -485,11 +524,15 @@
         }
         allOpportunities = applyFilters(opportunities, pipelineId, startDate, endDate, new Set(), {
           project: project,
+          sourceCategory: sourceCategory,
+          channels: source ? [source] : [],
           sourceCategories: sourceCategory ? [sourceCategory] : []
         });
 
+        console.log('Filtered opportunities:', allOpportunities.length);
         updateProjects();
         updateSourceCategories();
+        updateSources();
 
         const hourlyCounts = Array(24).fill().map(() => ({ weekday: 0, weekend: 0 }));
         const hours = Array.from({ length: 24 }, (_, i) => {
@@ -558,6 +601,7 @@
           }
         };
 
+        Plotly.purge('barChart');
         Plotly.newPlot('barChart', data, layout).then(() => {
           document.getElementById('barChart').on('plotly_click', function(eventData) {
             const point = eventData.points[0];
@@ -726,7 +770,14 @@
       document.getElementById('pipeline').addEventListener('change', renderBarChart);
       document.getElementById('project').addEventListener('change', renderBarChart);
       document.getElementById('sourceCategory').addEventListener('change', renderBarChart);
-      document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+      document.getElementById('source').addEventListener('change', () => {
+        console.log('Source filter changed:', document.getElementById('source').value);
+        renderBarChart();
+      });
+      document.getElementById('clearAllFilters').addEventListener('click', async () => {
+        clearAllFilters();
+        await refreshData();
+      });
 
       await renderBarChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
