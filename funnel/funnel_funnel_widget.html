@@ -1080,6 +1080,18 @@
       return stages.map(stage => stageCounts[stage.id] || 0);
     }
 
+    function mapStageLabel(name) {
+      const labelMap = {
+        'Hot Leads (Uncontacted)': 'Lead In',
+        'Follow Up (Contacted)': 'Followed Up',
+        'Appointment': 'Appointment',
+        'Booking': 'Booking',
+        'Lost Leads': 'Lost Leads',
+        'No respond/Not interested': 'No respond/Not interested'
+      };
+      return labelMap[name] || name;
+    }
+
     async function renderFunnel() {
       showWidgetSpinner();
       const pipelineId = document.getElementById('pipeline').value;
@@ -1123,7 +1135,7 @@
         const generalCumulativeValues = computeCumulativeValues(generalStageCounts, selectedPipeline.stages);
         const generalCurrentValues = computeCurrentValues(generalStageCounts, selectedPipeline.stages);
         let generalData = selectedPipeline.stages.map((stage, index) => ({
-          label: stage.name,
+          label: mapStageLabel(stage.name),
           value: generalCumulativeValues[index],
           current: generalCurrentValues[index],
           color: stageColors[index % stageColors.length],
@@ -1173,7 +1185,7 @@
           const projectCumulativeValues = computeCumulativeValues(projectStageCounts, selectedPipeline.stages);
           const projectCurrentValues = computeCurrentValues(projectStageCounts, selectedPipeline.stages);
           let projectData = selectedPipeline.stages.map((stage, index) => ({
-            label: stage.name,
+            label: mapStageLabel(stage.name),
             value: projectCumulativeValues[index],
             current: projectCurrentValues[index],
             color: stageColors[index % stageColors.length],
