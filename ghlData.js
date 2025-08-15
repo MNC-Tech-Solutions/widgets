@@ -426,9 +426,9 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
     console.log(`Filtered by hiddenProjects: ${filtered.length} opportunities`);
   }
 
-  if (additionalFilters.project) {
-    filtered = filtered.filter(op => op.project === additionalFilters.project);
-    console.log(`Filtered by project ${additionalFilters.project}: ${filtered.length} opportunities`);
+  if (additionalFilters.projects && additionalFilters.projects.length > 0 && !additionalFilters.projects.includes('all')) {
+    filtered = filtered.filter(op => op.project && additionalFilters.projects.includes(op.project));
+    console.log(`Filtered by projects ${additionalFilters.projects}: ${filtered.length} opportunities`);
   }
 
   if (additionalFilters.sourceCategory) {
@@ -457,10 +457,10 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
   }
 
   if (additionalFilters.stageId) {
-    filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
-    console.log(`Filtered by stageId ${additionalFilters.stageId}: ${filtered.length} opportunities`);
-  }
-
+     filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
+     console.log(`Filtered by stageId ${additionalFilters.stageId}: ${filtered.length} opportunities`);
+   } 
+  
   console.log(`Final filtered opportunities: ${filtered.length}`);
   return filtered;
 }

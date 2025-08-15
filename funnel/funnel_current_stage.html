@@ -1,4 +1,4 @@
-<!-- in traditional funnel chart type -->
+<!-- show all stages with current number of leads for each stage -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -18,14 +18,13 @@
       --funnel-2: #b7d0e1;
       --funnel-3: #cadeed;
       --funnel-4: #dbecf4;
-      --funnel-grey: #e5e7eb;
       --text: #374151;
       --border: #d1d5db;
-      --background: #f8fafc;
+      --funnel-grey: #e5e7eb;
     }
     
     body {
-      font-family: 'Cem Seui', Tahoma, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       padding: 15px;
       background: white;
@@ -62,16 +61,10 @@
     select, input[type="text"], input[type="date"] {
       padding: 8px 12px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 4px;
       font-size: 14px;
       background: white;
       cursor: pointer;
-      transition: border-color 0.2s ease;
-    }
-    
-    select:focus, input[type="text"]:focus, input[type="date"]:focus {
-      border-color: var(--primary);
-      outline: none;
     }
     
     select[multiple] {
@@ -85,7 +78,7 @@
     .choices__inner {
       padding: 8px 12px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 4px;
       font-size: 14px;
       background: white;
       min-height: 38px;
@@ -107,17 +100,15 @@
       padding: 2px 8px;
       margin: 2px;
       line-height: 1.4;
-      border-radius: 4px;
     }
     
     .choices__list--dropdown {
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 4px;
       font-size: 14px;
       max-height: 300px;
       overflow-y: auto !important;
       z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .choices__list--dropdown::-webkit-scrollbar {
@@ -130,47 +121,45 @@
     
     #funnel-container {
       width: 100%;
-      margin-top: 20px;
+      margin-top: 15px;
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 15px;
       justify-content: flex-start;
     }
     
     .funnel-card {
-      flex: 0 0 calc(50% - 20px);
-      min-width: 600px;
-      margin-bottom: 20px;
+      flex: 0 0 calc(50% - 15px);
+      min-width: 550px;
+      margin-bottom: 15px;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      background: white;
-      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .funnel-card .card-header {
       background: #f8f9fa;
       border-bottom: 1px solid var(--border);
-      padding: 10px 15px;
+      padding: 8px 10px;
       font-weight: 600;
       color: var(--text);
-      font-size: 16px;
+      font-size: 14px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     
     .funnel-card .card-body {
-      padding: 15px;
+      padding: 10px;
     }
     
-    rect, path {
+    rect {
       cursor: pointer;
-      transition: opacity 0.2s ease, fill 0.2s ease;
+      transition: opacity 0.2s ease;
     }
     
-    rect:hover, path:hover {
-      opacity: 0.9;
+    rect:hover {
+      opacity: 0.8;
     }
     
     .modal-dialog {
@@ -384,18 +373,14 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      padding: 8px 12px;
+      padding: 6px 12px;
       font-size: 14px;
-      border-radius: 6px;
     }
     
     @media (max-width: 768px) {
       .button-group .btn {
         max-width: 120px;
         font-size: 12px;
-      }
-      .funnel-card {
-        min-width: 100%;
       }
     }
   </style>
@@ -1059,11 +1044,11 @@
         }));
       }
       
-      const firstStageValue = stages[0].value;
+      const firstStageCount = stages[0].value;
       return stages.map((stage, index) => {
-        const currentStageValue = stage.value;
-        const cumulativeConversion = (currentStageValue / firstStageValue) * 100;
-        let nextStepConversion = index === 0 ? 100.0 : (stages[index - 1].value > 0 ? (currentStageValue / stages[index - 1].value) * 100 : 0);
+        const currentStageCount = stage.value;
+        const cumulativeConversion = (currentStageCount / firstStageCount) * 100;
+        let nextStepConversion = index === 0 ? 100.0 : (stages[index - 1].value > 0 ? (currentStageCount / stages[index - 1].value) * 100 : 0);
         return {
           ...stage,
           cumulativeConversion: cumulativeConversion.toFixed(2),
@@ -1072,26 +1057,14 @@
       });
     }
 
-    function computeCumulativeValues(stageCounts, stages) {
-      return stages.map((_, index) =>
+    function computeFunnelValues(stageCounts, stages) {
+      return stages.map((stage, index) =>
         stages.slice(index).reduce((sum, s) => sum + (stageCounts[s.id] || 0), 0)
       );
     }
 
     function computeCurrentValues(stageCounts, stages) {
       return stages.map(stage => stageCounts[stage.id] || 0);
-    }
-
-    function mapStageLabel(name) {
-      const labelMap = {
-        'Hot Leads (Uncontacted)': 'Lead In',
-        'Follow-Up (Contacted)': 'Followed Up',
-        'Appointment': 'Appointment',
-        'Booking': 'Booking',
-        'Lost Leads': 'Lost Leads',
-        'No respond/Not interested': 'No respond/Not interested'
-      };
-      return labelMap[name] || name;
     }
 
     async function renderFunnel() {
@@ -1134,11 +1107,11 @@
           }
         });
 
-        const generalCumulativeValues = computeCumulativeValues(generalStageCounts, selectedPipeline.stages);
+        const generalFunnelValues = computeFunnelValues(generalStageCounts, selectedPipeline.stages);
         const generalCurrentValues = computeCurrentValues(generalStageCounts, selectedPipeline.stages);
         let generalData = selectedPipeline.stages.map((stage, index) => ({
-          label: mapStageLabel(stage.name),
-          value: generalCumulativeValues[index],
+          label: stage.name,
+          value: generalFunnelValues[index],
           current: generalCurrentValues[index],
           color: stageColors[index % stageColors.length],
           stageId: stage.id,
@@ -1184,11 +1157,11 @@
             }
           });
 
-          const projectCumulativeValues = computeCumulativeValues(projectStageCounts, selectedPipeline.stages);
+          const projectFunnelValues = computeFunnelValues(projectStageCounts, selectedPipeline.stages);
           const projectCurrentValues = computeCurrentValues(projectStageCounts, selectedPipeline.stages);
           let projectData = selectedPipeline.stages.map((stage, index) => ({
-            label: mapStageLabel(stage.name),
-            value: projectCumulativeValues[index],
+            label: stage.name,
+            value: projectFunnelValues[index],
             current: projectCurrentValues[index],
             color: stageColors[index % stageColors.length],
             stageId: stage.id,
@@ -1216,26 +1189,26 @@
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.setAttribute("width", "100%");
       svg.setAttribute("height", "300px");
-      svg.setAttribute("viewBox", "0 0 600 350");
 
       const fixedWidth = 550;
       const fixedHeight = 300;
       const topPadding = 30;
-      const bottomPadding = 10;
+      const bottomPadding = 20;
       const leftPadding = 150;
       const rightPadding = 120;
-      const funnelMaxWidth = fixedWidth - leftPadding - rightPadding;
+
+      svg.setAttribute("viewBox", `0 0 ${fixedWidth} ${fixedHeight}`);
+
       const availableHeight = fixedHeight - topPadding - bottomPadding;
       const stageHeight = stages.length > 0 ? availableHeight / stages.length : availableHeight;
-      const barHeight = stageHeight * 0.7;
+      const barHeight = stageHeight * 0.55;
 
-      const maxCount = stages.length > 0 ? Math.max(...stages.map(s => s.current)) : 1;
-      const scaleFactor = funnelMaxWidth / maxCount;
+      const maxValue = stages.length > 0 ? Math.max(...stages.map(s => s.current)) : 1;
+      const barAreaWidth = fixedWidth - leftPadding - rightPadding - 50;
 
-      // Draw grid lines and scale
-      const step = maxCount > 0 ? Math.ceil(maxCount / 4) : 1;
+      const step = maxValue > 0 ? Math.ceil(maxValue / 4) : 100;
       for (let i = 0; i <= 4; i++) {
-        const x = leftPadding + (i * funnelMaxWidth) / 4;
+        const x = leftPadding + (i * barAreaWidth) / 4;
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("x1", x);
         line.setAttribute("y1", topPadding);
@@ -1250,53 +1223,48 @@
         text.setAttribute("x", x);
         text.setAttribute("y", topPadding - 10);
         text.setAttribute("text-anchor", "middle");
-        text.setAttribute("fill", "#6b7280");
+        text.setAttribute("fill", "#666666");
         text.setAttribute("font-size", "12px");
         text.textContent = i * step;
         svg.appendChild(text);
       }
 
-      // Conversion rate headers
       const cumulativeHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      cumulativeHeader.setAttribute("x", fixedWidth - rightPadding + 70);
+      cumulativeHeader.setAttribute("x", fixedWidth - rightPadding + 30);
       cumulativeHeader.setAttribute("y", topPadding - 10);
       cumulativeHeader.setAttribute("text-anchor", "middle");
-      cumulativeHeader.setAttribute("fill", "#374151");
+      cumulativeHeader.setAttribute("fill", "#666666");
       cumulativeHeader.setAttribute("font-size", "12px");
       cumulativeHeader.setAttribute("font-weight", "bold");
       cumulativeHeader.textContent = "Cumulative";
       svg.appendChild(cumulativeHeader);
 
       const nextStepHeader = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      nextStepHeader.setAttribute("x", fixedWidth - rightPadding + 150);
+      nextStepHeader.setAttribute("x", fixedWidth - rightPadding + 100);
       nextStepHeader.setAttribute("y", topPadding - 10);
       nextStepHeader.setAttribute("text-anchor", "middle");
-      nextStepHeader.setAttribute("fill", "#374151");
+      nextStepHeader.setAttribute("fill", "#666666");
       nextStepHeader.setAttribute("font-size", "12px");
       nextStepHeader.setAttribute("font-weight", "bold");
       nextStepHeader.textContent = "Next-Step";
       svg.appendChild(nextStepHeader);
 
       stages.forEach((stage, i) => {
-        const y = topPadding + i * stageHeight;
-        const barWidth = stage.current * scaleFactor;
-        const barX = leftPadding + (funnelMaxWidth - barWidth) / 2;
+        const y = topPadding + i * stageHeight + stageHeight / 2;
 
-        // Stage label
         const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        labelText.setAttribute("x", leftPadding - 20);
+        labelText.setAttribute("x", leftPadding - 10);
         labelText.setAttribute("y", y + barHeight / 2);
         labelText.setAttribute("text-anchor", "end");
-        labelText.setAttribute("fill", "#374151");
-        labelText.setAttribute("font-size", "14px");
-        labelText.setAttribute("font-weight", "500");
+        labelText.setAttribute("fill", "#444444");
+        labelText.setAttribute("font-size", "12px");
         labelText.setAttribute("dy", "0.35em");
         labelText.textContent = stage.label;
         svg.appendChild(labelText);
-        
-        // Draw rectangle
+
+        const barWidth = maxValue > 0 ? (stage.current / maxValue) * barAreaWidth : 0;
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", barX);
+        rect.setAttribute("x", leftPadding);
         rect.setAttribute("y", y);
         rect.setAttribute("width", barWidth);
         rect.setAttribute("height", barHeight);
@@ -1307,37 +1275,33 @@
         rect.addEventListener('click', () => showOpportunitiesModal(stage.stageId, stage.label, stage.project));
         svg.appendChild(rect);
 
-        // Current stage count
-        const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        const textX = barWidth > 100 ? barX + barWidth / 2 : barX + barWidth + 10;
-        const textAnchor = barWidth > 100 ? "middle" : "start";
-        countText.setAttribute("x", textX);
-        countText.setAttribute("y", y + barHeight / 2);
-        countText.setAttribute("text-anchor", textAnchor);
-        countText.setAttribute("fill", barWidth > 100 ? "#ffffff" : "#374151");
-        countText.setAttribute("font-size", "14px");
-        countText.setAttribute("font-weight", "600");
-        countText.setAttribute("dy", "0.35em");
-        countText.textContent = stage.current;
-        svg.appendChild(countText);
+        const valueText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const textX = barWidth > 50 ? leftPadding + barWidth - 10 : leftPadding + barWidth + 10;
+        const textAnchor = barWidth > 50 ? "end" : "start";
+        valueText.setAttribute("x", textX);
+        valueText.setAttribute("y", y + barHeight / 2);
+        valueText.setAttribute("text-anchor", textAnchor);
+        valueText.setAttribute("fill", barWidth > 50 ? "#ffffff" : "#444444");
+        valueText.setAttribute("font-size", "14px");
+        valueText.setAttribute("dy", "0.35em");
+        valueText.textContent = stage.current;
+        svg.appendChild(valueText);
 
-        // Cumulative conversion rate
         const cumulativeText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        cumulativeText.setAttribute("x", fixedWidth - rightPadding + 70);
+        cumulativeText.setAttribute("x", fixedWidth - rightPadding + 30);
         cumulativeText.setAttribute("y", y + barHeight / 2);
         cumulativeText.setAttribute("text-anchor", "middle");
-        cumulativeText.setAttribute("fill", "#6b7280");
+        cumulativeText.setAttribute("fill", "#666666");
         cumulativeText.setAttribute("font-size", "12px");
         cumulativeText.setAttribute("dy", "0.35em");
         cumulativeText.textContent = `${stage.cumulativeConversion}%`;
         svg.appendChild(cumulativeText);
 
-        // Next-step conversion rate
         const nextStepText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        nextStepText.setAttribute("x", fixedWidth - rightPadding + 150);
+        nextStepText.setAttribute("x", fixedWidth - rightPadding + 100);
         nextStepText.setAttribute("y", y + barHeight / 2);
         nextStepText.setAttribute("text-anchor", "middle");
-        nextStepText.setAttribute("fill", "#6b7280");
+        nextStepText.setAttribute("fill", "#666666");
         nextStepText.setAttribute("font-size", "12px");
         nextStepText.setAttribute("dy", "0.35em");
         nextStepText.textContent = `${stage.nextStepConversion}%`;
