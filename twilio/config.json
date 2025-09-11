@@ -1,0 +1,81 @@
+{
+    "companies": {
+        "armani": {
+            "LOG_FILE": "twilio_log_armani.txt",
+            "DATA_FILE": "twilio_data_armani.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "8b8c2bb550a81f916d6c3e5a87f6cc18",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_armani.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/czuCHTUCqPoTp6pJoHB7/webhook-trigger/OWxptp3YEURgnNMMlCAL",
+            "LOCATION_ID": "czuCHTUCqPoTp6pJoHB7",
+            "ACCESS_TOKEN": "pit-f0870b38-945b-44ac-b014-42cbb99218b3"
+        },
+        "bhp": {
+            "LOG_FILE": "twilio_log_bhp.txt",
+            "DATA_FILE": "twilio_data_bhp.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "0cb4cec5686b3195f3b1e5ccc30991a2",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_bhp.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/ZGtHSLAGOT83yj6W1pDG/webhook-trigger/IxLMvG72YNyqIZlmheu3",
+            "LOCATION_ID": "ZGtHSLAGOT83yj6W1pDG",
+            "ACCESS_TOKEN": "pit-3f0005c1-6e0f-476c-976b-b74047b0e00d"
+        },
+        "forum": {
+            "LOG_FILE": "twilio_log_forum.txt",
+            "DATA_FILE": "twilio_data_forum.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "804af14ec6f2b18d54a1b7a7c1efa147",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_forum.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/yNJna0ZdyTI6naLhJu4R/webhook-trigger/EDpej4K0r4fzPxXh5B9v",
+            "LOCATION_ID": "yNJna0ZdyTI6naLhJu4R",
+            "ACCESS_TOKEN": "pit-b5bebbb4-f2f9-4acb-b9ef-be38dc723483"
+        },
+        "ocr": {
+            "LOG_FILE": "twilio_log_ocr.txt",
+            "DATA_FILE": "twilio_data_ocr.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "4e950d4b7aeafee1c5f3ec9bcc0ee817",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_ocr.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/jH41Z47TXtote3u6rh92/webhook-trigger/MO45w07W33raUUtdmZUE",
+            "LOCATION_ID": "jH41Z47TXtote3u6rh92",
+            "ACCESS_TOKEN": "pit-dca8441c-06f1-41c0-a7d3-ad8857c61812"
+        },
+        "orando": {
+            "LOG_FILE": "twilio_log_orando.txt",
+            "DATA_FILE": "twilio_data_orando.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "4a0950b5cac8a152281fd6b66e9e1020",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_orando.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/deO9d55gcA2INMHhK2RC/webhook-trigger/c3f8ade7-3a9e-4285-83d4-f28caec256b0",
+            "LOCATION_ID": "deO9d55gcA2INMHhK2RC",
+            "ACCESS_TOKEN": "pit-6bc6982c-7291-404a-96b6-e189c97749ce"
+        },
+        "sunsuria": {
+            "LOG_FILE": "twilio_log_sunsuria.txt",
+            "DATA_FILE": "twilio_data_sunsuria.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "7f0960c7eddf46077dacf677949b4ca6",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_sunsuria.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/UTlkUPljhIcaHUW95wIW/webhook-trigger/KASBXEuNZEGIb29OZ0uu",
+            "LOCATION_ID": "UTlkUPljhIcaHUW95wIW",
+            "ACCESS_TOKEN": "pit-3145da83-4812-400b-8517-f8cf98a2df21"
+        },
+        "demo": {
+            "LOG_FILE": "twilio_log_demo.txt",
+            "DATA_FILE": "twilio_data_demo.txt",
+            "CALL_DETAILS_FILE": "latest_call_details.json",
+            "AUTH_TOKEN": "1c46b5593e219a0ddbc1f6a315adc5e0",
+            "WEBHOOK_URL": "https://widget.salesjourney360.com/widget/twilio/twilio_webhook_demo.php",
+            "TWILIO_API_BASE": "https://api.twilio.com",
+            "SJ360_WEBHOOK_URL": "https://services.leadconnectorhq.com/hooks/WphrMU0x3Ocd2pEpBJcH/webhook-trigger/ws0VbykKVbhPnH8K9AH2",
+            "LOCATION_ID": "WphrMU0x3Ocd2pEpBJcH",
+            "ACCESS_TOKEN": "pit-43dd0be6-ab49-42f6-aace-d7c0746adc19"
+        }
+    }
+}
