@@ -1,0 +1,20 @@
+{
+  "authentication": {
+    "username": "chloe.ooi@mnctechsolutions.com",
+    "password": "chloeooi2004"
+  },
+  "clients": [
+    {
+      "clientname": "pv",
+      "clientid": 8141,
+      "date_from": "2022-07-01",
+      "locationId": "rsdW1sEFWbzzULIapmdQ"
+    },
+    {
+      "clientname": "radium",
+      "clientid": 8911,
+      "date_from": "2021-11-01",
+      "locationId": "E0H7r1mN6ry0kv4uGZ6L"
+    }
+  ]
+}

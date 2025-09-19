@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Status Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .spinner-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .filter-container {
+            margin-bottom: 1.5rem;
+        }
+        .modal-content {
+            border-radius: 10px;
+        }
+        .modal-header {
+            border-bottom: 1px solid #eaeaea;
+        }
+        .modal-footer {
+            border-top: 1px solid #eaeaea;
+        }
+        .quick-selections {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-sm {
+            height: 38px;
+            font-size: 14px;
+        }
+        .chart-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="display-6 fw-bold mb-4">Call Status Report</h1>
+        <div id="loading" class="spinner-container d-none">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div class="filter-container">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="openDateModal" class="form-label">Date Range</label>
+                    <button id="openDateModal" class="btn btn-outline-primary btn-sm w-100">Select Date Range</button>
+                </div>
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label">Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="answerNameFilter" class="form-label">Answer Name</label>
+                    <select id="answerNameFilter" class="form-select">
+                        <option value="">All Answer Names</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button id="applyFilters" class="btn btn-primary w-100">Apply Filters</button>
+                    <button id="clearFilters" class="btn btn-secondary w-100">Clear Filters</button>
+                </div>
+            </div>
+            <div class="mt-3 d-flex align-items-center gap-3">
+                <div>
+                    <strong>Total Records: <span id="totalRecords">0</span></strong>
+                </div>
+                <div>
+                    <label for="chartType" class="form-label">Chart Type</label>
+                    <select id="chartType" class="form-select w-auto">
+                        <option value="bar">Stacked Bar (Status by Month)</option>
+                        <option value="pie">Pie (Status Distribution)</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-end">
+                    <button id="resetZoom" class="btn btn-outline-secondary btn-sm d-none">Reset Zoom</button>
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="callChart"></canvas>
+        </div>
+        <table id="data-table" class="table table-bordered table-striped table-hover d-none">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Call ID</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Caller Number</th>
+                    <th scope="col">Target Name</th>
+                    <th scope="col">Target Number</th>
+                    <th scope="col">Answer Name</th>
+                    <th scope="col">Answer Number</th>
+                    <th scope="col">Duration (s)</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+        <div id="pagination" class="d-flex justify-content-between align-items-center mt-4"></div>
+    </div>
+
+    <!-- Date Selection Modal -->
+    <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="modalDateRange" class="form-label">Date Range</label>
+                        <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+                    </div>
+                    <div class="quick-selections">
+                        <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
+                        <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
+                        <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
+                        <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
+                        <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
+                        <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script>
+        const recordsPerPage = 10;
+        let currentPage = 1;
+        let callData = [];
+        let configData = {};
+        let filteredData = [];
+        let selectedStartDate = null;
+        let selectedEndDate = null;
+        let dateRangePicker;
+        let chartInstance = null;
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('../call_config.json');
+                if (!response.ok) throw new Error('Failed to load config file');
+                configData = await response.json();
+                initializeWithLocationId();
+            } catch (error) {
+                console.error('Error loading config:', error);
+                document.getElementById('loading').textContent = 'Error: Unable to load config file.';
+            }
+        }
+
+        function initializeWithLocationId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const locationId = urlParams.get('locationId');
+            if (!locationId) {
+                document.getElementById('loading').textContent = 'Error: No locationId provided in URL.';
+                return;
+            }
+
+            const client = configData.clients.find(c => c.locationId === locationId);
+            if (!client) {
+                document.getElementById('loading').textContent = 'Error: Invalid locationId.';
+                return;
+            }
+
+            document.querySelector('h1').textContent = `Call Status Report - ${client.clientname}`;
+            selectedStartDate = new Date(client.date_from);
+            selectedEndDate = new Date();
+            updateDateRangeButton();
+            initializeDatePicker(client.date_from);
+            fetchData(locationId, client.clientid, client.date_from);
+        }
+
+        function initializeDatePicker(minDate) {
+            dateRangePicker = flatpickr('#modalDateRange', {
+                mode: "range",
+                dateFormat: "Y/m/d",
+                minDate: minDate,
+                defaultDate: [selectedStartDate, selectedEndDate],
+                onClose: (dates) => {
+                    if (dates.length === 2) {
+                        selectedStartDate = dates[0];
+                        selectedEndDate = dates[1];
+                        updateDateRangeButton();
+                        applyFilters();
+                        bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+                    }
+                }
+            });
+        }
+
+        function formatDate(date) {
+            if (!date) return '';
+            return date.toISOString().split('T')[0].replace(/-/g, '/');
+        }
+
+        function updateDateRangeButton() {
+            const button = document.getElementById('openDateModal');
+            if (selectedStartDate && selectedEndDate) {
+                button.textContent = `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`;
+            } else {
+                button.textContent = 'Select Date Range';
+            }
+        }
+
+        function getDateRange(range) {
+            const today = new Date();
+            let start, end;
+            switch (range) {
+                case 'thisWeek':
+                    start = new Date(today);
+                    start.setDate(today.getDate() - today.getDay());
+                    end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    break;
+                case 'lastWeek':
+                    start = new Date(today);
+                    start.setDate(today.getDate() - today.getDay() - 7);
+                    end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    break;
+                case 'last7Days':
+                    start = new Date(today);
+                    start.setDate(today.getDate() - 7);
+                    end = new Date(today);
+                    break;
+                case 'thisMonth':
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+                case 'lastMonth':
+                    start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    end = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+                case 'thisYear':
+                    start = new Date(today.getFullYear(), 0, 1);
+                    end = new Date(today.getFullYear(), 11, 31);
+                    break;
+                default:
+                    start = null;
+                    end = null;
+            }
+            const minDate = new Date(configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId')).date_from);
+            if (start && start < minDate) {
+                start = minDate;
+            }
+            return { start, end };
+        }
+
+        function clearFilters() {
+            const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
+            if (client) {
+                selectedStartDate = new Date(client.date_from);
+                selectedEndDate = new Date();
+                dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
+                document.getElementById('statusFilter').value = '';
+                document.getElementById('answerNameFilter').value = '';
+                document.getElementById('chartType').value = 'bar';
+                updateDateRangeButton();
+                applyFilters();
+            }
+        }
+
+        async function fetchData(locationId, clientId, dateFrom) {
+            const loading = document.getElementById('loading');
+            loading.classList.remove('d-none');
+
+            const auth = configData.authentication;
+            const apiUrl = `https://widget.salesjourney360.com/widget/report/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Basic ' + btoa(`${auth.username}:${auth.password}`)
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                callData = (data.calls || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+                filteredData = callData;
+                populateStatusFilter();
+                populateAnswerNameFilter();
+                applyFilters();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                loading.textContent = 'Error: Unable to fetch data. Ensure the PHP proxy (proxy.php) is correctly set up on your server.';
+            } finally {
+                loading.classList.add('d-none');
+            }
+        }
+
+        function populateStatusFilter() {
+            const statusFilter = document.getElementById('statusFilter');
+            const statuses = [...new Set(callData.map(record => record.status_name))];
+            statusFilter.innerHTML = '<option value="">All Statuses</option>';
+            statuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                statusFilter.appendChild(option);
+            });
+        }
+
+        function populateAnswerNameFilter() {
+            const answerNameFilter = document.getElementById('answerNameFilter');
+            const answerNames = [...new Set(callData.map(record => record.answer_name).filter(name => name && name !== 'N/A'))];
+            answerNameFilter.innerHTML = '<option value="">All Answer Names</option>';
+            answerNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                answerNameFilter.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const answerNameFilter = document.getElementById('answerNameFilter').value;
+            const dateFrom = selectedStartDate ? formatDate(selectedStartDate) : null;
+            const dateTo = selectedEndDate ? formatDate(selectedEndDate) : null;
+
+            filteredData = callData.filter(record => {
+                let include = true;
+                if (statusFilter) {
+                    include = include && record.status_name === statusFilter;
+                }
+                if (answerNameFilter) {
+                    include = include && record.answer_name === answerNameFilter;
+                }
+                if (dateFrom && dateTo) {
+                    const recordDate = new Date(record.date.replace(/\//g, '-'));
+                    include = include && recordDate >= new Date(dateFrom.replace(/\//g, '-')) && recordDate <= new Date(dateTo.replace(/\//g, '-'));
+                }
+                return include;
+            });
+
+            document.getElementById('totalRecords').textContent = filteredData.length;
+            displayPage(1);
+            updateChart();
+        }
+
+        function getMonthLabel(date) {
+            return date.toLocaleString('default', { year: 'numeric', month: 'short' });
+        }
+
+        function updateChart() {
+            const chartType = document.getElementById('chartType').value;
+            const ctx = document.getElementById('callChart').getContext('2d');
+            const resetZoomButton = document.getElementById('resetZoom');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (chartType === 'bar') {
+                const months = [];
+                const statusCounts = {};
+                filteredData.forEach(record => {
+                    const date = new Date(record.date.replace(/\//g, '-'));
+                    const month = getMonthLabel(date);
+                    if (!months.includes(month)) {
+                        months.push(month);
+                    }
+                    if (!statusCounts[record.status_name]) {
+                        statusCounts[record.status_name] = {};
+                    }
+                    statusCounts[record.status_name][month] = (statusCounts[record.status_name][month] || 0) + 1;
+                });
+                months.sort((a, b) => new Date(a + '-01') - new Date(b + '-01'));
+
+                const datasets = Object.keys(statusCounts).map((status, index) => ({
+                    label: status,
+                    data: months.map(month => statusCounts[status][month] || 0),
+                    backgroundColor: getColor(index),
+                    borderColor: getColor(index),
+                    borderWidth: 1
+                }));
+
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months,
+                        datasets: datasets
+                    },
+                    options: {
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Calls by Status Over Time'
+                            },
+                            legend: {
+                                position: 'top'
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'x'
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                },
+                                stacked: true
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Number of Calls'
+                                },
+                                beginAtZero: true,
+                                stacked: true
+                            }
+                        }
+                    }
+                });
+                resetZoomButton.classList.remove('d-none');
+            } else {
+                const statusCounts = {};
+                filteredData.forEach(record => {
+                    statusCounts[record.status_name] = (statusCounts[record.status_name] || 0) + 1;
+                });
+
+                const labels = Object.keys(statusCounts);
+                const data = Object.values(statusCounts);
+
+                chartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: labels.map((_, index) => getColor(index)),
+                            borderColor: '#ffffff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Call Status Distribution'
+                            },
+                            legend: {
+                                position: 'top'
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: false
+                                    },
+                                    pinch: {
+                                        enabled: false
+                                    }
+                                },
+                                pan: {
+                                    enabled: false
+                                }
+                            }
+                        }
+                    }
+                });
+                resetZoomButton.classList.add('d-none');
+            }
+        }
+
+        function getColor(index) {
+            const colors = [
+                '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+            ];
+            return colors[index % colors.length];
+        }
+
+        function displayPage(page) {
+            const table = document.getElementById('data-table');
+            const tableBody = document.getElementById('table-body');
+            const pagination = document.getElementById('pagination');
+            table.classList.remove('d-none');
+
+            const start = (page - 1) * recordsPerPage;
+            const end = start + recordsPerPage;
+            const paginatedData = filteredData.slice(start, end);
+
+            tableBody.innerHTML = '';
+            paginatedData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.id || 'N/A'}</td>
+                    <td>${record.date || 'N/A'}</td>
+                    <td>${record.caller_number || 'N/A'}</td>
+                    <td>${record.target_name || 'N/A'}</td>
+                    <td>${record.target_number || 'N/A'}</td>
+                    <td>${record.answer_name || 'N/A'}</td>
+                    <td>${record.answer_number || 'N/A'}</td>
+                    <td>${record.duration || 'N/A'}</td>
+                    <td>${record.status_name || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            pagination.innerHTML = `
+                <button onclick="changePage(${page - 1})" ${page === 1 ? 'disabled' : ''} class="btn btn-primary ${page === 1 ? 'disabled' : ''}">Previous</button>
+                <span>Page ${page} of ${totalPages}</span>
+                <button onclick="changePage(${page + 1})" ${page === totalPages ? 'disabled' : ''} class="btn btn-primary ${page === totalPages ? 'disabled' : ''}">Next</button>
+            `;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                displayPage(page);
+            }
+        }
+
+        $(document).ready(function() {
+            $('#openDateModal').on('click', () => {
+                const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+                modal.show();
+            });
+
+            $('.quick-selections button').each(function() {
+                $(this).on('click', function() {
+                    const range = this.dataset.range;
+                    const dates = getDateRange(range);
+                    dateRangePicker.setDate([dates.start, dates.end]);
+                    selectedStartDate = dates.start;
+                    selectedEndDate = dates.end;
+                    updateDateRangeButton();
+                    applyFilters();
+                    bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+                });
+            });
+
+            $('#clearFilter').on('click', () => {
+                dateRangePicker.clear();
+                selectedStartDate = null;
+                selectedEndDate = null;
+                updateDateRangeButton();
+                applyFilters();
+                bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+            });
+
+            $('#applyFilters').on('click', applyFilters);
+            $('#clearFilters').on('click', clearFilters);
+            $('#chartType').on('change', updateChart);
+            $('#resetZoom').on('click', () => {
+                if (chartInstance) {
+                    chartInstance.resetZoom();
+                }
+            });
+        });
+
+        loadConfig();
+    </script>
+</body>
+</html>
