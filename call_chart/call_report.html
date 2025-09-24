@@ -52,16 +52,22 @@
                     <label for="openDateModal" class="form-label">Date Range</label>
                     <button id="openDateModal" class="btn btn-outline-primary btn-sm w-100">Select Date Range</button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="statusFilter" class="form-label">Status</label>
                     <select id="statusFilter" class="form-select">
                         <option value="">All Statuses</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="answerNameFilter" class="form-label">Answer Name</label>
                     <select id="answerNameFilter" class="form-select">
                         <option value="">All Answer Names</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="targetNameFilter" class="form-label">Target Name</label>
+                    <select id="targetNameFilter" class="form-select">
+                        <option value="">All Target Names</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end gap-2">
@@ -125,6 +131,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        // Define constants and global variables
         const recordsPerPage = 10;
         let currentPage = 1;
         let callData = [];
@@ -134,6 +141,13 @@
         let selectedEndDate = null;
         let dateRangePicker;
 
+        // Normalize string for consistent comparison
+        function normalizeString(str) {
+            if (!str || str === 'N/A') return str;
+            return str.trim().toLowerCase();
+        }
+
+        // Load configuration file
         async function loadConfig() {
             try {
                 const response = await fetch('../call_config.json');
@@ -146,6 +160,7 @@
             }
         }
 
+        // Initialize based on locationId from URL
         function initializeWithLocationId() {
             const urlParams = new URLSearchParams(window.location.search);
             const locationId = urlParams.get('locationId');
@@ -160,24 +175,30 @@
                 return;
             }
 
-            selectedStartDate = new Date(client.date_from);
+            // Set earliest date_from as minDate for date picker
+            const minDate = client.accounts.reduce((earliest, account) => {
+                const accountDate = new Date(account.date_from);
+                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+            }, null);
+            selectedStartDate = minDate;
             selectedEndDate = new Date();
             updateDateRangeButton();
-            initializeDatePicker(client.date_from);
-            fetchData(locationId, client.clientid, client.date_from);
+            initializeDatePicker(minDate);
+            fetchAllClientData(client);
 
-            // background refresh
+            // Background refresh every 5 minutes
             const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
             setInterval(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const locationId = urlParams.get('locationId');
                 const client = configData.clients.find(c => c.locationId === locationId);
                 if (client) {
-                    fetchData(locationId, client.clientid, client.date_from);
+                    fetchAllClientData(client);
                 }
             }, BACKGROUND_REFRESH_INTERVAL);
         }
 
+        // Initialize Flatpickr date picker
         function initializeDatePicker(minDate) {
             dateRangePicker = flatpickr('#modalDateRange', {
                 mode: "range",
@@ -196,11 +217,13 @@
             });
         }
 
+        // Format date to YYYY/MM/DD
         function formatDate(date) {
             if (!date) return '';
             return date.toISOString().split('T')[0].replace(/-/g, '/');
         }
 
+        // Update date range button text
         function updateDateRangeButton() {
             const button = document.getElementById('openDateModal');
             if (selectedStartDate && selectedEndDate) {
@@ -210,6 +233,7 @@
             }
         }
 
+        // Get date range for quick selection buttons
         function getDateRange(range) {
             const today = new Date();
             let start, end;
@@ -248,48 +272,54 @@
                     end = null;
             }
             // Ensure start date is not before minDate
-            const minDate = new Date(configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId')).date_from);
+            const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
+            const minDate = client.accounts.reduce((earliest, account) => {
+                const accountDate = new Date(account.date_from);
+                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+            }, null);
             if (start && start < minDate) {
                 start = minDate;
             }
             return { start, end };
         }
 
+        // Clear all filters and reset to defaults
         function clearFilters() {
             const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
             if (client) {
-                selectedStartDate = new Date(client.date_from);
+                const minDate = client.accounts.reduce((earliest, account) => {
+                    const accountDate = new Date(account.date_from);
+                    return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+                }, null);
+                selectedStartDate = minDate;
                 selectedEndDate = new Date();
                 dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
                 document.getElementById('statusFilter').value = '';
                 document.getElementById('answerNameFilter').value = '';
+                document.getElementById('targetNameFilter').value = '';
                 updateDateRangeButton();
                 applyFilters();
             }
         }
 
-        async function fetchData(locationId, clientId, dateFrom) {
+        // Fetch data for all client IDs associated with the client
+        async function fetchAllClientData(client) {
             const loading = document.getElementById('loading');
             loading.classList.remove('d-none');
+            callData = [];
 
             const auth = configData.authentication;
-            const apiUrl = `https://widget.salesjourney360.com/widget/call/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
+            const promises = client.accounts.map(account => 
+                fetchDataForClientId(account.clientid, account.date_from, auth)
+            );
 
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Basic ' + btoa(`${auth.username}:${auth.password}`)
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                callData = (data.calls || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+                const results = await Promise.all(promises);
+                callData = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
                 filteredData = callData;
                 populateStatusFilter();
                 populateAnswerNameFilter();
+                populateTargetNameFilter();
                 applyFilters();
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -299,6 +329,23 @@
             }
         }
 
+        // Fetch data for a single client ID
+        async function fetchDataForClientId(clientId, dateFrom, auth) {
+            const apiUrl = `https://widget.salesjourney360.com/widget/call/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${auth.username}:${auth.password}`)
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error for client ID ${clientId}! Status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.calls || [];
+        }
+
+        // Populate status filter dropdown
         function populateStatusFilter() {
             const statusFilter = document.getElementById('statusFilter');
             const statuses = [...new Set(callData.map(record => record.status_name))];
@@ -311,6 +358,7 @@
             });
         }
 
+        // Populate answer name filter dropdown
         function populateAnswerNameFilter() {
             const answerNameFilter = document.getElementById('answerNameFilter');
             const answerNames = [...new Set(callData.map(record => record.answer_name).filter(name => name && name !== 'N/A'))];
@@ -323,9 +371,37 @@
             });
         }
 
+        // Populate target name filter dropdown with normalized names
+        function populateTargetNameFilter() {
+            const targetNameFilter = document.getElementById('targetNameFilter');
+            // Normalize target names and create a map to preserve original display text
+            const targetNameMap = new Map();
+            callData.forEach(record => {
+                const originalName = record.target_name;
+                if (originalName && originalName !== 'N/A') {
+                    const normalizedName = normalizeString(originalName);
+                    // Store the first encountered original name for each normalized name
+                    if (!targetNameMap.has(normalizedName)) {
+                        targetNameMap.set(normalizedName, originalName);
+                    }
+                }
+            });
+
+            // Populate dropdown with original names, but use normalized names for filtering
+            targetNameFilter.innerHTML = '<option value="">All Target Names</option>';
+            [...targetNameMap.entries()].sort((a, b) => a[1].localeCompare(b[1])).forEach(([normalizedName, originalName]) => {
+                const option = document.createElement('option');
+                option.value = normalizedName; // Use normalized name for filtering
+                option.textContent = originalName; // Display original name
+                targetNameFilter.appendChild(option);
+            });
+        }
+
+        // Apply filters to data
         function applyFilters() {
             const statusFilter = document.getElementById('statusFilter').value;
             const answerNameFilter = document.getElementById('answerNameFilter').value;
+            const targetNameFilter = document.getElementById('targetNameFilter').value;
             const dateFrom = selectedStartDate ? formatDate(selectedStartDate) : null;
             const dateTo = selectedEndDate ? formatDate(selectedEndDate) : null;
 
@@ -337,8 +413,11 @@
                 if (answerNameFilter) {
                     include = include && record.answer_name === answerNameFilter;
                 }
+                if (targetNameFilter) {
+                    include = include && normalizeString(record.target_name) === targetNameFilter;
+                }
                 if (dateFrom && dateTo) {
-                    const recordDate = new Date(record.date.replace(/\//g, '-')); // Convert to YYYY-MM-DD
+                    const recordDate = new Date(record.date.replace(/\//g, '-'));
                     include = include && recordDate >= new Date(dateFrom.replace(/\//g, '-')) && recordDate <= new Date(dateTo.replace(/\//g, '-'));
                 }
                 return include;
@@ -348,6 +427,7 @@
             displayPage(1);
         }
 
+        // Display paginated data
         function displayPage(page) {
             const table = document.getElementById('data-table');
             const tableBody = document.getElementById('table-body');
@@ -383,6 +463,7 @@
             `;
         }
 
+        // Change page
         function changePage(page) {
             const totalPages = Math.ceil(filteredData.length / recordsPerPage);
             if (page >= 1 && page <= totalPages) {
@@ -391,6 +472,7 @@
             }
         }
 
+        // Initialize event listeners
         $(document).ready(function() {
             $('#openDateModal').on('click', () => {
                 const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
