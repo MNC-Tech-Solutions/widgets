@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHL Funnel Widget</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+  <style>
+    :root {
+      --primary: #3b82f6; /* Vibrant blue for better contrast */
+      --primary-dark: #1e40af; /* Darker blue for hover states */
+      --text: #1f2937; /* Darker gray for readability */
+      --border: #e2e8f0; /* Softer gray for borders */
+      --funnel-grey: #f1f5f9; /* Light gray for backgrounds */
+      --background: #ffffff; /* Clean white background */
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--background);
+      -webkit-tap-highlight-color: transparent;
+      color: var(--text);
+    }
+
+    .widget {
+      max-width: 1700px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      background: var(--background);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px; /* Increased margin to separate from table */
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      position: relative; /* Ensure dropdowns are positioned relative to control-group */
+    }
+
+    label {
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    select,
+    input[type="text"],
+    input[type="date"] {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--background);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    select:focus,
+    input[type="text"]:focus,
+    input[type="date"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      outline: none;
+    }
+
+    select[multiple] {
+      padding: 0;
+    }
+
+    .choices {
+      margin-bottom: 0;
+      position: relative;
+    }
+
+    /* FIX: Ensure dropdowns have proper z-index and positioning */
+    .choices__list--dropdown {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      max-height: 280px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: absolute;
+      width: 100%;
+      background: var(--background);
+      z-index: 2000 !important; /* Higher than table and other elements */
+    }
+
+    .choices__inner {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--background);
+      min-height: 40px;
+      max-height: 120px;
+      overflow-y: auto;
+      transition: border-color 0.2s ease;
+    }
+
+    .choices__inner:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .choices__inner::-webkit-scrollbar {
+      display: none;
+    }
+
+    .choices__list--multiple .choices__item {
+      background-color: var(--primary);
+      border: 1px solid var(--primary-dark);
+      color: white;
+      font-size: 12px;
+      padding: 3px 10px;
+      margin: 3px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .choices__list--multiple .choices__item:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .choices__list--dropdown::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .choices__list--dropdown::-webkit-scrollbar-track {
+      background: var(--funnel-grey);
+    }
+
+    .choices__list--dropdown::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 4px;
+    }
+
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+      background-color: var(--funnel-grey);
+      color: var(--text);
+    }
+
+    #funnel-container {
+      width: 100%;
+      margin-top: 20px;
+      position: relative;
+      z-index: 100; /* Lower than dropdowns */
+    }
+
+    .funnel-table,
+    .opportunities-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .funnel-table thead th,
+    .opportunities-table thead th {
+      background: var(--funnel-grey);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 200; /* Lower than dropdowns but above table body */
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .funnel-table tbody tr:nth-child(even),
+    .opportunities-table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .funnel-table tbody tr:hover,
+    .opportunities-table tbody tr:hover {
+      background: #e6f0fa;
+      transition: background 0.2s ease;
+    }
+
+    .funnel-table tbody td,
+    .opportunities-table tbody td {
+      font-size: 13px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .table-container {
+      max-height: 600px;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+      z-index: 100; /* Lower than dropdowns */
+      border-radius: 8px;
+    }
+
+    .table-container::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+      background: var(--funnel-grey);
+      border-radius: 5px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 5px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-dark);
+    }
+
+    .pagination-section {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: var(--funnel-grey);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      z-index: 150; /* Lower than dropdowns */
+    }
+
+    .pagination-info {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .pagination-buttons .btn {
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .pagination-buttons .btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .pagination-buttons .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-color: var(--border);
+      color: var(--border);
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1500; /* Higher than dropdowns */
+      border-radius: 12px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--funnel-grey);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .widget-loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1500; /* Higher than dropdowns */
+      border-radius: 12px;
+    }
+
+    #dateSelectionModal .modal-dialog {
+      max-width: 650px;
+    }
+
+    #dateSelectionModal .modal-content {
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    #dateSelectionModal .modal-header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+    }
+
+    #dateSelectionModal .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #dateSelectionModal .modal-body {
+      padding: 24px;
+    }
+
+    #dateSelectionModal .quick-selections {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #dateSelectionModal .quick-selections button {
+      padding: 8px 16px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    #dateSelectionModal .quick-selections button:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .button-group .btn {
+      flex: 1;
+      max-width: 160px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .button-group .btn-outline-primary {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .button-group .btn-outline-primary:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .button-group .btn-outline-danger {
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .button-group .btn-outline-danger:hover {
+      background: #ef4444;
+      color: white;
+    }
+
+    .button-group .btn-outline-secondary {
+      border-color: #6b7280;
+      color: #6b7280;
+    }
+
+    .button-group .btn-outline-secondary:hover {
+      background: #6b7280;
+      color: white;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .header-row h5 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .no-data-message {
+      text-align: center;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 500;
+      padding: 24px;
+      background: var(--funnel-grey);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .widget {
+        padding: 15px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .button-group .btn {
+        max-width: 100%;
+        font-size: 13px;
+        padding: 8px 12px;
+      }
+
+      .funnel-table,
+      .opportunities-table {
+        font-size: 12px;
+      }
+
+      .funnel-table thead th,
+      .opportunities-table thead th {
+        padding: 10px;
+      }
+
+      .funnel-table tbody td,
+      .opportunities-table tbody td {
+        padding: 10px;
+      }
+
+      .pagination-section {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .pagination-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      .choices__list--dropdown {
+        max-height: 200px; /* Reduce dropdown height on mobile */
+        width: 100%; /* Ensure full width on mobile */
+      }
+    }
+
+    @media (max-width: 576px) {
+      .control-group {
+        min-width: 100%;
+      }
+
+      #dateSelectionModal .modal-dialog {
+        max-width: 100%;
+        margin: 10px;
+      }
+
+      #dateSelectionModal .quick-selections button {
+        flex: 1 1 45%;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="container-fluid">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="pipeline">Pipeline</label>
+            <select id="pipeline" class="form-select"></select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="sourceCategory">Source Category</label>
+            <select id="sourceCategory" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="channel">Source</label>
+            <select id="channel" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+      </div>
+      <br>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="agent">Agent</label>
+            <select id="agent" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="control-group">
+            <label for="project">Interested Project</label>
+            <select id="project" class="form-select">
+              <option value="all">All Projects</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4" id="teamFilter">
+          <div class="control-group">
+            <label for="team">Assigned Team</label>
+            <select id="team" class="form-select" multiple>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row g-3 mt-1">
+        <div class="col-md-12">
+          <div class="control-group w-100">
+            <div class="button-group">
+              <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
+              <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
+              <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="funnel-container"></div>
+    <div class="widget-loading-overlay" id="widgetLoadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modalDateRange" class="form-label">Date Range</label>
+            <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+          </div>
+          <div class="quick-selections">
+            <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+          <button type="button" class="btn btn-primary" id="doneButton">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script type="module">
+    import {
+      loadConfig,
+      fetchPipelines,
+      fetchAllUsers,
+      fetchAllOpportunities,
+      fetchNewOpportunities,
+      applyFilters,
+      formatDateTimeWithOffset,
+      clearIndexedDB
+    } from '../ghlData.js';
+
+    let CONFIG = {};
+    let locationId = '';
+    let pipelines = [];
+    let currentOpportunities = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let usersMap = new Map();
+    let sourcesSet = new Set();
+    let sourceCategoriesSet = new Set();
+    let projectsSet = new Set();
+    let teamsSet = new Set();
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+    let sourceCategoryToSources = {};
+    let sourceToCategories = {};
+    let choicesInstances = {};
+    const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
+    const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
+
+    function showWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'flex';
+    }
+    function hideWidgetSpinner() {
+      document.getElementById('widgetLoadingOverlay').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      showWidgetSpinner();
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) {
+          document.getElementById('funnel-container').innerHTML = '<p>No configuration available for this location.</p>';
+          return;
+        }
+        CONFIG = config;
+        locationId = locId;
+
+        await initWidget();
+        setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        updateHeight();
+      } finally {
+        hideWidgetSpinner();
+      }
+    });
+
+    async function backgroundRefresh() {
+      console.log('Background refresh started');
+      try {
+        const pipelineId = document.getElementById('pipeline').value;
+        if (pipelineId) {
+          const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
+          if (newOpps.length > 0) {
+            console.log('New opportunities found, updating chart');
+            await updateChannels(pipelineId);
+            await renderFunnel();
+          } else {
+            console.log('No new opportunities');
+          }
+        }
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
+    }
+
+    async function initWidget() {
+      if (locationId !== 'rsdW1sEFWbzzULIapmdQ') {
+        document.getElementById('teamFilter').classList.add('d-none');
+      }
+
+      const pipelineSelect = document.getElementById('pipeline');
+      const channelSelect = document.getElementById('channel');
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const agentSelect = document.getElementById('agent');
+      const teamSelect = document.getElementById('team');
+      const projectSelect = document.getElementById('project');
+
+      const createChoicesInstance = (selectElement, placeholder) => {
+        const choices = new Choices(selectElement, {
+          removeItemButton: true,
+          placeholderValue: placeholder,
+          maxItemCount: -1,
+          allowHTML: false,
+          searchEnabled: true,
+          searchResultLimit: 1000,
+          shouldSort: true,
+          renderSelected: false,
+          fuseOptions: {
+            threshold: 0.3,
+            ignoreLocation: true,
+            includeScore: false,
+            getFn: (obj, path) => {
+              return obj.label ? obj.label.toString().toLowerCase() : '';
+            }
+          },
+          callbackOnInit: function() {
+            const instance = this;
+            let fullChoices = [];
+            const originalSetChoices = instance.setChoices;
+            instance.setChoices = function(choicesArray, valueKey, labelKey, replace) {
+              if (replace) {
+                fullChoices = [...choicesArray];
+              }
+              return originalSetChoices.call(instance, choicesArray, valueKey, labelKey, replace);
+            };
+
+            instance.passedElement.element.addEventListener('search', function(event) {
+              const selectedValues = instance.getValue(true);
+              instance._store.items.forEach(item => {
+                if (selectedValues.includes(item.value)) {
+                  item.active = false;
+                }
+              });
+            });
+
+            instance.passedElement.element.addEventListener('showDropdown', function() {
+              const selectedValues = instance.getValue(true);
+              const searchInput = instance.input.element.value;
+              if (!searchInput) {
+                fullChoices.forEach(choice => {
+                  const item = instance._store.items.find(item => item.value === choice.value);
+                  if (item) {
+                    item.active = !selectedValues.includes(item.value);
+                  }
+                });
+              }
+            });
+
+            instance.passedElement.element.addEventListener('change', function() {
+              const selectedValues = instance.getValue(true);
+              fullChoices.forEach(choice => {
+                const item = instance._store.items.find(item => item.value === choice.value);
+                if (item) {
+                  item.active = !selectedValues.includes(item.value);
+                }
+              });
+              instance.showDropdown();
+            });
+          },
+          callbackOnChange: function() {
+            const values = this.getValue(true);
+            if (values.length > 0 && values.includes('all') && values.length > 1) {
+              this.removeActiveItemsByValue('all');
+            }
+          }
+        });
+        return choices;
+      };
+
+      choicesInstances.sourceCategory = createChoicesInstance(sourceCategorySelect, 'All Source Categories');
+      choicesInstances.channel = createChoicesInstance(channelSelect, 'All Sources');
+      choicesInstances.agent = createChoicesInstance(agentSelect, 'All Agents');
+      choicesInstances.team = createChoicesInstance(teamSelect, 'All Teams');
+
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode: "range",
+        dateFormat: "Y/m/d",
+        numberOfMonths: 2,
+        onClose: function(selectedDates, dateStr, instance) {
+          if (selectedDates.length === 2) {
+            const start = flatpickr.formatDate(selectedDates[0], "Y/m/d");
+            const end = flatpickr.formatDate(selectedDates[1], "Y/m/d");
+            instance.input.value = `${start} - ${end}`;
+          }
+        }
+      });
+
+      // Set up pagination event listeners using event delegation
+      document.getElementById('funnel-container').addEventListener('click', (event) => {
+        const totalPages = Math.ceil(currentOpportunities.length / itemsPerPage);
+        if (event.target.id === 'prevPageBtn' && currentPage > 1) {
+          currentPage--;
+          console.log('Previous button clicked, new page:', currentPage, 'total pages:', totalPages);
+          renderFunnel();
+        } else if (event.target.id === 'nextPageBtn' && currentPage < totalPages) {
+          currentPage++;
+          console.log('Next button clicked, new page:', currentPage, 'total pages:', totalPages);
+          renderFunnel();
+        }
+      });
+
+      document.getElementById('openDateModal').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+        if (selectedStartDate && selectedEndDate) {
+          dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
+        } else {
+          dateRangePicker.clear();
+        }
+        modal.show();
+      });
+
+      document.getElementById('clearFilters').addEventListener('click', async function() {
+        showWidgetSpinner();
+        try {
+          if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+            pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+          } else if (pipelines.length > 0) {
+            pipelineSelect.value = pipelines[0].id;
+          } else {
+            pipelineSelect.value = '';
+          }
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          projectSelect.value = 'all';
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          dateRangePicker.clear();
+          currentPage = 1; // Reset page on filter clear
+          await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+          updateAgents();
+          updateTeams();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.querySelectorAll('.quick-selections button').forEach(button => {
+        button.addEventListener('click', function() {
+          const range = this.getAttribute('data-range');
+          const { start, end } = getDateRange(range);
+          if (start && end) {
+            dateRangePicker.setDate([start, end], false);
+          }
+        });
+      });
+
+      document.getElementById('doneButton').addEventListener('click', async () => {
+        showWidgetSpinner();
+        try {
+          const selectedDates = dateRangePicker.selectedDates;
+          const dateButton = document.getElementById('openDateModal');
+          if (selectedDates.length === 2) {
+            selectedStartDate = flatpickr.formatDate(selectedDates[0], "Y-m-d");
+            selectedEndDate = flatpickr.formatDate(selectedDates[1], "Y-m-d");
+            dateButton.textContent = `${selectedStartDate} - ${selectedEndDate}`;
+          } else {
+            selectedStartDate = null;
+            selectedEndDate = null;
+            dateButton.textContent = 'Select Date Range';
+          }
+          currentPage = 1; // Reset page on date change
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.getElementById('clearFilter').addEventListener('click', async () => {
+        showWidgetSpinner();
+        try {
+          dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          currentPage = 1; // Reset page on date clear
+          const modal = bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal'));
+          modal.hide();
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      document.getElementById('refresh').addEventListener('click', hardRefresh);
+
+      pipelineSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          await updateChannels(pipelineSelect.value);
+          updateAgents();
+          updateTeams();
+          choicesInstances.agent.removeActiveItems();
+          choicesInstances.channel.removeActiveItems();
+          choicesInstances.sourceCategory.removeActiveItems();
+          choicesInstances.team.removeActiveItems();
+          projectSelect.value = 'all';
+          selectedStartDate = null;
+          selectedEndDate = null;
+          document.getElementById('openDateModal').textContent = 'Select Date Range';
+          currentPage = 1; // Reset page on pipeline change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      sourceCategorySelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          updateSourceDropdown();
+          currentPage = 1; // Reset page on filter change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      channelSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          currentPage = 1; // Reset page on filter change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      agentSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          currentPage = 1; // Reset page on filter change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      teamSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          currentPage = 1; // Reset page on filter change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      projectSelect.addEventListener('change', async () => {
+        showWidgetSpinner();
+        try {
+          currentPage = 1; // Reset page on project change
+          await renderFunnel();
+        } finally {
+          hideWidgetSpinner();
+        }
+      });
+
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(user => [user.id, user.name]));
+
+      updatePipelines();
+      await updateChannels(pipelineSelect.value || pipelines[0]?.id);
+      updateAgents();
+      updateTeams();
+
+      if (pipelines.length > 0) {
+        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+        } else {
+          pipelineSelect.value = pipelines[0].id;
+        }
+      }
+
+      await renderFunnel();
+    }
+
+    async function hardRefresh() {
+      showWidgetSpinner();
+      try {
+        await clearIndexedDB();
+        pipelines = await fetchPipelines(CONFIG, locationId);
+        const users = await fetchAllUsers(CONFIG, locationId);
+        usersMap = new Map(users.map(user => [user.id, user.name]));
+        updatePipelines();
+        const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
+        await updateChannels(pipelineId);
+        updateAgents();
+        choicesInstances.channel.removeActiveItems();
+        choicesInstances.sourceCategory.removeActiveItems();
+        choicesInstances.team.removeActiveItems();
+        document.getElementById('project').value = 'all';
+        document.getElementById('openDateModal').textContent = 'Select Date Range';
+        selectedStartDate = null;
+        selectedEndDate = null;
+        dateRangePicker.clear();
+        currentPage = 1; // Reset page on hard refresh
+        await renderFunnel();
+      } catch (error) {
+        console.error('Hard refresh failed:', error);
+        alert('Failed to perform hard refresh. Please try again.');
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    function updatePipelines() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelineSelect.innerHTML = '';
+      pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+      });
+    }
+
+    async function updateChannels(pipelineId) {
+      const channelChoices = choicesInstances.channel;
+      const sourceCategoryChoices = choicesInstances.sourceCategory;
+      const teamChoices = choicesInstances.team;
+      const projectSelect = document.getElementById('project');
+      
+      channelChoices.clearChoices();
+      sourceCategoryChoices.clearChoices();
+      teamChoices.clearChoices();
+      projectSelect.innerHTML = '<option value="all">All Projects</option>';
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+      sourceCategoryChoices.setChoices([{ value: 'all', label: 'All Source Categories' }], 'value', 'label', true);
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
+      sourcesSet.clear();
+      sourceCategoriesSet.clear();
+      teamsSet.clear();
+      projectsSet.clear();
+      sourceCategoryToSources = {};
+      sourceToCategories = {};
+
+      if (pipelineId) {
+        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        opportunities.forEach(op => {
+          const source = op.source;
+          const sourceCategory = op.sourceCategory;
+          const team = op.team;
+          const project = op.project;
+
+          if (source) sourcesSet.add(source);
+          if (sourceCategory) sourceCategoriesSet.add(sourceCategory);
+          if (team) teamsSet.add(team);
+          if (project && project !== 'N/A') projectsSet.add(project);
+
+          if (source && sourceCategory) {
+            if (!sourceCategoryToSources[sourceCategory]) sourceCategoryToSources[sourceCategory] = new Set();
+            sourceCategoryToSources[sourceCategory].add(source);
+            if (!sourceToCategories[source]) sourceToCategories[source] = new Set();
+            sourceToCategories[source].add(sourceCategory);
+          }
+        });
+
+        Array.from(sourcesSet).sort().forEach(source => {
+          channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+        });
+        Array.from(sourceCategoriesSet).sort().forEach(category => {
+          sourceCategoryChoices.setChoices([{ value: category, label: category }], 'value', 'label', false);
+        });
+        Array.from(teamsSet).sort().forEach(team => {
+          teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+        });
+        Array.from(projectsSet).sort().forEach(project => {
+          const option = document.createElement('option');
+          option.value = project;
+          option.textContent = project;
+          projectSelect.appendChild(option);
+        });
+      }
+    }
+
+    function updateAgents() {
+      const agentChoices = choicesInstances.agent;
+      agentChoices.clearChoices();
+      agentChoices.setChoices([{ value: 'all', label: 'All Agents' }], 'value', 'label', true);
+      usersMap.forEach((name, userId) => {
+        agentChoices.setChoices([{ value: userId, label: name }], 'value', 'label', false);
+      });
+    }
+
+    function updateTeams() {
+      const teamChoices = choicesInstances.team;
+      teamChoices.clearChoices();
+      teamChoices.setChoices([{ value: 'all', label: 'All Teams' }], 'value', 'label', true);
+      Array.from(teamsSet).sort().forEach(team => {
+        teamChoices.setChoices([{ value: team, label: team }], 'value', 'label', false);
+      });
+    }
+
+    function updateSourceDropdown() {
+      const selectedCategories = choicesInstances.sourceCategory.getValue(true);
+      const channelChoices = choicesInstances.channel;
+      const sourcesToShow = new Set();
+
+      channelChoices.clearChoices();
+      channelChoices.setChoices([{ value: 'all', label: 'All Sources' }], 'value', 'label', true);
+
+      if (selectedCategories.includes('all') || selectedCategories.length === 0) {
+        sourcesSet.forEach(source => sourcesToShow.add(source));
+      } else {
+        selectedCategories.forEach(category => {
+          if (sourceCategoryToSources[category]) {
+            sourceCategoryToSources[category].forEach(source => sourcesToShow.add(source));
+          }
+        });
+      }
+
+      Array.from(sourcesToShow).sort().forEach(source => {
+        channelChoices.setChoices([{ value: source, label: source }], 'value', 'label', false);
+      });
+    }
+
+    function calculateConversionRates(stages) {
+      if (stages.length === 0 || stages[0].value === 0) {
+        return stages.map(stage => ({
+          ...stage,
+          cumulativeConversion: "0.00",
+          nextStepConversion: "0.00"
+        }));
+      }
+      
+      const firstStageCount = stages[0].value;
+      return stages.map((stage, index) => {
+        const currentStageCount = stage.value;
+        const cumulativeConversion = (currentStageCount / firstStageCount) * 100;
+        let nextStepConversion = index === 0 ? 100.0 : (stages[index - 1].value > 0 ? (currentStageCount / stages[index - 1].value) * 100 : 0);
+        return {
+          ...stage,
+          cumulativeConversion: cumulativeConversion.toFixed(2),
+          nextStepConversion: nextStepConversion.toFixed(2)
+        };
+      });
+    }
+
+    function computeFunnelValues(stageCounts, stages) {
+      return stages.map((stage, index) =>
+        stages.slice(index).reduce((sum, s) => sum + (stageCounts[s.id] || 0), 0)
+      );
+    }
+
+    function computeCurrentValues(stageCounts, stages) {
+      return stages.map(stage => stageCounts[stage.id] || 0);
+    }
+
+    async function renderFunnel() {
+      showWidgetSpinner();
+      const pipelineId = document.getElementById('pipeline').value;
+      let selectedChannels = choicesInstances.channel.getValue(true);
+      let selectedSourceCategories = choicesInstances.sourceCategory.getValue(true);
+      let selectedAgents = choicesInstances.agent.getValue(true);
+      let selectedTeams = choicesInstances.team.getValue(true);
+      let selectedProject = document.getElementById('project').value;
+      const container = document.getElementById('funnel-container');
+      container.innerHTML = '';
+
+      try {
+        if (!pipelineId) {
+          drawFunnelTable([]);
+          return;
+        }
+
+        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        const filters = {
+          channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
+          sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],
+          agents: selectedAgents.length > 0 && !selectedAgents.includes('all') ? selectedAgents : [],
+          teams: selectedTeams.length > 0 && !selectedTeams.includes('all') ? selectedTeams : [],
+          projects: selectedProject !== 'all' ? [selectedProject] : []
+        };
+
+        if (selectedProject === 'all') {
+          const selectedPipeline = pipelines.find(p => p.id === pipelineId);
+          if (!selectedPipeline) {
+            drawFunnelTable([]);
+            return;
+          }
+
+          const filteredOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), filters);
+
+          const stageCounts = {};
+          selectedPipeline.stages.forEach(stage => stageCounts[stage.id] = 0);
+          filteredOpportunities.forEach(op => {
+            const stageId = op.pipelineStageId;
+            if (stageId && stageCounts.hasOwnProperty(stageId)) {
+              stageCounts[stageId]++;
+            }
+          });
+
+          const funnelValues = computeFunnelValues(stageCounts, selectedPipeline.stages);
+          const currentValues = computeCurrentValues(stageCounts, selectedPipeline.stages);
+          let data = selectedPipeline.stages.map((stage, index) => ({
+            label: stage.name,
+            value: funnelValues[index],
+            current: currentValues[index],
+            color: stageColors[index % stageColors.length],
+            stageId: stage.id
+          }));
+          data = calculateConversionRates(data);
+
+          container.innerHTML = `<h5>All Projects</h5>`;
+          drawFunnelTable(data, container);
+        } else {
+          currentOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), filters);
+          console.log('Filtered opportunities:', currentOpportunities);
+          currentOpportunities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          container.innerHTML = `<div class="header-row"><h5>Project: ${selectedProject}</h5><button type="button" class="btn btn-outline-primary btn-sm" id="exportBtn"><i class="bi bi-filetype-csv"></i></button></div>`;
+          drawOpportunitiesTable();
+
+          document.getElementById('exportBtn').onclick = () => exportToCSV(currentOpportunities, `Project_${selectedProject}`);
+        }
+
+        updateHeight();
+      } catch (error) {
+        console.error('Error rendering funnel:', error);
+        drawFunnelTable([], container);
+      } finally {
+        hideWidgetSpinner();
+      }
+    }
+
+    function drawFunnelTable(stages, container) {
+      const table = document.createElement('table');
+      table.className = 'funnel-table';
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Stage</th><th>Current Leads</th><th>Cumulative Conversion %</th><th>Next-Step Conversion %</th></tr>';
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      stages.forEach((stage) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${stage.label}</td><td>${stage.current}</td><td>${stage.cumulativeConversion}%</td><td>${stage.nextStepConversion}%</td>`;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      container.appendChild(table);
+    }
+
+    function drawOpportunitiesTable() {
+      const container = document.getElementById('funnel-container');
+      const tableContainer = document.createElement('div');
+      tableContainer.className = 'table-container';
+
+      console.log('Drawing opportunities table', {
+        currentPage,
+        totalOpportunities: currentOpportunities.length,
+        itemsPerPage
+      });
+
+      if (currentOpportunities.length === 0) {
+        container.innerHTML += '<div class="no-data-message">No opportunities found for this project.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'opportunities-table';
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th>Opportunity ID</th>
+          <th>Opportunity Name</th>
+          <th>Primary Contact Name</th>
+          <th>Source</th>
+          <th>Assigned User</th>
+          <th>Status</th>
+          <th>Phone Number</th>
+          <th>Lead Value</th>
+          <th>Project</th>
+          <th>Contact Created</th>
+          <th>Team</th>
+        </tr>
+      `;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, currentOpportunities.length);
+      const totalItems = currentOpportunities.length;
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+      for (let i = startIndex; i < endIndex; i++) {
+        const op = currentOpportunities[i];
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${op.id || 'N/A'}</td>
+          <td>${op.name || 'N/A'}</td>
+          <td>${op.contact?.name || 'N/A'}</td>
+          <td>${op.source || 'N/A'}</td>
+          <td>${assignedUserName}</td>
+          <td>${op.status || 'N/A'}</td>
+          <td>${op.contact?.phone || 'N/A'}</td>
+          <td>${op.monetaryValue || 0}</td>
+          <td>${op.project || 'N/A'}</td>
+          <td>${createdAtFormatted}</td>
+          <td>${op.team || 'N/A'}</td>
+        `;
+        tbody.appendChild(row);
+      }
+      table.appendChild(tbody);
+      tableContainer.appendChild(table);
+
+      const paginationSection = document.createElement('div');
+      paginationSection.className = 'pagination-section d-flex justify-content-between align-items-center';
+      paginationSection.innerHTML = `
+        <span class="pagination-info">Showing ${startIndex + 1} to ${endIndex} of ${totalItems}</span>
+        <div class="pagination-buttons">
+          <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+          <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+        </div>
+      `;
+      tableContainer.appendChild(paginationSection);
+
+      container.appendChild(tableContainer);
+    }
+
+    function exportToCSV(opportunities, filename) {
+      const headers = [
+        'Opportunity ID',
+        'Opportunity Name',
+        'Primary Contact Name',
+        'Source',
+        'Assigned User',
+        'Pipeline Name',
+        'Status',
+        'Phone Number',
+        'Lead Value',
+        'Project',
+        'Contact Created',
+        'Team'
+      ];
+
+      const rows = opportunities.map(op => {
+        const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
+        const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        return [
+          op.id || 'N/A',
+          op.name || 'N/A',
+          op.contact?.name || 'N/A',
+          op.source || 'N/A',
+          assignedUserName,
+          pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
+          op.status || 'N/A',
+          op.contact?.phone || 'N/A',
+          op.monetaryValue || 0,
+          op.project || 'N/A',
+          createdAtFormatted,
+          op.team || 'N/A'
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
+      });
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function getDateRange(range) {
+      const today = new Date();
+      let start, end;
+      switch (range) {
+        case 'thisWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay());
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'lastWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 7);
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'last7Days':
+          start = new Date(today);
+          start.setDate(today.getDate() - 7);
+          end = new Date(today);
+          break;
+        case 'thisMonth':
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case 'lastMonth':
+          start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 0);
+          break;
+        case 'thisYear':
+          start = new Date(today.getFullYear(), 0, 1);
+          end = new Date(today.getFullYear(), 11, 31);
+          break;
+        default:
+          start = null;
+          end = null;
+      }
+      return { start, end };
+    }
+
+    function updateHeight() {
+      const height = document.documentElement.scrollHeight;
+      try {
+        window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+      } catch (e) {
+        console.log("Parent communication not available");
+      }
+    }
+
+    window.addEventListener('message', event => {
+      if (event.data.type === 'ping') updateHeight();
+    });
+  </script>
+</body>
+</html>

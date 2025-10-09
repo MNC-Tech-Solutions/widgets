@@ -1,3 +1,4 @@
+// ghlData.js (updated with new filters in applyFilters)
 const DB_NAME = 'ghl_funnel_db';
 const DB_VERSION = 2;
 
@@ -429,6 +430,14 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
   if (additionalFilters.projects && additionalFilters.projects.length > 0 && !additionalFilters.projects.includes('all')) {
     filtered = filtered.filter(op => op.project && additionalFilters.projects.includes(op.project));
     console.log(`Filtered by projects ${additionalFilters.projects}: ${filtered.length} opportunities`);
+  }
+
+  if (additionalFilters.type && additionalFilters.type !== 'all') {
+    filtered = filtered.filter(op => {
+      const catLower = op.sourceCategory ? op.sourceCategory.toLowerCase() : '';
+      return additionalFilters.type === 'online' ? catLower.includes('online') : catLower.includes('offline');
+    });
+    console.log(`Filtered by type ${additionalFilters.type}: ${filtered.length} opportunities`);
   }
 
   if (additionalFilters.sourceCategory) {
