@@ -1,4 +1,4 @@
-<!-- original -->
+<!-- latest changes with multiple pv acc -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -206,7 +206,7 @@
 </head>
 <body>
     <div class="widget">
-        <h1 class="display-8 fw-bold mb-3">Call Status Report</h1>
+        <h1 class="display-6 fw-bold mb-4">Call Status Report</h1>
         <div id="loading" class="spinner-container d-none">
             <div class="spinner"></div>
         </div>
@@ -364,17 +364,6 @@
             updateDateRangeButton();
             initializeDatePicker(client.date_from);
             fetchData(locationId, client.clientid, client.date_from);
-            
-            // background refresh
-            const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
-            setInterval(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const locationId = urlParams.get('locationId');
-                const client = configData.clients.find(c => c.locationId === locationId);
-                if (client) {
-                    fetchData(locationId, client.clientid, client.date_from);
-                }
-            }, BACKGROUND_REFRESH_INTERVAL);
         }
 
         function initializeDatePicker(minDate) {
