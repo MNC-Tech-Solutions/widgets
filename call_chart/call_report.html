@@ -150,7 +150,7 @@
         // Load configuration file
         async function loadConfig() {
             try {
-                const response = await fetch('../call_config.json');
+                const response = await fetch('../call_config1.json');
                 if (!response.ok) throw new Error('Failed to load config file');
                 configData = await response.json();
                 initializeWithLocationId();

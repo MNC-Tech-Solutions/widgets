@@ -1,7 +1,7 @@
 {
   "authentication": {
     "username": "chloe.ooi@mnctechsolutions.com",
-    "password": "chloeooi2004"
+    "password": "chloeooi2004@"
   },
   "clients": [
     {
@@ -14,6 +14,10 @@
         {
           "clientid": 8753,
           "date_from": "2020-02-01"
+        },
+        {
+          "clientid": 8683,
+          "date_from": "2024-06-27"
         }
       ],
       "locationId": "rsdW1sEFWbzzULIapmdQ"
