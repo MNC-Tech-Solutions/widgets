@@ -187,15 +187,15 @@
             fetchAllClientData(client);
 
             // Background refresh every 5 minutes
-            const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
-            setInterval(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const locationId = urlParams.get('locationId');
-                const client = configData.clients.find(c => c.locationId === locationId);
-                if (client) {
-                    fetchAllClientData(client);
-                }
-            }, BACKGROUND_REFRESH_INTERVAL);
+            // const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
+            // setInterval(() => {
+            //     const urlParams = new URLSearchParams(window.location.search);
+            //     const locationId = urlParams.get('locationId');
+            //     const client = configData.clients.find(c => c.locationId === locationId);
+            //     if (client) {
+            //         fetchAllClientData(client);
+            //     }
+            // }, BACKGROUND_REFRESH_INTERVAL);
         }
 
         // Initialize Flatpickr date picker
