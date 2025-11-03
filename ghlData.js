@@ -1,4 +1,4 @@
-// ghlData.js (updated with new filters in applyFilters)
+// ghlData.js (updated with force refresh capability)
 const DB_NAME = 'ghl_funnel_db';
 const DB_VERSION = 2;
 
@@ -77,6 +77,35 @@ async function getLatestOpportunityId(pipelineId, locationId) {
       resolve(cursor ? cursor.value.id : null);
     };
     request.onerror = () => reject(request.error);
+  });
+}
+
+// New function to clear opportunities cache for a specific pipeline
+async function clearOpportunitiesCache(locationId, pipelineId) {
+  console.log(`Clearing opportunities cache for locationId: ${locationId}, pipelineId: ${pipelineId}`);
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('opportunities', 'readwrite');
+    const store = transaction.objectStore('opportunities');
+    const index = store.index('pipelineId');
+    const request = index.openCursor(IDBKeyRange.only(pipelineId));
+    
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        cursor.delete();
+        cursor.continue();
+      }
+    };
+    
+    transaction.oncomplete = () => {
+      console.log(`Successfully cleared opportunities cache for pipelineId: ${pipelineId}`);
+      resolve();
+    };
+    transaction.onerror = () => {
+      console.error('Error clearing opportunities cache:', transaction.error);
+      reject(transaction.error);
+    };
   });
 }
 
@@ -179,11 +208,16 @@ async function fetchAllUsers(config, locationId) {
   }
 }
 
-async function fetchAllOpportunities(config, locationId, pipelineId) {
-  let cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
-  if (cachedOpportunities.length > 0) {
-    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
-    return cachedOpportunities;
+async function fetchAllOpportunities(config, locationId, pipelineId, forceRefresh = false) {
+  // If forceRefresh is true, skip cache and fetch fresh data
+  if (!forceRefresh) {
+    let cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+    if (cachedOpportunities.length > 0) {
+      console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
+      return cachedOpportunities;
+    }
+  } else {
+    console.log(`Force refresh enabled, skipping cache for pipelineId: ${pipelineId}`);
   }
 
   let allOpportunities = [];
@@ -480,6 +514,7 @@ export {
   setCache,
   getAllByIndex,
   getLatestOpportunityId,
+  clearOpportunitiesCache,
   getLocationId,
   selectConfig,
   loadConfig,

@@ -259,6 +259,9 @@
         </select>
       </div>
       <div class="control-group">
+        <button id="forceRefresh" class="btn btn-primary btn-sm clear-filter-btn">Refresh</button>
+      </div>
+      <div class="control-group">
         <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
@@ -336,7 +339,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, applyFilters, clearIndexedDB } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache } from '../ghlData.js';
 
     let CONFIG = {};
     let locationId = '';
@@ -496,16 +499,16 @@
       await renderBarChart();
     }
 
-    async function renderBarChart() {
+    async function renderBarChart(forceRefresh = false) {
       const pipelineId = document.getElementById('pipeline').value || null;
       const dateRange = document.getElementById('dateRange').value;
       const project = document.getElementById('project').value || null;
       const sourceCategory = document.getElementById('sourceCategory').value || null;
       const source = document.getElementById('source').value || null;
-      console.log('Selected filters:', { pipelineId, dateRange, project, sourceCategory, source });
+      console.log('Selected filters:', { pipelineId, dateRange, project, sourceCategory, source, forceRefresh });
       showSpinner();
       try {
-        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId, forceRefresh);
         // Store unfiltered lists for dropdowns
         allProjects = [...new Set(opportunities.map(op => op.project).filter(p => p !== 'N/A'))].sort();
         allSourceCategories = [...new Set(opportunities.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
@@ -777,6 +780,24 @@
       document.getElementById('clearAllFilters').addEventListener('click', async () => {
         clearAllFilters();
         await refreshData();
+      });
+
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated');
+        showSpinner();
+        try {
+          const pipelineId = document.getElementById('pipeline').value;
+          if (pipelineId) {
+            await clearOpportunitiesCache(locationId, pipelineId);
+            console.log('Cache cleared, re-fetching all data');
+          }
+          await renderBarChart(true);
+          console.log('Force refresh completed');
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+        } finally {
+          hideSpinner();
+        }
       });
 
       await renderBarChart();

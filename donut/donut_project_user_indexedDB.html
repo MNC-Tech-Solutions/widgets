@@ -163,6 +163,9 @@
         <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
       </div>
       <div class="control-group">
+        <button id="forceRefresh" class="btn btn-primary btn-sm clear-filter-btn">Refresh</button>
+      </div>
+      <div class="control-group">
         <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
@@ -210,7 +213,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllUsers, fetchAllOpportunities, fetchNewOpportunities, applyFilters } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllUsers, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache } from '../ghlData.js';
 
     let CONFIG = {};
     let locationId = '';
@@ -364,7 +367,7 @@
       renderTableAndChart();
     }
 
-    async function renderTableAndChart() {
+    async function renderTableAndChart(forceRefresh = false) {
       console.log('Rendering chart with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
       const pipelineId = document.getElementById('pipeline').value || null;
       const project = document.getElementById('project').value || null;
@@ -372,7 +375,7 @@
       const source = document.getElementById('source').value || null;
       showSpinner();
       try {
-        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId, forceRefresh);
         allProjects = new Set(allOpportunities.map(op => op.project).filter(p => p && p !== 'N/A'));
         allSourceCategories = [...new Set(allOpportunities.map(op => op.sourceCategory).filter(sc => sc && sc !== 'N/A'))].sort();
         allSources = [...new Set(allOpportunities.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
@@ -557,6 +560,24 @@
         renderTableAndChart();
       });
       document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated');
+        showSpinner();
+        try {
+          const pipelineId = document.getElementById('pipeline').value;
+          if (pipelineId) {
+            await clearOpportunitiesCache(locationId, pipelineId);
+            console.log('Cache cleared, re-fetching all data');
+          }
+          await renderTableAndChart(true);
+          console.log('Force refresh completed');
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+        } finally {
+          hideSpinner();
+        }
+      });
 
       await renderTableAndChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
