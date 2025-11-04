@@ -1,12 +1,106 @@
-const GHLDATA_VERSION = '1.0.2';
+const GHLDATA_VERSION = '1.0.3';
 console.log('ghlData.js loaded - version: ', GHLDATA_VERSION);
 
-// ghlData.js (updated with force refresh capability)
 const DB_NAME = 'ghl_funnel_db';
 const DB_VERSION = 2;
 
 let dbPromise;
 
+// ============ PROGRESS MODAL MANAGER ============
+class ProgressModalManager {
+  constructor() {
+    this.modal = null;
+    this.progressBar = null;
+    this.statusText = null;
+    this.percentageText = null;
+    this.isInitialized = false;
+  }
+
+  initialize() {
+    if (this.isInitialized) return;
+
+    const modalHTML = `
+      <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-0">
+              <h5 class="modal-title" id="progressModalLabel">Fetching Data</h5>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <div class="progress" style="height: 24px; border-radius: 8px; background: #f0f0f0; overflow: hidden;">
+                  <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #91AEC4, #2667cc);" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div style="text-align: center; margin-top: 8px;">
+                  <span id="percentageText" style="font-weight: 600; color: #374151; font-size: 14px;">0%</span>
+                </div>
+              </div>
+              <div id="statusText" style="text-align: center; color: #6b7280; font-size: 14px; line-height: 1.5; min-height: 60px;">
+                <p style="margin: 0;">Syncing opportunities data...</p>
+              </div>
+              <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #91AEC4;">
+                <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                  <strong style="color: #374151;">ℹ️ Multi-Widget Sync:</strong> Data changes will automatically sync to other open widgets. Please do not refresh again.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.body;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = modalHTML;
+    container.appendChild(wrapper.firstElementChild);
+
+    this.modal = new bootstrap.Modal(document.getElementById('progressModal'), {
+      backdrop: 'static',
+      keyboard: false
+    });
+
+    this.progressBar = document.getElementById('progressBar');
+    this.statusText = document.getElementById('statusText');
+    this.percentageText = document.getElementById('percentageText');
+    this.isInitialized = true;
+  }
+
+  show(initialStatus = 'Fetching opportunities data...') {
+    this.initialize();
+    this.setProgress(0, initialStatus);
+    this.modal.show();
+  }
+
+  setProgress(percentage, status) {
+    if (!this.isInitialized) return;
+    
+    const boundedPercentage = Math.min(Math.max(percentage, 0), 100);
+    this.progressBar.style.width = boundedPercentage + '%';
+    this.progressBar.setAttribute('aria-valuenow', boundedPercentage);
+    this.percentageText.textContent = boundedPercentage + '%';
+
+    if (status) {
+      this.statusText.innerHTML = `<p style="margin: 0;">${status}</p>`;
+    }
+  }
+
+  hide() {
+    if (this.isInitialized && this.modal) {
+      this.modal.hide();
+    }
+  }
+
+  destroy() {
+    if (this.isInitialized && this.modal) {
+      this.modal.dispose();
+    }
+    this.isInitialized = false;
+  }
+}
+
+const progressManager = new ProgressModalManager();
+
+// ============ DATABASE FUNCTIONS ============
 function openDB() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
@@ -83,7 +177,6 @@ async function getLatestOpportunityId(pipelineId, locationId) {
   });
 }
 
-// New function to clear opportunities cache for a specific pipeline
 async function clearOpportunitiesCache(locationId, pipelineId) {
   console.log(`Clearing opportunities cache for locationId: ${locationId}, pipelineId: ${pipelineId}`);
   const db = await openDB();
@@ -132,7 +225,6 @@ function selectConfig(configs, locId) {
 
 async function loadConfig() {
   try {
-    // Add timestamp to prevent browser caching
     const cacheBuster = `?v=${Date.now()}`;
     const response = await fetch(`../config.json${cacheBuster}`, { 
       cache: 'no-store',
@@ -220,17 +312,24 @@ async function fetchAllUsers(config, locationId) {
   }
 }
 
-async function fetchAllOpportunities(config, locationId, pipelineId, forceRefresh = false) {
-  // Check cache first unless force refresh
+async function fetchAllOpportunities(config, locationId, pipelineId, forceRefresh = false, showProgress = false) {
   if (!forceRefresh) {
     const cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
     if (cachedOpportunities.length > 0) {
       console.log(`Using cached opportunities for pipelineId: ${pipelineId}, count: ${cachedOpportunities.length}`);
+      if (showProgress) {
+        progressManager.setProgress(100, 'Data loaded from cache');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        progressManager.hide();
+      }
       return cachedOpportunities;
     }
   } else {
-    // Only clear cache on force refresh
     await clearOpportunitiesCache(locationId, pipelineId);
+  }
+
+  if (showProgress) {
+    progressManager.show('Fetching opportunities data from server...');
   }
 
   let allOpportunities = [];
@@ -246,6 +345,10 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
       let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
       if (startAfter && startAfterId) url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
       else if (startAfterId) url += `&startAfterId=${startAfterId}`;
+
+      if (showProgress) {
+        progressManager.setProgress(20 + (totalFetched / 100), `Fetching batch ${Math.floor(totalFetched / limit) + 1}...`);
+      }
 
       console.log(`Fetching batch from URL: ${url}`);
       const response = await fetch(url, {
@@ -265,8 +368,17 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
       hasMore = !!startAfter && !!startAfterId && allOpportunities.length < (data.meta?.total || 0);
     }
 
+    if (showProgress) {
+      progressManager.setProgress(70, 'Processing opportunities...');
+    }
+
     if (allOpportunities.length === 0) {
       console.log('No opportunities retrieved from API');
+      if (showProgress) {
+        progressManager.setProgress(100, 'No opportunities found');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        progressManager.hide();
+      }
       return [];
     }
 
@@ -293,6 +405,10 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
       };
     });
 
+    if (showProgress) {
+      progressManager.setProgress(85, 'Saving to cache...');
+    }
+
     const db = await openDB();
     const transaction = db.transaction('opportunities', 'readwrite');
     const store = transaction.objectStore('opportunities');
@@ -305,6 +421,7 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
         data: op
       });
     });
+    
     await new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
         console.log(`Successfully added ${processedOpportunities.length} opportunities to IndexedDB for pipelineId: ${pipelineId}`);
@@ -316,47 +433,82 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
       };
     });
 
+    if (showProgress) {
+      progressManager.setProgress(100, 'Syncing to other widgets...');
+      localStorage.setItem('ghl_last_refresh', Date.now().toString());
+      await new Promise(resolve => setTimeout(resolve, 800));
+      progressManager.hide();
+    }
+
     return processedOpportunities;
   } catch (error) {
     console.error('Error fetching opportunities:', error);
+    if (showProgress) {
+      progressManager.setProgress(100, 'Error fetching data. Please try again.');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      progressManager.hide();
+    }
     return [];
   }
 }
 
 async function fetchNewOpportunities(config, locationId, pipelineId) {
-  let latestId = await getLatestOpportunityId(pipelineId, locationId);
-  let newOpportunities = [];
-  let startAfter = null;
-  let startAfterId = latestId;
-  let hasMore = !!startAfterId;
-  const limit = 100;
-
   try {
-    while (hasMore) {
+    // Get all cached opportunities for this pipeline
+    const cachedOpps = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+    const cachedIds = new Set(cachedOpps.map(op => op.id));
+    console.log(`Cached opportunities count: ${cachedIds.size}`);
+
+    let newOpportunities = [];
+    let startAfter = null;
+    let startAfterId = null;
+    let hasMore = true;
+    const limit = 100;
+    let batchCount = 0;
+
+    // Fetch from the beginning to find new opportunities
+    while (hasMore && batchCount < 100) { // Safety limit of 100 batches
+      batchCount++;
       let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
       if (startAfter && startAfterId) url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
-      else if (startAfterId) url += `&startAfterId=${startAfterId}`;
 
+      console.log(`Background refresh: Fetching batch ${batchCount}...`);
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${config.accessToken}`, 'Version': '2021-07-28' }
       });
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
 
-      newOpportunities = newOpportunities.concat(data.opportunities || []);
+      const batchOpps = data.opportunities || [];
+      
+      // Only keep opportunities that are NOT already cached
+      const trulyNewOpps = batchOpps.filter(op => !cachedIds.has(op.id));
+      
+      if (trulyNewOpps.length > 0) {
+        console.log(`Batch ${batchCount}: Found ${trulyNewOpps.length} new opportunities (skipped ${batchOpps.length - trulyNewOpps.length} existing)`);
+        newOpportunities = newOpportunities.concat(trulyNewOpps);
+      } else {
+        console.log(`Batch ${batchCount}: No new opportunities found, stopping`);
+        break; // Stop if this batch has no new opportunities
+      }
+
       startAfter = data.meta?.startAfter || null;
       startAfterId = data.meta?.startAfterId || null;
-      hasMore = !!startAfter && !!startAfterId && newOpportunities.length < (data.meta?.total || 0);
+      hasMore = !!startAfter && !!startAfterId;
     }
 
-    if (newOpportunities.length === 0) return [];
+    if (newOpportunities.length === 0) {
+      console.log('Background refresh: No new opportunities found');
+      return [];
+    }
+
+    console.log(`Background refresh: Processing ${newOpportunities.length} new opportunities`);
 
     const processedOpportunities = newOpportunities.map(op => {
       const customFields = op.customFields || [];
       const sourceCategory = customFields.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A';
       const project = customFields.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A';
       const team = customFields.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A';
-      console.log(`Processing new opportunity ${op.id}: sourceCategory=${sourceCategory}, project=${project}, team=${team}`);
       return {
         id: op.id,
         pipelineId: op.pipelineId,
@@ -374,6 +526,7 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
       };
     });
 
+    // Only add NEW opportunities to IndexedDB
     const db = await openDB();
     const transaction = db.transaction('opportunities', 'readwrite');
     const store = transaction.objectStore('opportunities');
@@ -385,9 +538,16 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
         data: op
       });
     });
+    
     await new Promise((resolve, reject) => {
-      transaction.oncomplete = resolve;
-      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => {
+        console.log(`Background refresh: Successfully added ${processedOpportunities.length} new opportunities to IndexedDB`);
+        resolve();
+      };
+      transaction.onerror = () => {
+        console.error('Error adding new opportunities to IndexedDB:', transaction.error);
+        reject(transaction.error);
+      };
     });
 
     return processedOpportunities;
@@ -513,9 +673,9 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
   }
 
   if (additionalFilters.stageId) {
-     filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
-     console.log(`Filtered by stageId ${additionalFilters.stageId}: ${filtered.length} opportunities`);
-   } 
+    filtered = filtered.filter(op => op.pipelineStageId === additionalFilters.stageId);
+    console.log(`Filtered by stageId ${additionalFilters.stageId}: ${filtered.length} opportunities`);
+  }
   
   console.log(`Final filtered opportunities: ${filtered.length}`);
   return filtered;
@@ -537,5 +697,6 @@ export {
   fetchNewOpportunities,
   formatDateTimeWithOffset,
   applyFilters,
-  clearIndexedDB
+  clearIndexedDB,
+  progressManager
 };

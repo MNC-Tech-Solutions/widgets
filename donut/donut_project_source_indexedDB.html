@@ -229,7 +229,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex } from '../ghlData.js?v=1.0.2';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
 
     let CONFIG = {};
     let locationId = '';
@@ -633,29 +633,50 @@
 
       document.getElementById('forceRefresh').addEventListener('click', async () => {
         console.log('Force refresh initiated - clearing all caches');
-        showSpinner();
+        
         try {
           const savedPipelineId = document.getElementById('pipeline').value;
           
-          // Clear all IndexedDB data
-          await clearIndexedDB();
+          // Show progress modal
+          progressManager.show('Initializing refresh...');
           
-          // Fetch fresh data with force refresh flag
+          // Step 1: Clear all IndexedDB data
+          progressManager.setProgress(15, 'Clearing cache...');
+          await clearIndexedDB();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Step 2: Fetch fresh pipelines
+          progressManager.setProgress(25, 'Fetching pipelines...');
           pipelines = await fetchPipelines(CONFIG, locationId);
           updatePipelines();
           document.getElementById('pipeline').value = savedPipelineId;
+          await new Promise(resolve => setTimeout(resolve, 200));
           
-          // Force refresh opportunities data
-          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true);
+          // Step 3: Fetch opportunities with progress tracking
+          progressManager.setProgress(40, 'Fetching opportunities...');
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
+          
           currentPipelineId = savedPipelineId;
           
+          // Step 4: Render chart
+          progressManager.setProgress(90, 'Rendering chart...');
           await renderTableAndChart();
+          
+          // Step 5: Update all widgets
+          progressManager.setProgress(95, 'Syncing to other widgets...');
           localStorage.setItem('ghl_last_refresh', Date.now().toString());
-          console.log('Force refresh completed');
+          
+          // Final step
+          progressManager.setProgress(100, 'Refresh complete! ✓');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          progressManager.hide();
+          
+          console.log('Force refresh completed successfully');
         } catch (error) {
           console.error('Force refresh failed:', error);
-        } finally {
-          hideSpinner();
+          progressManager.setProgress(100, 'Error during refresh. Please try again.');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          progressManager.hide();
         }
       });
 

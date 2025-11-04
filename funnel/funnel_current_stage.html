@@ -546,8 +546,9 @@
       applyFilters,
       formatDateTimeWithOffset,
       clearIndexedDB,
-      getAllByIndex  // Add this
-    } from '../ghlData.js?v=1.0.2';  // Add version number;
+      getAllByIndex,
+      progressManager
+    } from '../ghlData.js?v=1.0.3';  // Add version number;
 
     let CONFIG = {};
     let locationId = '';
@@ -948,49 +949,70 @@
     }
 
     async function hardRefresh() {
-      showWidgetSpinner();
       try {
         const savedPipelineId = document.getElementById('pipeline').value;
         
-        // Clear all caches
+        progressManager.show('Initializing refresh...');
+        
+        // Step 1: Clear all caches
+        progressManager.setProgress(15, 'Clearing cache...');
         await clearIndexedDB();
         opportunitiesCache = [];
         currentPipelineId = null;
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Fetch fresh data
+        // Step 2: Fetch pipelines
+        progressManager.setProgress(30, 'Fetching pipelines...');
         pipelines = await fetchPipelines(CONFIG, locationId);
+        updatePipelines();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 3: Fetch users
+        progressManager.setProgress(45, 'Fetching users...');
         const users = await fetchAllUsers(CONFIG, locationId);
         usersMap = new Map(users.map(user => [user.id, user.name]));
-        
-        updatePipelines();
-        
-        // Restore pipeline selection
-        document.getElementById('pipeline').value = savedPipelineId || pipelines[0]?.id;
-        
-        // Fetch fresh opportunities with force refresh flag
-        await updateChannels(savedPipelineId || pipelines[0]?.id);
         updateAgents();
+        await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Reset filters
+        // Step 4: Set pipeline and update dropdowns
+        progressManager.setProgress(60, 'Updating filters...');
+        const pipelineId = savedPipelineId || pipelines[0]?.id;
+        document.getElementById('pipeline').value = pipelineId;
+        
+        await updateChannels(pipelineId);
+        updateTeams();
+        updateProjects();
+        
         choicesInstances.channel.removeActiveItems();
         choicesInstances.sourceCategory.removeActiveItems();
         choicesInstances.team.removeActiveItems();
+        choicesInstances.project.removeActiveItems();
         document.getElementById('openDateModal').textContent = 'Select Date Range';
         selectedStartDate = null;
         selectedEndDate = null;
         dateRangePicker.clear();
+        await new Promise(resolve => setTimeout(resolve, 200));
         
+        // Step 5: Render funnel
+        progressManager.setProgress(80, 'Rendering funnel...');
         await renderFunnel();
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Notify other widgets AFTER everything is done
+        // Step 6: Notify other widgets
+        progressManager.setProgress(95, 'Syncing to other widgets...');
         localStorage.setItem('ghl_last_refresh', Date.now().toString());
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        progressManager.setProgress(100, 'Refresh complete! ✓');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        progressManager.hide();
         
         console.log('✅ Hard refresh completed and other widgets notified');
       } catch (error) {
         console.error('Hard refresh failed:', error);
-        alert('Failed to perform hard refresh. Please try again.');
-      } finally {
-        hideWidgetSpinner();
+        progressManager.setProgress(100, 'Error during refresh. Please try again.');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        progressManager.hide();
       }
     }
 
