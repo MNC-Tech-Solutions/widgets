@@ -1,7 +1,3 @@
-const GHLDATA_VERSION = '1.0.2';
-console.log('ghlData.js loaded - version: ', GHLDATA_VERSION);
-
-// ghlData.js (updated with force refresh capability)
 const DB_NAME = 'ghl_funnel_db';
 const DB_VERSION = 2;
 
@@ -83,35 +79,6 @@ async function getLatestOpportunityId(pipelineId, locationId) {
   });
 }
 
-// New function to clear opportunities cache for a specific pipeline
-async function clearOpportunitiesCache(locationId, pipelineId) {
-  console.log(`Clearing opportunities cache for locationId: ${locationId}, pipelineId: ${pipelineId}`);
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction('opportunities', 'readwrite');
-    const store = transaction.objectStore('opportunities');
-    const index = store.index('pipelineId');
-    const request = index.openCursor(IDBKeyRange.only(pipelineId));
-    
-    request.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
-      }
-    };
-    
-    transaction.oncomplete = () => {
-      console.log(`Successfully cleared opportunities cache for pipelineId: ${pipelineId}`);
-      resolve();
-    };
-    transaction.onerror = () => {
-      console.error('Error clearing opportunities cache:', transaction.error);
-      reject(transaction.error);
-    };
-  });
-}
-
 function getLocationId() {
   const urlParams = new URLSearchParams(window.location.search);
   let locId = urlParams.get('locationId');
@@ -132,16 +99,7 @@ function selectConfig(configs, locId) {
 
 async function loadConfig() {
   try {
-    // Add timestamp to prevent browser caching
-    const cacheBuster = `?v=${Date.now()}`;
-    const response = await fetch(`../config.json${cacheBuster}`, { 
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    const response = await fetch('../config.json', { cache: 'no-store' });
     if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
     const configs = await response.json();
     const locationId = getLocationId();
@@ -220,17 +178,11 @@ async function fetchAllUsers(config, locationId) {
   }
 }
 
-async function fetchAllOpportunities(config, locationId, pipelineId, forceRefresh = false) {
-  // Check cache first unless force refresh
-  if (!forceRefresh) {
-    const cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
-    if (cachedOpportunities.length > 0) {
-      console.log(`Using cached opportunities for pipelineId: ${pipelineId}, count: ${cachedOpportunities.length}`);
-      return cachedOpportunities;
-    }
-  } else {
-    // Only clear cache on force refresh
-    await clearOpportunitiesCache(locationId, pipelineId);
+async function fetchAllOpportunities(config, locationId, pipelineId) {
+  let cachedOpportunities = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+  if (cachedOpportunities.length > 0) {
+    console.log(`Loaded ${cachedOpportunities.length} opportunities from IndexedDB cache for pipelineId: ${pipelineId}`);
+    return cachedOpportunities;
   }
 
   let allOpportunities = [];
@@ -474,17 +426,9 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
     console.log(`Filtered by hiddenProjects: ${filtered.length} opportunities`);
   }
 
-  if (additionalFilters.project) {
-    filtered = filtered.filter(op => op.project === additionalFilters.project);
-    console.log(`Filtered by project ${additionalFilters.project}: ${filtered.length} opportunities`);
-  }
-
-  if (additionalFilters.type && additionalFilters.type !== 'all') {
-    filtered = filtered.filter(op => {
-      const catLower = op.sourceCategory ? op.sourceCategory.toLowerCase() : '';
-      return additionalFilters.type === 'online' ? catLower.includes('online') : catLower.includes('offline');
-    });
-    console.log(`Filtered by type ${additionalFilters.type}: ${filtered.length} opportunities`);
+  if (additionalFilters.projects && additionalFilters.projects.length > 0 && !additionalFilters.projects.includes('all')) {
+    filtered = filtered.filter(op => op.project && additionalFilters.projects.includes(op.project));
+    console.log(`Filtered by projects ${additionalFilters.projects}: ${filtered.length} opportunities`);
   }
 
   if (additionalFilters.sourceCategory) {
@@ -527,7 +471,6 @@ export {
   setCache,
   getAllByIndex,
   getLatestOpportunityId,
-  clearOpportunitiesCache,
   getLocationId,
   selectConfig,
   loadConfig,

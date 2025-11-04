@@ -1,3 +1,4 @@
+<!-- project source -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,15 +24,26 @@
     }
     .controls {
       display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+      flex-direction: column;
+      gap: 15px;
       margin-bottom: 25px;
-      align-items: flex-end;
     }
     .control-group {
       display: flex;
       flex-direction: column;
-      min-width: 200px;
+    }
+    .control-group .btn-sm {
+      height: 38px;
+      font-size: 14px;
+    }
+    .refresh-btn {
+      min-width: 120px;
+    }
+    .control-group label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
     }
     label {
       margin-bottom: 6px;
@@ -134,39 +146,43 @@
 <body>
   <div class="widget">
     <div class="controls">
-      <div class="control-group">
-        <label for="pipeline">Pipeline</label>
-        <select id="pipeline" class="form-select">
-          <option value="">Select Pipeline</option>
-        </select>
+      <div class="d-flex gap-3 mb-3">
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="pipeline">Pipeline</label>
+          <select id="pipeline" class="form-select">
+            <option value="">Select Pipeline</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="project">Interested Project</label>
+          <select id="project" class="form-select">
+            <option value="">All Projects</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="sourceCategory">Source Category</label>
+          <select id="sourceCategory" class="form-select">
+            <option value="">All Source Categories</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="source">Source</label>
+          <select id="source" class="form-select">
+            <option value="">All Sources</option>
+          </select>
+        </div>
       </div>
-      <div class="control-group">
-        <label for="project">Interested Project</label>
-        <select id="project" class="form-select">
-          <option value="">All Projects</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="sourceCategory">Source Category</label>
-        <select id="sourceCategory" class="form-select">
-          <option value="">All Source Categories</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="source">Source</label>
-        <select id="source" class="form-select">
-          <option value="">All Sources</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="openDateModal">Date Range</label>
-        <button id="openDateModal" class="btn btn-outline-primary btn-sm">Select Date Range</button>
-      </div>
-      <div class="control-group">
-        <button id="forceRefresh" class="btn btn-primary btn-sm clear-filter-btn">Refresh</button>
-      </div>
-      <div class="control-group">
-        <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
+
+      <div class="d-flex justify-content-end gap-2 flex-wrap">
+        <div class="control-group">
+          <button id="forceRefresh" class="btn btn-primary btn-sm refresh-btn w-100"> Refresh </button>
+        </div>
+        <div class="control-group">
+          <button id="openDateModal" class="btn btn-outline-primary btn-sm w-100">Select Date Range</button>
+        </div>
+        <div class="control-group">
+          <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn w-100">Clear Filters</button>
+        </div>
       </div>
     </div>
 
@@ -213,7 +229,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex } from '../ghlData.js?v=1.0.2';
 
     let CONFIG = {};
     let locationId = '';
@@ -227,6 +243,40 @@
     let allSources = [];
     let allSourceCategories = [];
     const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+    let currentPipelineId = null;
+    let opportunitiesData = [];
+
+    // Add after: let opportunitiesData = [];
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    async function checkForRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected in another widget, syncing data...');
+        
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+        
+        try {
+          // Reload from IndexedDB
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length > 0) {
+            console.log(`✅ Synced ${opportunitiesData.length} opportunities`);
+            await renderTableAndChart(); // or renderTableAndChart() for donut
+          }
+          
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
+    // Start checking every 5 seconds
+    setInterval(checkForRefresh, 5000);
 
     function escapeSingleQuotes(str) {
       return str.replace(/'/g, "\\'");
@@ -366,7 +416,7 @@
       renderTableAndChart();
     }
 
-    async function renderTableAndChart(forceRefresh = false) {
+    async function renderTableAndChart() {
       console.log('Rendering chart with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
       const pipelineId = document.getElementById('pipeline').value || null;
       const project = document.getElementById('project').value || null;
@@ -374,10 +424,23 @@
       const source = document.getElementById('source').value || null;
       showSpinner();
       try {
-        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId, forceRefresh);
-        allProjects = new Set(allOpportunities.map(op => op.project).filter(p => p && p !== 'N/A'));
-        allSourceCategories = [...new Set(allOpportunities.map(op => op.sourceCategory).filter(sc => sc && sc !== 'N/A'))].sort();
-        allSources = [...new Set(allOpportunities.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+        if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
+          // Try cache first
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          // Only fetch from API if cache is empty
+          if (opportunitiesData.length === 0) {
+            console.log('Cache empty, fetching from API');
+            opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          } else {
+            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
+          }
+          currentPipelineId = pipelineId;
+        }
+
+        allProjects = new Set(opportunitiesData.map(op => op.project).filter(p => p && p !== 'N/A'));
+        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc && sc !== 'N/A'))].sort();
+        allSources = [...new Set(opportunitiesData.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
         console.log('All sources:', allSources);
 
         updateProjects();
@@ -391,7 +454,7 @@
           sourceCategories: sourceCategory ? [sourceCategory] : []
         };
 
-        const opportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, customFields);
+        const opportunities = applyFilters(opportunitiesData, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, customFields);
 
         const projectSourceCounts = {};
         opportunities.forEach(op => {
@@ -513,6 +576,7 @@
           pipelineSelect.value = pipelines[0].id;
         }
       }
+      currentPipelineId = pipelineSelect.value;
 
       dateRangePicker = flatpickr('#modalDateRange', {
         mode: "range",
@@ -568,15 +632,25 @@
       document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
 
       document.getElementById('forceRefresh').addEventListener('click', async () => {
-        console.log('Force refresh initiated');
+        console.log('Force refresh initiated - clearing all caches');
         showSpinner();
         try {
-          const pipelineId = document.getElementById('pipeline').value;
-          if (pipelineId) {
-            await clearOpportunitiesCache(locationId, pipelineId);
-            console.log('Cache cleared, re-fetching all data');
-          }
-          await renderTableAndChart(true);
+          const savedPipelineId = document.getElementById('pipeline').value;
+          
+          // Clear all IndexedDB data
+          await clearIndexedDB();
+          
+          // Fetch fresh data with force refresh flag
+          pipelines = await fetchPipelines(CONFIG, locationId);
+          updatePipelines();
+          document.getElementById('pipeline').value = savedPipelineId;
+          
+          // Force refresh opportunities data
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true);
+          currentPipelineId = savedPipelineId;
+          
+          await renderTableAndChart();
+          localStorage.setItem('ghl_last_refresh', Date.now().toString());
           console.log('Force refresh completed');
         } catch (error) {
           console.error('Force refresh failed:', error);
@@ -593,14 +667,19 @@
       console.log('Background refresh started');
       try {
         const pipelineId = document.getElementById('pipeline').value;
-        if (pipelineId) {
+        if (pipelineId && pipelineId === currentPipelineId && opportunitiesData.length > 0) {
           const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
           if (newOpps.length > 0) {
-            console.log('New opportunities found, updating chart');
-            await renderTableAndChart();
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
+            // Add new opportunities to in-memory data
+            opportunitiesData = [...opportunitiesData, ...newOpps];
+            // Re-render chart with updated data
+            await renderTableAndChart(); // or renderTableAndChart() for donut
           } else {
-            console.log('No new opportunities');
+            console.log('Background refresh: No new opportunities');
           }
+        } else {
+          console.log('Background refresh skipped: No pipeline selected or no data loaded');
         }
       } catch (error) {
         console.error('Background refresh failed:', error);
