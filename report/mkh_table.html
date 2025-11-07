@@ -624,7 +624,7 @@
       applyFilters,
       formatDateTimeWithOffset,
       clearIndexedDB
-    } from '../ghlData.js';
+    } from '../ghlData.js?v=1.0.3';
 
     let CONFIG = {};
     let locationId = '';
@@ -646,6 +646,27 @@
     const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
 
+    // Add these variables at the top with your other declarations
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    // Add this function after your backgroundRefresh function
+    async function checkForExternalRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected from another widget, syncing data...');
+        
+        try {
+          // Re-render funnel with fresh data from cache
+          await renderFunnel();
+          console.log('✅ Synced successfully');
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
     function showWidgetSpinner() {
       document.getElementById('widgetLoadingOverlay').style.display = 'flex';
     }
@@ -665,7 +686,11 @@
         locationId = locId;
 
         await initWidget();
+        
+        // Start both background refresh and sync check
         setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        setInterval(checkForExternalRefresh, 5000); // Check every 5 seconds for external refreshes
+        
         updateHeight();
       } finally {
         hideWidgetSpinner();

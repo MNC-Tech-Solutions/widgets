@@ -259,6 +259,9 @@
         </select>
       </div>
       <div class="control-group">
+          <button id="forceRefresh" class="btn btn-primary btn-sm refresh-btn w-100"> Refresh </button>
+        </div>
+      <div class="control-group">
         <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
       </div>
     </div>
@@ -336,7 +339,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, applyFilters, clearIndexedDB } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
 
     let CONFIG = {};
     let locationId = '';
@@ -351,6 +354,40 @@
     let currentPage = 1;
     const leadsPerPage = 10;
     const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+    let currentPipelineId = null;
+    let opportunitiesData = [];
+
+    // Add after: let opportunitiesData = [];
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    async function checkForRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected in another widget, syncing data...');
+        
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+        
+        try {
+          // Reload from IndexedDB
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length > 0) {
+            console.log(`✅ Synced ${opportunitiesData.length} opportunities`);
+            await renderBarChart(); // or renderTableAndChart() for donut
+          }
+          
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
+    // Start checking every 5 seconds
+    setInterval(checkForRefresh, 5000);
 
     function showSpinner() {
       document.getElementById('loadingOverlay').style.display = 'flex';
@@ -505,11 +542,23 @@
       console.log('Selected filters:', { pipelineId, dateRange, project, sourceCategory, source });
       showSpinner();
       try {
-        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
-        // Store unfiltered lists for dropdowns
-        allProjects = [...new Set(opportunities.map(op => op.project).filter(p => p !== 'N/A'))].sort();
-        allSourceCategories = [...new Set(opportunities.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
-        allSources = [...new Set(opportunities.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+        if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
+          // Try cache first
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          // Only fetch from API if cache is empty
+          if (opportunitiesData.length === 0) {
+            console.log('Cache empty, fetching from API');
+            opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          } else {
+            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
+          }
+          currentPipelineId = pipelineId;
+        }
+
+        allProjects = [...new Set(opportunitiesData.map(op => op.project).filter(p => p !== 'N/A'))].sort();
+        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
+        allSources = [...new Set(opportunitiesData.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
         console.log('All sources:', allSources);
 
         let startDate = null;
@@ -522,7 +571,7 @@
           startDate = formatDateToLocalString(selectedStartDate);
           endDate = formatDateToLocalString(selectedEndDate);
         }
-        allOpportunities = applyFilters(opportunities, pipelineId, startDate, endDate, new Set(), {
+        allOpportunities = applyFilters(opportunitiesData, pipelineId, startDate, endDate, new Set(), {
           project: project,
           sourceCategory: sourceCategory,
           channels: source ? [source] : [],
@@ -723,6 +772,7 @@
       } else if (pipelines.length > 0) {
         pipelineSelect.value = pipelines[0].id;
       }
+      currentPipelineId = pipelineSelect.value;
 
       dateRangePicker = flatpickr('#modalDateRange', {
         mode: "range",
@@ -779,6 +829,85 @@
         await refreshData();
       });
 
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated - clearing all caches');
+        showSpinner();
+        try {
+          const savedPipelineId = document.getElementById('pipeline').value;
+          
+          // Clear all IndexedDB data
+          await clearIndexedDB();
+          
+          // Fetch fresh data with force refresh flag
+          pipelines = await fetchPipelines(CONFIG, locationId);
+          updatePipelines();
+          document.getElementById('pipeline').value = savedPipelineId;
+          
+          // Force refresh opportunities data
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true);
+          currentPipelineId = savedPipelineId;
+          
+          await renderBarChart();
+
+          localStorage.setItem('ghl_last_refresh', Date.now().toString());
+          
+          console.log('Force refresh completed');
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+        } finally {
+          hideSpinner();
+        }
+      });
+      
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated - clearing all caches');
+        
+        try {
+          const savedPipelineId = document.getElementById('pipeline').value;
+          
+          // Show progress modal
+          progressManager.show('Initializing refresh...');
+          
+          // Step 1: Clear all IndexedDB data
+          progressManager.setProgress(15, 'Clearing cache...');
+          await clearIndexedDB();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Step 2: Fetch fresh pipelines
+          progressManager.setProgress(25, 'Fetching pipelines...');
+          pipelines = await fetchPipelines(CONFIG, locationId);
+          updatePipelines();
+          document.getElementById('pipeline').value = savedPipelineId;
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Step 3: Fetch opportunities with progress tracking
+          progressManager.setProgress(40, 'Fetching opportunities...');
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
+          
+          currentPipelineId = savedPipelineId;
+          
+          // Step 4: Render chart
+          progressManager.setProgress(90, 'Rendering chart...');
+          await renderBarChart();
+          
+          // Step 5: Update all widgets
+          progressManager.setProgress(95, 'Syncing to other widgets...');
+          localStorage.setItem('ghl_last_refresh', Date.now().toString());
+          
+          // Final step
+          progressManager.setProgress(100, 'Refresh complete! ✓');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          progressManager.hide();
+          
+          console.log('Force refresh completed successfully');
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+          progressManager.setProgress(100, 'Error during refresh. Please try again.');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          progressManager.hide();
+        }
+      });
+
       await renderBarChart();
       setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
     }
@@ -787,14 +916,19 @@
       console.log('Background refresh started');
       try {
         const pipelineId = document.getElementById('pipeline').value;
-        if (pipelineId) {
+        if (pipelineId && pipelineId === currentPipelineId && opportunitiesData.length > 0) {
           const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
           if (newOpps.length > 0) {
-            console.log('New opportunities found, updating chart');
-            await renderBarChart();
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
+            // Add new opportunities to in-memory data
+            opportunitiesData = [...opportunitiesData, ...newOpps];
+            // Re-render chart with updated data
+            await renderBarChart(); // or renderTableAndChart() for donut
           } else {
-            console.log('No new opportunities');
+            console.log('Background refresh: No new opportunities');
           }
+        } else {
+          console.log('Background refresh skipped: No pipeline selected or no data loaded');
         }
       } catch (error) {
         console.error('Background refresh failed:', error);

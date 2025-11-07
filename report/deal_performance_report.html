@@ -551,8 +551,9 @@
       fetchNewOpportunities,
       applyFilters,
       formatDateTimeWithOffset,
-      clearIndexedDB
-    } from '../ghlData.js';
+      clearIndexedDB,
+      progressManager
+    } from '../ghlData.js?v=1.0.3';
 
     let CONFIG = {};
     let locationId = '';
@@ -573,6 +574,27 @@
     const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
     const stageColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
     let currentStartDate, currentEndDate, previousStartDate, previousEndDate;
+
+    // Add these variables at the top with your other declarations
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    // Add this function after your backgroundRefresh function
+    async function checkForExternalRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected from another widget, syncing data...');
+        
+        try {
+          // Re-render funnel with fresh data from cache
+          await renderFunnel();
+          console.log('✅ Synced successfully');
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
 
     function showWidgetSpinner() {
       document.getElementById('widgetLoadingOverlay').style.display = 'flex';
@@ -600,7 +622,11 @@
         locationId = locId;
 
         await initWidget();
+        
+        // Start both background refresh and sync check
         setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        setInterval(checkForExternalRefresh, 5000); // Check every 5 seconds for external refreshes
+        
         updateHeight();
       } finally {
         hideWidgetSpinner();
@@ -927,15 +953,37 @@
     }
 
     async function hardRefresh() {
-      showWidgetSpinner();
       try {
+        const savedPipelineId = document.getElementById('pipeline').value;
+        
+        progressManager.show('Initializing refresh...');
+        
+        // Step 1: Clear all caches
+        progressManager.setProgress(15, 'Clearing cache...');
         await clearIndexedDB();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Step 2: Fetch pipelines
+        progressManager.setProgress(30, 'Fetching pipelines...');
         pipelines = await fetchPipelines(CONFIG, locationId);
+        updatePipelines();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 3: Fetch users
+        progressManager.setProgress(45, 'Fetching users...');
         const users = await fetchAllUsers(CONFIG, locationId);
         usersMap = new Map(users.map(user => [user.id, user.name]));
-        updatePipelines();
-        const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
+        updateAgents();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 4: Set pipeline and update channels/teams
+        progressManager.setProgress(60, 'Updating filters...');
+        const pipelineId = savedPipelineId || pipelines[0]?.id;
+        document.getElementById('pipeline').value = pipelineId;
+        
         await updateChannels(pipelineId);
+        updateTeams();
+        
         choicesInstances.channel.removeActiveItems();
         choicesInstances.sourceCategory.removeActiveItems();
         choicesInstances.team.removeActiveItems();
@@ -943,12 +991,29 @@
         selectedStartDate = null;
         selectedEndDate = null;
         dateRangePicker.clear();
+        document.getElementById('comparison').value = 'none';
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 5: Render chart
+        progressManager.setProgress(80, 'Rendering chart...');
         await renderFunnel();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Step 6: Notify other widgets
+        progressManager.setProgress(95, 'Syncing to other widgets...');
+        localStorage.setItem('ghl_last_refresh', Date.now().toString());
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        progressManager.setProgress(100, 'Refresh complete! ✓');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        progressManager.hide();
+        
+        console.log('✅ Hard refresh completed and other widgets notified');
       } catch (error) {
         console.error('Hard refresh failed:', error);
-        alert('Failed to perform hard refresh. Please try again.');
-      } finally {
-        hideWidgetSpinner();
+        progressManager.setProgress(100, 'Error during refresh. Please try again.');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        progressManager.hide();
       }
     }
 

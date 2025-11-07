@@ -545,8 +545,10 @@
       fetchNewOpportunities,
       applyFilters,
       formatDateTimeWithOffset,
-      clearIndexedDB
-    } from '../ghlData.js';
+      clearIndexedDB,
+      getAllByIndex,
+      progressManager
+    } from '../ghlData.js?v=1.0.3';  // Add version number;
 
     let CONFIG = {};
     let locationId = '';
@@ -566,6 +568,40 @@
     let choicesInstances = {};
     const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
+
+    // Add cross-widget sync
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+    let currentPipelineId = null;
+    let opportunitiesCache = [];
+
+    async function checkForRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected in another widget, syncing data...');
+        
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+        
+        try {
+          // Clear cache to force reload from IndexedDB
+          opportunitiesCache = [];
+          currentPipelineId = null;
+          
+          // Reload channels and render
+          await updateChannels(pipelineId);
+          await renderFunnel();
+          
+          console.log('✅ Synced with other widgets');
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
+    // Start checking every 5 seconds
+    setInterval(checkForRefresh, 5000);
 
     function showWidgetSpinner() {
       document.getElementById('widgetLoadingOverlay').style.display = 'flex';
@@ -604,15 +640,19 @@
       console.log('Background refresh started');
       try {
         const pipelineId = document.getElementById('pipeline').value;
-        if (pipelineId) {
+        if (pipelineId && pipelineId === currentPipelineId && opportunitiesCache.length > 0) {
           const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
           if (newOpps.length > 0) {
-            console.log('New opportunities found, updating chart');
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
+            // Add to cache
+            opportunitiesCache = [...opportunitiesCache, ...newOpps];
             await updateChannels(pipelineId);
             await renderFunnel();
           } else {
-            console.log('No new opportunities');
+            console.log('Background refresh: No new opportunities');
           }
+        } else {
+          console.log('Background refresh skipped: No pipeline selected or no cached data');
         }
       } catch (error) {
         console.error('Background refresh failed:', error);
@@ -909,29 +949,70 @@
     }
 
     async function hardRefresh() {
-      showWidgetSpinner();
       try {
+        const savedPipelineId = document.getElementById('pipeline').value;
+        
+        progressManager.show('Initializing refresh...');
+        
+        // Step 1: Clear all caches
+        progressManager.setProgress(15, 'Clearing cache...');
         await clearIndexedDB();
+        opportunitiesCache = [];
+        currentPipelineId = null;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Step 2: Fetch pipelines
+        progressManager.setProgress(30, 'Fetching pipelines...');
         pipelines = await fetchPipelines(CONFIG, locationId);
+        updatePipelines();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 3: Fetch users
+        progressManager.setProgress(45, 'Fetching users...');
         const users = await fetchAllUsers(CONFIG, locationId);
         usersMap = new Map(users.map(user => [user.id, user.name]));
-        updatePipelines();
-        const pipelineId = document.getElementById('pipeline').value || pipelines[0]?.id;
-        await updateChannels(pipelineId);
         updateAgents();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 4: Set pipeline and update dropdowns
+        progressManager.setProgress(60, 'Updating filters...');
+        const pipelineId = savedPipelineId || pipelines[0]?.id;
+        document.getElementById('pipeline').value = pipelineId;
+        
+        await updateChannels(pipelineId);
+        updateTeams();
+        updateProjects();
+        
         choicesInstances.channel.removeActiveItems();
         choicesInstances.sourceCategory.removeActiveItems();
         choicesInstances.team.removeActiveItems();
+        choicesInstances.project.removeActiveItems();
         document.getElementById('openDateModal').textContent = 'Select Date Range';
         selectedStartDate = null;
         selectedEndDate = null;
         dateRangePicker.clear();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 5: Render funnel
+        progressManager.setProgress(80, 'Rendering funnel...');
         await renderFunnel();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Step 6: Notify other widgets
+        progressManager.setProgress(95, 'Syncing to other widgets...');
+        localStorage.setItem('ghl_last_refresh', Date.now().toString());
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        progressManager.setProgress(100, 'Refresh complete! ✓');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        progressManager.hide();
+        
+        console.log('✅ Hard refresh completed and other widgets notified');
       } catch (error) {
         console.error('Hard refresh failed:', error);
-        alert('Failed to perform hard refresh. Please try again.');
-      } finally {
-        hideWidgetSpinner();
+        progressManager.setProgress(100, 'Error during refresh. Please try again.');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        progressManager.hide();
       }
     }
 
@@ -964,7 +1045,18 @@
       sourceToCategories = {};
 
       if (pipelineId) {
-        const opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        // Use cache if available and pipeline hasn't changed
+        let opportunities;
+        if (pipelineId === currentPipelineId && opportunitiesCache.length > 0) {
+          console.log('Using cached opportunities:', opportunitiesCache.length);
+          opportunities = opportunitiesCache;
+        } else {
+          console.log('Fetching opportunities from IndexedDB/API');
+          opportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          opportunitiesCache = opportunities;
+          currentPipelineId = pipelineId;
+        }
+        
         opportunities.forEach(op => {
           const source = op.source;
           const sourceCategory = op.sourceCategory;
@@ -1084,7 +1176,18 @@
           return;
         }
 
-        const allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId);
+        // Use cache if available
+        let allOpportunities;
+        if (pipelineId === currentPipelineId && opportunitiesCache.length > 0) {
+          console.log('Using cached opportunities for rendering');
+          allOpportunities = opportunitiesCache;
+        } else {
+          console.log('Fetching opportunities for rendering');
+          allOpportunities = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          opportunitiesCache = allOpportunities;
+          currentPipelineId = pipelineId;
+        }
+
         const filteredOpportunities = applyFilters(allOpportunities, pipelineId, selectedStartDate, selectedEndDate, new Set(), {
           channels: selectedChannels.length > 0 && !selectedChannels.includes('all') ? selectedChannels : [],
           sourceCategories: selectedSourceCategories.length > 0 && !selectedSourceCategories.includes('all') ? selectedSourceCategories : [],

@@ -412,7 +412,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, fetchAllUsers, formatDateTimeWithOffset } from '../ghlData.js';
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, fetchAllUsers, formatDateTimeWithOffset } from '../ghlData.js?v=1.0.3';
 
     let CONFIG = {};
     let locationId = '';
@@ -431,6 +431,27 @@
     let currentFilteredOpportunities = [];
     let currentProject = '';
     let currentSource = null;
+
+    // Add these variables at the top with your other declarations
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    // Add this function after your backgroundRefresh function
+    async function checkForExternalRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected from another widget, syncing data...');
+        
+        try {
+          // Re-render table with fresh data from cache
+          await renderTable();
+          console.log('✅ Synced successfully');
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
 
     function escapeSingleQuotes(str) {
       return str.replace(/'/g, "\\'");
@@ -822,7 +843,10 @@
         document.getElementById('pipeline').addEventListener('change', renderTable);
         setupPaginationListeners();
         await renderTable();
+        
+        // Start both background refresh and sync check
         setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+        setInterval(checkForExternalRefresh, 5000); // Check every 5 seconds for external refreshes
       } finally {
         hideSpinner();
       }
