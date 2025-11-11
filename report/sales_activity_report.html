@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHL Reports Dashboard</title>
+    <title>SJ360 Reports Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -338,7 +338,7 @@
     <div class="container-fluid">
         <div class="loading-spinner" id="loadingSpinner">
             <div class="spinner-border text-primary"></div>
-            <p class="mt-3">Fetching data from APIs...</p>
+            <p class="mt-3">Fetching data...</p>
         </div>
 
         <ul class="nav nav-tabs mb-4">
@@ -612,44 +612,77 @@
         }
 
         async function fetchAllConversations() {
-            let conversations = [];
-            let startAfterDate = null;
+            const conversations = [];
+            let startAfterDate = null;          // raw timestamp (number) or null
             const limit = 100;
+            let fetched = 0;
+
+            const locationId = selectedLocation.defaultLocationId;
+            const accessToken = selectedLocation.accessToken;
+            const apiVersion = selectedLocation.apiVersion || '2021-07-28';
+
+            const baseUrl = 'https://services.leadconnectorhq.com/conversations/search';
 
             while (true) {
-                let url = `https://services.leadconnectorhq.com/conversations/search?locationId=${selectedLocation.defaultLocationId}&limit=${limit}&sort=asc`;
-                if (startAfterDate) url += `&startAfterDate=${startAfterDate}`;
+                // ----- build query string -----
+                const params = new URLSearchParams({
+                    locationId: locationId,
+                    limit: limit.toString(),
+                    sort: 'desc',
+                    sortBy: 'last_message_date'
+                });
 
+                if (startAfterDate !== null) {
+                    params.append('startAfterDate', startAfterDate.toString());
+                }
+
+                const url = `${baseUrl}?${params.toString()}`;
+                console.log('Request →', url);          // <-- debug
+
+                // ----- API call -----
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
-                        'Version': selectedLocation.apiVersion || '2021-07-28'
+                        'Version': apiVersion
                     }
                 });
 
                 if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Conversations API error: ${response.status} – ${errText}`);
+                    const err = await response.text();
+                    throw new Error(`Conversations API error: ${response.status} – ${err}`);
                 }
 
                 const data = await response.json();
-                let batch = data.conversations || [];
+                const batch = data.conversations || [];
+                const total = data.total || 0;
+
                 if (batch.length === 0) break;
 
-                if (startAfterDate && batch.length > 0) batch.shift();
-                conversations = conversations.concat(batch);
+                // ----- store this page -----
+                conversations.push(...batch);
+                fetched += batch.length;
 
-                if (batch.length < limit) break;
+                console.log(`Fetched ${fetched} / ${total} conversations…`);
 
-                const last = batch[batch.length - 1];
-                if (!last?.dateAdded) break;
-                startAfterDate = last.dateAdded;
+                // ----- stop conditions -----
+                if (batch.length < limit) break;                 // last page
+                if (total > 0 && fetched >= total) break;        // safety
+
+                // ----- next pagination key -----
+                const lastItem = batch[batch.length - 1];
+                if (!lastItem?.lastMessageDate) {
+                    console.warn('lastMessageDate missing on last item → stop', lastItem);
+                    break;
+                }
+                startAfterDate = lastItem.lastMessageDate;       // raw number
             }
-            console.log(`Fetched ${conversations.length} conversations.`);
+
+            console.log(`Finished – ${conversations.length} conversations fetched.`);
             return conversations;
         }
+
 
         async function getContactDisplayName(contact) {
             const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName;
