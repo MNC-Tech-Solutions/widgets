@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHL Lead Summary Table (Won Status)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root{
+      --primary:#91AEC4;
+      --border:#d1d5db;
+      --text:#374151;
+      --bg:#f8fafc;
+      --success:#10b981;
+      --warning:#f59e0b;
+    }
+    body{font-family:'Cem Seui',Tahoma,sans-serif;background:#fff;margin:0;padding:15px;}
+    .widget{max-width:1300px;margin:auto;padding:15px;position:relative;}
+    .pipeline-select{margin-bottom:20px;}
+    .lead-table th{background:#f8f9fa;font-weight:600;font-size:13px;padding:10px;border-bottom:2px solid #e5e7eb;}
+    .lead-table td{font-size:13px;padding:10px;border-top:1px solid #e5e7eb;}
+    .lead-table tbody tr:hover{background:#f1f5f9;}
+    .badge-clickable{
+      cursor:pointer;
+      transition:all .2s;
+      padding:6px 10px;
+      font-size:13px;
+      border-radius:6px;
+    }
+    .badge-clickable:hover{opacity:0.8;transform:scale(1.05);}
+    .badge-total{background:var(--primary);color:white;}
+    .badge-won{background:var(--success);color:white;}
+    .badge-rate{color:black;}
+    .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid var(--primary);border-radius:50%;animation:s 1s linear infinite;}
+    @keyframes s{to{transform:rotate(360deg)}}
+    .loading-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;z-index:1000;}
+    .modal-body .table-container{max-height:65vh;overflow:auto;}
+    .modal-header .btn-close{position:absolute;right:1rem;top:1rem;}
+    .modal-table th{background:#f8f9fa;font-weight:600;font-size:13px;padding:8px;}
+    .modal-table td{font-size:13px;padding:8px;}
+  </style>
+</head>
+<body>
+<div class="widget">
+  <!-- PIPELINE SELECTOR -->
+  <div class="pipeline-select">
+    <label for="pipeline" class="form-label fw-bold">Pipeline</label>
+    <select id="pipeline" class="form-select w-auto"></select>
+  </div>
+
+  <!-- MAIN TABLE -->
+  <div id="table-container"></div>
+
+  <!-- GLOBAL LOADER -->
+  <div class="loading-overlay" id="globalLoader" style="display:none;">
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 80vw;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Lead Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-container">
+          <table class="table table-sm modal-table">
+            <thead>
+              <tr>
+                <th>Opportunity ID</th>
+                <th>Opportunity Name</th>
+                <th>Primary Contact Name</th>
+                <th>Source</th>
+                <th>Assigned User</th>
+                <th>Status</th>
+                <th>Phone Number</th>
+                <th>Lead Value</th>
+                <th>Project</th>
+                <th>Contact Created</th>
+                <th>Team</th>
+              </tr>
+            </thead>
+            <tbody id="modalTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+  import {
+    loadConfig,
+    fetchPipelines,
+    fetchAllUsers,
+    fetchAllOpportunities,
+    formatDateTimeWithOffset
+  } from '../ghlData.js?v=1.0.3';
+
+  // -------------------------------------------------
+  // 1. Get locationId from URL
+  // -------------------------------------------------
+  function getLocationIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('locationId');
+  }
+
+  let CONFIG = {}, locationId = '';
+  let pipelines = [], usersMap = new Map();
+  let currentPipelineId = null, oppCache = [];
+  let currentFilter = {};
+  let modalInstance = null;
+
+  const globalLoader   = document.getElementById('globalLoader');
+  const pipelineSelect = document.getElementById('pipeline');
+  const modalTitle     = document.getElementById('modalTitle');
+  const modalTableBody = document.getElementById('modalTableBody');
+
+  // -------------------------------------------------
+  // 2. Helpers
+  // -------------------------------------------------
+  function showLoader()  { globalLoader.style.display = 'flex'; }
+  function hideLoader()  { globalLoader.style.display = 'none'; }
+
+  function getProjectFromOpp(opp) {
+    return opp.project || 'Unknown';
+  }
+
+  function getPhoneFromOpp(opp) {
+    if (opp.contact?.phone) return opp.contact.phone;
+    if (opp.relations?.[0]?.phone) return opp.relations[0].phone;
+    return 'N/A';
+  }
+
+  // -------------------------------------------------
+  // 3. Badge creator – clickable = true/false
+  // -------------------------------------------------
+  function createBadge(text, type, filterObj, clickable = true) {
+    const span = document.createElement('span');
+    span.className = `badge-${type} me-1`;               // base style
+    if (clickable) span.classList.add('badge-clickable'); // cursor + hover
+    span.textContent = text;
+    if (clickable && filterObj) {
+      span.onclick = () => showDetails(filterObj);
+    }
+    return span; // return the element (not outerHTML)
+  }
+
+  // -------------------------------------------------
+  // 4. Modal
+  // -------------------------------------------------
+  function initModal() {
+    const modalEl = document.getElementById('detailsModal');
+    if (!modalEl) return console.error('Modal element not found!');
+    modalInstance = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+  }
+
+  function showDetails(filter) {
+    if (!modalInstance) return console.error('Modal not ready');
+    currentFilter = filter;
+    modalTitle.textContent = filter.title;
+    renderModalTable();
+    modalInstance.show();
+  }
+
+  function renderModalTable() {
+    const filtered = oppCache.filter(op => {
+      if (currentFilter.project && getProjectFromOpp(op) !== currentFilter.project) return false;
+      if (currentFilter.status && op.status !== currentFilter.status) return false;
+      return true;
+    });
+
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    modalTableBody.innerHTML = '';
+    filtered.forEach(op => {
+      const assignedName = usersMap.get(op.assignedTo) || 'Unassigned';
+      const contactName  = op.contact?.name || op.name || 'N/A';
+      const phone        = getPhoneFromOpp(op);
+      const created      = formatDateTimeWithOffset(op.createdAt);
+      const project      = getProjectFromOpp(op);
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="text-muted small">${op.id}</td>
+        <td>${op.name || 'N/A'}</td>
+        <td>${contactName}</td>
+        <td>${op.source || 'N/A'}</td>
+        <td>${assignedName}</td>
+        <td><span class="badge bg-${op.status==='won'?'success':'secondary'}">${op.status}</span></td>
+        <td>${phone}</td>
+        <td>RM ${op.monetaryValue || 0}</td>
+        <td>${project}</td>
+        <td class="text-muted small">${created}</td>
+        <td>${op.team || 'N/A'}</td>
+      `;
+      modalTableBody.appendChild(row);
+    });
+  }
+
+  // -------------------------------------------------
+  // 5. Init
+  // -------------------------------------------------
+  async function init() {
+    showLoader();
+    try {
+      locationId = getLocationIdFromUrl();
+      if (!locationId) {
+        document.getElementById('table-container').innerHTML = '<p class="text-danger">Error: locationId not found in URL.</p>';
+        hideLoader();
+        return;
+      }
+
+      const { config } = await loadConfig();
+      if (!config) throw new Error('No config');
+      CONFIG = config;
+
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(u => [u.id, u.name]));
+
+      pipelines.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = p.name;
+        pipelineSelect.appendChild(o);
+      });
+
+      if (pipelines.length) pipelineSelect.value = pipelines[0].id;
+      pipelineSelect.addEventListener('change', renderTable);
+
+      initModal();
+      await renderTable();
+    } catch (e) {
+      console.error(e);
+      document.getElementById('table-container').innerHTML = '<p class="text-danger">Failed to load data.</p>';
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // -------------------------------------------------
+  // 6. Render main table
+  // -------------------------------------------------
+  async function renderTable() {
+    showLoader();
+    const pipelineId = pipelineSelect.value;
+    if (!pipelineId) { hideLoader(); return; }
+
+    let opps;
+    if (pipelineId === currentPipelineId && oppCache.length) {
+      opps = oppCache;
+    } else {
+      opps = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+      oppCache = opps;
+      currentPipelineId = pipelineId;
+    }
+
+    // ---- group by project ----
+    const projects = new Set();
+    const projData = {};
+
+    opps.forEach(op => {
+      const proj = getProjectFromOpp(op);
+      projects.add(proj);
+      if (!projData[proj]) projData[proj] = { total: 0, won: 0 };
+      projData[proj].total++;
+      if (op.status === 'won') projData[proj].won++;
+    });
+
+    const projectList = Array.from(projects).sort();
+
+    // ---- totals ----
+    const totalLeads = opps.length;
+    const totalWon   = opps.filter(o => o.status === 'won').length;
+    const totalRate  = totalLeads ? ((totalWon / totalLeads) * 100).toFixed(2) : '0.00';
+
+    // ---- per-project rows ----
+    const rows = projectList.map(p => {
+      const d = projData[p];
+      const rate = d.total ? ((d.won / d.total) * 100).toFixed(2) : '0.00';
+      return { proj: p, total: d.total, won: d.won, rate };
+    });
+
+    // ---- build table ----
+    const table = document.createElement('table');
+    table.className = 'table lead-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th rowspan="2" style="vertical-align:middle;width:200px;">Project</th>
+          <th colspan="3" class="text-center bg-light">Lead Summary</th>
+        </tr>
+        <tr>
+          <th class="text-center">Total Leads</th>
+          <th class="text-center">Converted (Won)</th>
+          <th class="text-center">Conversion Rate</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector('tbody');
+
+    // ---- TOTAL ROW ----
+    const totalRow = document.createElement('tr');
+    totalRow.style.fontWeight = '600';
+    totalRow.style.background = '#f8f9fa';
+    totalRow.innerHTML = `<td><strong>Total</strong></td><td class="text-center"></td><td class="text-center"></td><td class="text-center"></td>`;
+
+    totalRow.children[1].appendChild(createBadge(totalLeads, 'total', { title: 'All Leads', status: null, project: null }, true));
+    totalRow.children[2].appendChild(createBadge(totalWon,   'won',   { title: 'Won Leads', status: 'won', project: null }, true));
+    totalRow.children[3].appendChild(createBadge(totalRate + '%', 'rate', null, false)); // NOT clickable
+
+    tbody.appendChild(totalRow);
+
+    // ---- PROJECT ROWS ----
+    rows.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${r.proj}</td><td class="text-center"></td><td class="text-center"></td><td class="text-center"></td>`;
+
+      row.children[1].appendChild(createBadge(r.total, 'total', { title: r.proj + ' - All Leads', project: r.proj }, true));
+      row.children[2].appendChild(createBadge(r.won,   'won',   { title: r.proj + ' - Won Leads', status: 'won', project: r.proj }, true));
+      row.children[3].appendChild(createBadge(r.rate + '%', 'rate', null, false)); // NOT clickable
+
+      tbody.appendChild(row);
+    });
+
+    const container = document.getElementById('table-container');
+    container.innerHTML = '';
+    container.appendChild(table);
+
+    hideLoader();
+  }
+
+  // -------------------------------------------------
+  // 7. Start
+  // -------------------------------------------------
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

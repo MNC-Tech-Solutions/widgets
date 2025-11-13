@@ -97,5 +97,14 @@
         "customFieldIds": {
             "sourceCategory": "XXBTH0R0GakEX7TpD29v"
         }
+    },
+    {
+        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImRlTzlkNTVnY0EySU5NSGhLMlJDIiwidmVyc2lvbiI6MSwiaWF0IjoxNzU1NzYzNTIyNTA2LCJzdWIiOiJCZlc1YlA1Q1RmYmFhR3pVRU45NiJ9.Loyae_34ZTgEUwpTbErX9DzRQ8G5vsKjttocII_52uk",
+        "accessToken": "pit-6e3c08d6-4966-4414-8426-e0d2345c79f3",
+        "defaultLocationId": "jhK98wkjheNkRJlKPQPt",
+        "name": "LSH",
+        "customFieldIds": {
+            "sourceCategory": "XXBTH0R0GakEX7TpD29v"
+        }
     }
 ]
