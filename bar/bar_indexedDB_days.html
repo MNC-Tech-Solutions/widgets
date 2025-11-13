@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads by Day Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --text: #374151;
+      --border: #d1d5db;
+      --funnel-grey: #e5e7eb;
+    }
+    body {
+      font-family: 'Cem Seui', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: #f5f6fa;
+    }
+    .widget {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 25px;
+      align-items: flex-end;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      width: 200px;
+    }
+    label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .form-select, .form-control, .btn-sm {
+      height: 38px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .chart-container {
+      max-width: 1550px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .total-leads {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      margin-top: 10px;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .modal-content {
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    }
+    .modal-header {
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .modal-body {
+      padding: 20px 30px;
+      position: relative;
+    }
+    .table-container {
+      max-height: 95%;
+      overflow-y: auto;
+      overflow-x: auto;
+      position: relative;
+    }
+    .table {
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      margin-bottom: 0;
+    }
+    .table thead th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .table tbody tr {
+      transition: background 0.2s ease;
+    }
+    .table tbody tr:hover {
+      background: #f1f5f9;
+    }
+    .table tbody td {
+      font-size: 13px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .table-container::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+      background: #adb5bd;
+      border-radius: 6px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+    .pagination-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pagination-info {
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+    .pagination-buttons .btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .pagination-buttons .btn-outline-primary {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .pagination-buttons .btn-outline-primary:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .pagination-buttons .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .modal-wide {
+      max-width: 800px;
+      width: 90%;
+      margin: 1.75rem auto;
+    }
+    .modal-leads-wide {
+      max-width: 1200px;
+      width: 90%;
+      margin: 1.75rem auto;
+    }
+    .clear-filter-btn {
+      height: 38px;
+      align-self: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="controls">
+      <div class="control-group">
+        <label for="pipeline">Pipeline</label>
+        <select id="pipeline" class="form-select">
+          <option value="">All Pipelines</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="dateRange">Date Range</label>
+        <select id="dateRange" class="form-select">
+          <option value="">All Dates</option>
+          <option value="thisWeek">This Week</option>
+          <option value="lastWeek">Last Week</option>
+          <option value="last7Days">Last 7 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="thisYear">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="project">Interested Project</label>
+        <select id="project" class="form-select">
+          <option value="">All Projects</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="sourceCategory">Source Category</label>
+        <select id="sourceCategory" class="form-select">
+          <option value="">All Source Categories</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="source">Source</label>
+        <select id="source" class="form-select">
+          <option value="">All Sources</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button id="forceRefresh" class="btn btn-primary btn-sm refresh-btn w-100">Refresh</button>
+      </div>
+      <div class="control-group">
+        <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div id="barChart"></div>
+      <div id="totalLeads" class="total-leads"></div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Date Selection Modal -->
+    <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-wide">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="dateSelectionModalLabel">Select Custom Date Range</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="modalDateRange" class="form-label">Date Range</label>
+              <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="clearDateFilter">Clear Date Filter</button>
+            <button type="button" class="btn btn-primary" id="applyDateFilter">Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads Modal -->
+    <div class="modal fade" id="leadsModal" tabindex="-1" aria-labelledby="leadsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-leads-wide">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="leadsModalLabel">Leads</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Opportunity Name</th>
+                    <th>Contact Name</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Interested Project</th>
+                    <th>Source Category</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="pagination-section">
+              <span class="pagination-info" id="paginationInfo">Showing 0 to 0 of 0</span>
+              <div class="pagination-buttons">
+                <button class="btn btn-outline-primary btn-sm me-2" id="prevPageBtn" disabled>Previous</button>
+                <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
+  <script type="module">
+    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
+
+    let CONFIG = {};
+    let locationId = '';
+    let pipelines = [];
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+    let allOpportunities = [];
+    let allProjects = [];
+    let allSourceCategories = [];
+    let allSources = [];
+    let currentPage = 1;
+    const leadsPerPage = 10;
+    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000;
+
+    let currentPipelineId = null;
+    let opportunitiesData = [];
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    async function checkForRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('🔄 Refresh detected in another widget, syncing data...');
+        
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+        
+        try {
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length > 0) {
+            console.log(`✅ Synced ${opportunitiesData.length} opportunities`);
+            await renderBarChart();
+          }
+          
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
+    setInterval(checkForRefresh, 5000);
+
+    function showSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function formatDate(date) {
+      if (!date) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    }
+
+    function formatDateToLocalString(date) {
+      if (!date) return null;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function updateDateRangeDisplay() {
+      const dateRangeSelect = document.getElementById('dateRange');
+      if (selectedStartDate && selectedEndDate) {
+        dateRangeSelect.value = 'custom';
+      } else {
+        dateRangeSelect.value = dateRangeSelect.value || '';
+      }
+    }
+
+    function updatePipelines() {
+      const pipelineSelect = document.getElementById('pipeline');
+      const currentValue = pipelineSelect.value;
+      pipelineSelect.innerHTML = '<option value="">All Pipelines</option>';
+      pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+      });
+      pipelineSelect.value = currentValue || '';
+    }
+
+    function updateProjects() {
+      const projectSelect = document.getElementById('project');
+      const currentValue = projectSelect.value;
+      projectSelect.innerHTML = '<option value="">All Projects</option>';
+      allProjects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project;
+        option.textContent = project;
+        projectSelect.appendChild(option);
+      });
+      projectSelect.value = currentValue || '';
+    }
+
+    function updateSourceCategories() {
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const currentValue = sourceCategorySelect.value;
+      sourceCategorySelect.innerHTML = '<option value="">All Source Categories</option>';
+      allSourceCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        sourceCategorySelect.appendChild(option);
+      });
+      sourceCategorySelect.value = currentValue || '';
+    }
+
+    function updateSources() {
+      const sourceSelect = document.getElementById('source');
+      const currentValue = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">All Sources</option>';
+      allSources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source;
+        option.textContent = source;
+        sourceSelect.appendChild(option);
+      });
+      sourceSelect.value = currentValue || '';
+    }
+
+    function getDateRange(range) {
+      const today = new Date();
+      let start, end;
+      switch (range) {
+        case 'thisWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay());
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'lastWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 7);
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'last7Days':
+          start = new Date(today);
+          start.setDate(today.getDate() - 7);
+          end = new Date(today);
+          break;
+        case 'thisMonth':
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case 'lastMonth':
+          start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 0);
+          break;
+        case 'thisYear':
+          start = new Date(today.getFullYear(), 0, 1);
+          end = new Date(today.getFullYear(), 11, 31);
+          break;
+        default:
+          start = null;
+          end = null;
+      }
+      return { start, end };
+    }
+
+    function clearAllFilters() {
+      const pipelineSelect = document.getElementById('pipeline');
+      const presalesPipeline = pipelines.find(p => p.name.toLowerCase() === 'presales');
+      pipelineSelect.value = presalesPipeline ? presalesPipeline.id : (pipelines.length > 0 ? pipelines[0].id : '');
+      document.getElementById('dateRange').value = '';
+      selectedStartDate = null;
+      selectedEndDate = null;
+      dateRangePicker.clear();
+      updateDateRangeDisplay();
+      document.getElementById('project').value = '';
+      document.getElementById('sourceCategory').value = '';
+      document.getElementById('source').value = '';
+      renderBarChart();
+    }
+
+    async function refreshData() {
+      await renderBarChart();
+    }
+
+    async function renderBarChart() {
+      const pipelineId = document.getElementById('pipeline').value || null;
+      const dateRange = document.getElementById('dateRange').value;
+      const project = document.getElementById('project').value || null;
+      const sourceCategory = document.getElementById('sourceCategory').value || null;
+      const source = document.getElementById('source').value || null;
+      console.log('Selected filters:', { pipelineId, dateRange, project, sourceCategory, source });
+      showSpinner();
+      try {
+        if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length === 0) {
+            console.log('Cache empty, fetching from API');
+            opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          } else {
+            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
+          }
+          currentPipelineId = pipelineId;
+        }
+
+        allProjects = [...new Set(opportunitiesData.map(op => op.project).filter(p => p !== 'N/A'))].sort();
+        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
+        allSources = [...new Set(opportunitiesData.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+
+        let startDate = null;
+        let endDate = null;
+        if (dateRange && dateRange !== 'custom') {
+          const dates = getDateRange(dateRange);
+          startDate = formatDateToLocalString(dates.start);
+          endDate = formatDateToLocalString(dates.end);
+        } else if (dateRange === 'custom' && selectedStartDate && selectedEndDate) {
+          startDate = formatDateToLocalString(selectedStartDate);
+          endDate = formatDateToLocalString(selectedEndDate);
+        }
+        allOpportunities = applyFilters(opportunitiesData, pipelineId, startDate, endDate, new Set(), {
+          project: project,
+          sourceCategory: sourceCategory,
+          channels: source ? [source] : [],
+          sourceCategories: sourceCategory ? [sourceCategory] : []
+        });
+
+        console.log('Filtered opportunities:', allOpportunities.length);
+        updateProjects();
+        updateSourceCategories();
+        updateSources();
+
+        // Group opportunities by day of week
+        const dayCounts = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        allOpportunities.forEach(op => {
+          const createdAt = new Date(op.createdAt);
+          const dayOfWeek = createdAt.getDay();
+          const dayName = dayNames[dayOfWeek];
+          dayCounts[dayName]++;
+        });
+
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const dayData = days.map(day => dayCounts[day]);
+
+        const data = [
+          {
+            x: days,
+            y: dayData,
+            type: 'bar',
+            marker: { color: '#91AEC4' },
+            text: dayData.map(val => val > 0 ? val : ''),
+            textposition: 'auto',
+            hoverinfo: 'none'
+          }
+        ];
+
+        const layout = {
+          title: 'Lead Register by Day of Week',
+          xaxis: { 
+            title: 'Day of Week',
+            tickfont: { size: 12 }
+          },
+          yaxis: { title: 'Number of Leads' },
+          width: 1250,
+          height: 500,
+          margin: { t: 50, b: 50 },
+          showlegend: false
+        };
+
+        Plotly.purge('barChart');
+        Plotly.newPlot('barChart', data, layout).then(() => {
+          document.getElementById('barChart').on('plotly_click', function(eventData) {
+            const point = eventData.points[0];
+            const dayIndex = point.pointIndex;
+            const dayLabel = point.x;
+
+            const filteredLeads = allOpportunities.filter(op => {
+              const createdAt = new Date(op.createdAt);
+              const opDayOfWeek = createdAt.getDay();
+              const opDayName = dayNames[opDayOfWeek];
+              return opDayName === dayLabel;
+            });
+
+            // Sort by created at (latest to oldest)
+            filteredLeads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            displayLeadsInModal(filteredLeads, dayLabel);
+          });
+        });
+
+        const totalLeads = allOpportunities.length;
+        document.getElementById('totalLeads').textContent = `Total Leads: ${totalLeads}`;
+      } catch (error) {
+        console.error('Error rendering chart:', error);
+        document.getElementById('barChart').innerHTML = '<p>Error loading data. Please try again.</p>';
+        document.getElementById('totalLeads').textContent = 'Total Leads: 0';
+      } finally {
+        hideSpinner();
+      }
+    }
+
+    function displayLeadsInModal(leads, day) {
+      const modalTitle = `Leads for ${day}`;
+      document.getElementById('leadsModalLabel').textContent = modalTitle;
+      const tbody = document.getElementById('leadsTableBody');
+      const prevPageBtn = document.getElementById('prevPageBtn');
+      const nextPageBtn = document.getElementById('nextPageBtn');
+      const paginationInfo = document.getElementById('paginationInfo');
+
+      currentPage = 1;
+
+      function renderPage() {
+        tbody.innerHTML = '';
+        const startIndex = (currentPage - 1) * leadsPerPage;
+        const endIndex = Math.min(startIndex + leadsPerPage, leads.length);
+        const paginatedLeads = leads.slice(startIndex, endIndex);
+
+        paginatedLeads.forEach(lead => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${lead.name || 'N/A'}</td>
+            <td>${lead.contact?.name || 'N/A'}</td>
+            <td>${lead.source || 'N/A'}</td>
+            <td>${lead.status || 'N/A'}</td>
+            <td>${formatDateTimeWithOffset(lead.createdAt)}</td>
+            <td>${lead.project || 'N/A'}</td>
+            <td>${lead.sourceCategory || 'N/A'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        paginationInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${leads.length}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = endIndex >= leads.length;
+      }
+
+      prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderPage();
+        }
+      });
+
+      nextPageBtn.addEventListener('click', () => {
+        if (currentPage < Math.ceil(leads.length / leadsPerPage)) {
+          currentPage++;
+          renderPage();
+        }
+      });
+
+      renderPage();
+
+      const modal = new bootstrap.Modal(document.getElementById('leadsModal'));
+      modal.show();
+    }
+
+    function formatDateTimeWithOffset(utcDateString) {
+      if (!utcDateString) return 'N/A';
+      const date = new Date(utcDateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    async function initWidget() {
+      const { config, locationId: locId } = await loadConfig();
+      if (!config) {
+        document.getElementById('barChart').innerHTML = '<p>No configuration available for this location.</p>';
+        document.getElementById('totalLeads').textContent = 'Total Leads: 0';
+        hideSpinner();
+        return;
+      }
+      CONFIG = config;
+      locationId = locId;
+
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      updatePipelines();
+
+      const pipelineSelect = document.getElementById('pipeline');
+      const presalesPipeline = pipelines.find(p => p.name.toLowerCase() === 'presales');
+      if (presalesPipeline) {
+        pipelineSelect.value = presalesPipeline.id;
+      } else if (pipelines.length > 0) {
+        pipelineSelect.value = pipelines[0].id;
+      }
+      currentPipelineId = pipelineSelect.value;
+
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode: "range",
+        dateFormat: "Y/m/d",
+        onClose: (dates) => {
+          if (dates.length === 2) {
+            selectedStartDate = dates[0];
+            selectedEndDate = dates[1];
+            updateDateRangeDisplay();
+            renderBarChart();
+            bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+          }
+        }
+      });
+
+      document.getElementById('dateRange').addEventListener('change', async function() {
+        const range = this.value;
+        if (range === 'custom') {
+          const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+          modal.show();
+        } else {
+          selectedStartDate = null;
+          selectedEndDate = null;
+          dateRangePicker.clear();
+          await renderBarChart();
+        }
+      });
+
+      document.getElementById('clearDateFilter').addEventListener('click', async () => {
+        dateRangePicker.clear();
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('dateRange').value = '';
+        await renderBarChart();
+        bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+      });
+
+      document.getElementById('applyDateFilter').addEventListener('click', async () => {
+        if (selectedStartDate && selectedEndDate) {
+          await renderBarChart();
+          bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+        }
+      });
+
+      document.getElementById('pipeline').addEventListener('change', renderBarChart);
+      document.getElementById('project').addEventListener('change', renderBarChart);
+      document.getElementById('sourceCategory').addEventListener('change', renderBarChart);
+      document.getElementById('source').addEventListener('change', () => {
+        console.log('Source filter changed:', document.getElementById('source').value);
+        renderBarChart();
+      });
+      document.getElementById('clearAllFilters').addEventListener('click', async () => {
+        clearAllFilters();
+        await refreshData();
+      });
+
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated - clearing all caches');
+        
+        try {
+          const savedPipelineId = document.getElementById('pipeline').value;
+          
+          progressManager.show('Initializing refresh...');
+          
+          progressManager.setProgress(15, 'Clearing cache...');
+          await clearIndexedDB();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          progressManager.setProgress(25, 'Fetching pipelines...');
+          pipelines = await fetchPipelines(CONFIG, locationId);
+          updatePipelines();
+          document.getElementById('pipeline').value = savedPipelineId;
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          progressManager.setProgress(40, 'Fetching opportunities...');
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
+          
+          currentPipelineId = savedPipelineId;
+          
+          progressManager.setProgress(90, 'Rendering chart...');
+          await renderBarChart();
+          
+          progressManager.setProgress(95, 'Syncing to other widgets...');
+          localStorage.setItem('ghl_last_refresh', Date.now().toString());
+          
+          progressManager.setProgress(100, 'Refresh complete! ✓');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          progressManager.hide();
+          
+          console.log('Force refresh completed successfully');
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+          progressManager.setProgress(100, 'Error during refresh. Please try again.');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          progressManager.hide();
+        }
+      });
+
+      await renderBarChart();
+      setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+    }
+
+    async function backgroundRefresh() {
+      console.log('Background refresh started');
+      try {
+        const pipelineId = document.getElementById('pipeline').value;
+        if (pipelineId && pipelineId === currentPipelineId && opportunitiesData.length > 0) {
+          const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
+          if (newOpps.length > 0) {
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
+            opportunitiesData = [...opportunitiesData, ...newOpps];
+            await renderBarChart();
+          } else {
+            console.log('Background refresh: No new opportunities');
+          }
+        } else {
+          console.log('Background refresh skipped: No pipeline selected or no data loaded');
+        }
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initWidget();
+    });
+  </script>
+</body>
+</html>
