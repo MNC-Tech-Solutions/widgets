@@ -19,7 +19,7 @@
     .widget{max-width:1300px;margin:auto;padding:15px;position:relative;}
     .pipeline-select{margin-bottom:20px;}
     .lead-table th{background:#f8f9fa;font-weight:600;font-size:13px;padding:10px;border-bottom:2px solid #e5e7eb;}
-    .lead-table td{font-size:13px;padding:10px;border-top:1px solid #e5e7eb;}
+    .lead-table td{font-size:13px;padding:10px;border-top:1px solid #e5e7eb;vertical-align:top;}
     .lead-table tbody tr:hover{background:#f1f5f9;}
     .badge-clickable{
       cursor:pointer;
@@ -31,7 +31,17 @@
     .badge-clickable:hover{opacity:0.8;transform:scale(1.05);}
     .badge-total{background:var(--primary);color:white;}
     .badge-won{background:var(--success);color:white;}
-    .badge-rate{color:black;}
+    .badge-rate{background:var(--warning);color:white;}
+    .message-type-badge{
+      display:inline-block;
+      padding:4px 8px;
+      background:#e0e7ff;
+      color:#3730a3;
+      border-radius:4px;
+      font-size:11px;
+      margin:2px;
+      white-space:nowrap;
+    }
     .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid var(--primary);border-radius:50%;animation:s 1s linear infinite;}
     @keyframes s{to{transform:rotate(360deg)}}
     .loading-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;z-index:1000;}
@@ -39,6 +49,7 @@
     .modal-header .btn-close{position:absolute;right:1rem;top:1rem;}
     .modal-table th{background:#f8f9fa;font-weight:600;font-size:13px;padding:8px;}
     .modal-table td{font-size:13px;padding:8px;}
+    .stage-cell{min-width:120px;}
   </style>
 </head>
 <body>
@@ -60,7 +71,7 @@
 
 <!-- DETAILS MODAL -->
 <div class="modal fade" id="detailsModal" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 80vw;">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalTitle">Lead Details</h5>
@@ -82,6 +93,9 @@
                 <th>Project</th>
                 <th>Contact Created</th>
                 <th>Team</th>
+                <th>Conversation ID</th>
+                <th>Last Message Type</th>
+                <th>Last Message Date</th>
               </tr>
             </thead>
             <tbody id="modalTableBody"></tbody>
@@ -114,26 +128,32 @@
   }
 
   let CONFIG = {}, locationId = '';
-  let pipelines = [], usersMap = new Map();
+  let pipelines = [], usersMap = new Map(), stagesMap = new Map();
   let currentPipelineId = null, oppCache = [];
+  let contactsCache = [], conversationsCache = [];
   let currentFilter = {};
   let modalInstance = null;
+  let conversationsByContactId = new Map(); // Map contactId -> conversation
 
   const globalLoader   = document.getElementById('globalLoader');
   const pipelineSelect = document.getElementById('pipeline');
   const modalTitle     = document.getElementById('modalTitle');
   const modalTableBody = document.getElementById('modalTableBody');
 
-  // -------------------------------------------------
-  // 2. Helpers
-  // -------------------------------------------------
-  function showLoader()  { globalLoader.style.display = 'flex'; }
-  function hideLoader()  { globalLoader.style.display = 'none'; }
+  const PROJECT_FIELD_ID = 'QarlIsdnEep18DvcsfK0'; // Adjust if your project custom field ID differs
 
+  // -------------------------------------------------
+  // 2. Get project from opp (updated to extract from customFields if not set)
+  // -------------------------------------------------
   function getProjectFromOpp(opp) {
-    return opp.project || 'Unknown';
+    if (opp.project) return opp.project;
+    const projectField = opp.customFields?.find(cf => cf.id === PROJECT_FIELD_ID);
+    return projectField?.fieldValue || projectField?.value || 'Unknown';
   }
 
+  // -------------------------------------------------
+  // 3. Extract phone from contact or relations
+  // -------------------------------------------------
   function getPhoneFromOpp(opp) {
     if (opp.contact?.phone) return opp.contact.phone;
     if (opp.relations?.[0]?.phone) return opp.relations[0].phone;
@@ -141,30 +161,121 @@
   }
 
   // -------------------------------------------------
-  // 3. Badge creator – clickable = true/false
+  // 4. Fetch Contacts
   // -------------------------------------------------
-  function createBadge(text, type, filterObj, clickable = true) {
-    const span = document.createElement('span');
-    span.className = `badge-${type} me-1`;               // base style
-    if (clickable) span.classList.add('badge-clickable'); // cursor + hover
-    span.textContent = text;
-    if (clickable && filterObj) {
-      span.onclick = () => showDetails(filterObj);
+  async function fetchAllContacts(config, locationId) {
+    let contacts = [];
+    let searchAfter = null;
+    const limit = 100;
+
+    while (true) {
+      const body = { locationId, pageLimit: limit };
+      if (searchAfter) body.searchAfter = searchAfter;
+
+      const response = await fetch('https://services.leadconnectorhq.com/contacts/search', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+          'Version': config.apiVersion || '2021-07-28'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+
+      const data = await response.json();
+      const batch = data.contacts || [];
+      if (batch.length === 0) break;
+
+      contacts = contacts.concat(batch);
+      if (batch.length < limit) break;
+
+      const last = batch[batch.length - 1];
+      if (!last.searchAfter) break;
+      searchAfter = last.searchAfter;
     }
-    return span; // return the element (not outerHTML)
+    console.log(`Fetched ${contacts.length} contacts.`);
+    return contacts;
   }
 
   // -------------------------------------------------
-  // 4. Modal
+  // 5. Fetch Conversations
+  // -------------------------------------------------
+  async function fetchAllConversations(config, locationId) {
+    const conversations = [];
+    let startAfterDate = null;
+    const limit = 100;
+
+    while (true) {
+      const params = new URLSearchParams({
+        locationId,
+        limit: limit.toString(),
+        sort: 'desc',
+        sortBy: 'last_message_date'
+      });
+
+      if (startAfterDate !== null) {
+        params.append('startAfterDate', startAfterDate.toString());
+      }
+
+      const url = `https://services.leadconnectorhq.com/conversations/search?${params.toString()}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+          'Version': config.apiVersion || '2021-07-28'
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Conversations API error: ${response.status} – ${err}`);
+      }
+
+      const data = await response.json();
+      const batch = data.conversations || [];
+
+      if (batch.length === 0) break;
+
+      conversations.push(...batch);
+
+      if (batch.length < limit) break;
+
+      const lastItem = batch[batch.length - 1];
+      if (!lastItem?.lastMessageDate) break;
+      startAfterDate = lastItem.lastMessageDate;
+    }
+
+    console.log(`Fetched ${conversations.length} conversations.`);
+    return conversations;
+  }
+
+  // -------------------------------------------------
+  // 6. UI helpers
+  // -------------------------------------------------
+  function showLoader()  { globalLoader.style.display = 'flex'; }
+  function hideLoader()  { globalLoader.style.display = 'none'; }
+
+  // -------------------------------------------------
+  // 7. Modal functions
   // -------------------------------------------------
   function initModal() {
     const modalEl = document.getElementById('detailsModal');
-    if (!modalEl) return console.error('Modal element not found!');
+    if (!modalEl) {
+      console.error('Modal element not found!');
+      return;
+    }
     modalInstance = new bootstrap.Modal(modalEl, { backdrop: 'static' });
   }
 
   function showDetails(filter) {
-    if (!modalInstance) return console.error('Modal not ready');
+    if (!modalInstance) {
+      console.error('Modal instance not ready');
+      return;
+    }
     currentFilter = filter;
     modalTitle.textContent = filter.title;
     renderModalTable();
@@ -175,9 +286,21 @@
     const filtered = oppCache.filter(op => {
       if (currentFilter.project && getProjectFromOpp(op) !== currentFilter.project) return false;
       if (currentFilter.status && op.status !== currentFilter.status) return false;
+      if (currentFilter.stageId && op.pipelineStageId !== currentFilter.stageId) return false;
+      if (currentFilter.messageType) {
+        const conv = conversationsByContactId.get(op.contactId);
+        if (currentFilter.messageType === 'Uncontacted') {
+          if (conv && conv.lastMessageType) return false;
+        } else {
+          if (!conv || conv.lastMessageType !== currentFilter.messageType) return false;
+        }
+      }
       return true;
     });
 
+    console.log('Filtered opportunities:', filtered.length); // Debug: Check why empty
+
+    // Sort by contact created date (latest first)
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     modalTableBody.innerHTML = '';
@@ -187,7 +310,13 @@
       const phone        = getPhoneFromOpp(op);
       const created      = formatDateTimeWithOffset(op.createdAt);
       const project      = getProjectFromOpp(op);
-
+      
+      // Get conversation details
+      const conv = conversationsByContactId.get(op.contactId);
+      const convId = conv?.id || 'N/A';
+      const lastMessageType = conv?.lastMessageType ? formatMessageType(conv.lastMessageType) : 'Uncontacted';
+      const lastMessageDate = conv?.lastMessageDate ? formatDateTimeWithOffset(new Date(conv.lastMessageDate).toISOString()) : 'N/A';
+      
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="text-muted small">${op.id}</td>
@@ -201,13 +330,16 @@
         <td>${project}</td>
         <td class="text-muted small">${created}</td>
         <td>${op.team || 'N/A'}</td>
+        <td class="text-muted small">${convId}</td>
+        <td><span class="badge bg-info">${lastMessageType}</span></td>
+        <td class="text-muted small">${lastMessageDate}</td>
       `;
       modalTableBody.appendChild(row);
     });
   }
 
   // -------------------------------------------------
-  // 5. Init
+  // 8. Init
   // -------------------------------------------------
   async function init() {
     showLoader();
@@ -227,9 +359,19 @@
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(u => [u.id, u.name]));
 
+      // Fetch contacts and conversations
+      contactsCache = await fetchAllContacts(CONFIG, locationId);
+      conversationsCache = await fetchAllConversations(CONFIG, locationId);
+
+      // Build conversation map for quick lookup
+      conversationsByContactId = new Map(
+        conversationsCache.map(conv => [conv.contactId, conv])
+      );
+
       pipelines.forEach(p => {
         const o = document.createElement('option');
-        o.value = p.id; o.textContent = p.name;
+        o.value = p.id;
+        o.textContent = p.name;
         pipelineSelect.appendChild(o);
       });
 
@@ -237,6 +379,7 @@
       pipelineSelect.addEventListener('change', renderTable);
 
       initModal();
+
       await renderTable();
     } catch (e) {
       console.error(e);
@@ -247,7 +390,88 @@
   }
 
   // -------------------------------------------------
-  // 6. Render main table
+  // 9. Get project-specific conversation breakdown (updated with debug logs)
+  // -------------------------------------------------
+  function getProjectConversationBreakdown(pipelineId) {
+    const projectBreakdown = new Map(); // project -> stageId -> messageType -> count
+    const globalTypesByStage = new Map(); // stageId -> Set of messageTypes (for header)
+
+    // Build contactToInfo from oppCache (only for this pipeline)
+    const contactToInfo = new Map();
+    oppCache.forEach(opp => {
+      if (opp.pipelineId === pipelineId) {
+        contactToInfo.set(opp.contactId, {
+          stageId: opp.pipelineStageId,
+          project: getProjectFromOpp(opp)
+        });
+      }
+    });
+
+    // Debug counters
+    let matchedConv = 0;
+    let nullTypeCount = 0;
+    let uncontactedCount = 0;
+
+    // Process contacted (conversations)
+    conversationsCache.forEach(conv => {
+      const info = contactToInfo.get(conv.contactId);
+      if (!info) return; // Contact not in this pipeline
+      matchedConv++; // Matched a conv to an opp
+
+      const { stageId, project } = info;
+      let messageType = conv.lastMessageType || 'Uncontacted'; // Treat missing as uncontacted
+      if (!conv.lastMessageType) nullTypeCount++; // Count null types
+
+      if (!projectBreakdown.has(project)) projectBreakdown.set(project, new Map());
+      const stageMap = projectBreakdown.get(project);
+      if (!stageMap.has(stageId)) stageMap.set(stageId, new Map());
+      const typeMap = stageMap.get(stageId);
+      typeMap.set(messageType, (typeMap.get(messageType) || 0) + 1);
+
+      if (!globalTypesByStage.has(stageId)) globalTypesByStage.set(stageId, new Set());
+      globalTypesByStage.get(stageId).add(messageType);
+    });
+
+    // Process uncontacted (opps without conversations)
+    oppCache.forEach(opp => {
+      if (opp.pipelineId !== pipelineId) return;
+      if (conversationsByContactId.has(opp.contactId)) return; // Already contacted
+
+      uncontactedCount++; // Count pure uncontacted
+
+      const project = getProjectFromOpp(opp);
+      const stageId = opp.pipelineStageId;
+      const messageType = 'Uncontacted';
+
+      if (!projectBreakdown.has(project)) projectBreakdown.set(project, new Map());
+      const stageMap = projectBreakdown.get(project);
+      if (!stageMap.has(stageId)) stageMap.set(stageId, new Map());
+      const typeMap = stageMap.get(stageId);
+      typeMap.set(messageType, (typeMap.get(messageType) || 0) + 1);
+
+      if (!globalTypesByStage.has(stageId)) globalTypesByStage.set(stageId, new Set());
+      globalTypesByStage.get(stageId).add(messageType);
+    });
+
+    // Debug logs (check browser console after table render)
+    console.log(`Debug for pipeline ${pipelineId}:`);
+    console.log(`Total opportunities in pipeline: ${oppCache.length}`);
+    console.log(`Matched conversations (linked to opps): ${matchedConv}`);
+    console.log(`Matched conv with null lastMessageType (treated as Uncontacted): ${nullTypeCount}`);
+    console.log(`Uncontacted leads (no conversation at all): ${uncontactedCount}`);
+    console.log('Project breakdown:', Array.from(projectBreakdown.entries()).map(([proj, stages]) => ({
+      project: proj,
+      stages: Array.from(stages.entries()).map(([stage, types]) => ({
+        stage,
+        types: Array.from(types.entries())
+      }))
+    })));
+
+    return { projectBreakdown, globalTypesByStage };
+  }
+
+  // -------------------------------------------------
+  // 10. Render main table (updated)
   // -------------------------------------------------
   async function renderTable() {
     showLoader();
@@ -259,9 +483,23 @@
       opps = oppCache;
     } else {
       opps = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+      // Explicitly set project on each opp (in case not set by ghlData.js)
+      opps.forEach(opp => {
+        opp.project = getProjectFromOpp(opp);
+      });
       oppCache = opps;
       currentPipelineId = pipelineId;
     }
+
+    // Get pipeline stages
+    const currentPipeline = pipelines.find(p => p.id === pipelineId);
+    const stages = currentPipeline?.stages || [];
+    
+    // Build stages map
+    stagesMap = new Map(stages.map(s => [s.id, s.name]));
+
+    // Get project-specific conversation breakdown
+    const { projectBreakdown, globalTypesByStage } = getProjectConversationBreakdown(pipelineId);
 
     // ---- group by project ----
     const projects = new Set();
@@ -289,59 +527,198 @@
       return { proj: p, total: d.total, won: d.won, rate };
     });
 
-    // ---- build table ----
-    const table = document.createElement('table');
-    table.className = 'table lead-table';
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th rowspan="2" style="vertical-align:middle;width:200px;">Project</th>
-          <th colspan="3" class="text-center bg-light">Lead Summary</th>
-        </tr>
-        <tr>
-          <th class="text-center">Total Leads</th>
-          <th class="text-center">Converted (Won)</th>
-          <th class="text-center">Conversion Rate</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
+    // ---- build table HTML ----
+    const tableEl = document.createElement('table');
+    tableEl.className = 'table lead-table';
+    
+    const numStages = stages.length;
+
+    // Build header
+    const thead = document.createElement('thead');
+    
+    // Row 1: Project | Lead Summary | Stages
+    const headerRow1 = document.createElement('tr');
+    headerRow1.innerHTML = `
+      <th rowspan="3" style="vertical-align:middle;width:200px;">Project</th>
+      <th colspan="3" class="text-center bg-light">Lead Summary</th>
+      ${numStages > 0 ? `<th colspan="${numStages}" class="text-center bg-light">Stages</th>` : ''}
     `;
+    thead.appendChild(headerRow1);
 
-    const tbody = table.querySelector('tbody');
+    // Row 2: Total Leads | Converted | Conversion Rate | Stage Names
+    const headerRow2 = document.createElement('tr');
+    headerRow2.innerHTML = `
+      <th class="text-center" rowspan="2">Total Leads</th>
+      <th class="text-center" rowspan="2">Converted (Won)</th>
+      <th class="text-center" rowspan="2">Conversion Rate</th>
+      ${stages.map(s => `<th class="text-center stage-cell">${s.name}</th>`).join('')}
+    `;
+    thead.appendChild(headerRow2);
 
-    // ---- TOTAL ROW ----
+    // Row 3: Message Type Labels under each stage (global unique types)
+    const headerRow3 = document.createElement('tr');
+    headerRow3.innerHTML = stages.map(s => {
+      const typesSet = globalTypesByStage.get(s.id) || new Set();
+      const types = Array.from(typesSet).map(formatMessageType).join(', ');
+      return `<th class="text-center stage-cell" style="font-size:10px;color:#6b7280;">${types || 'No conversations'}</th>`;
+    }).join('');
+    thead.appendChild(headerRow3);
+
+    tableEl.appendChild(thead);
+
+    // Build body
+    const tbody = document.createElement('tbody');
+
+    // Total row
     const totalRow = document.createElement('tr');
     totalRow.style.fontWeight = '600';
     totalRow.style.background = '#f8f9fa';
-    totalRow.innerHTML = `<td><strong>Total</strong></td><td class="text-center"></td><td class="text-center"></td><td class="text-center"></td>`;
-
-    totalRow.children[1].appendChild(createBadge(totalLeads, 'total', { title: 'All Leads', status: null, project: null }, true));
-    totalRow.children[2].appendChild(createBadge(totalWon,   'won',   { title: 'Won Leads', status: 'won', project: null }, true));
-    totalRow.children[3].appendChild(createBadge(totalRate + '%', 'rate', null, false)); // NOT clickable
-
+    
+    const totalRowHTML = `
+      <td><strong>Total</strong></td>
+      <td class="text-center"></td>
+      <td class="text-center"></td>
+      <td class="text-center"></td>
+      ${stages.map(s => '<td class="text-center stage-cell"></td>').join('')}
+    `;
+    totalRow.innerHTML = totalRowHTML;
+    
+    const totalBadge = createBadge(totalLeads, 'total', { title: 'All Leads', status: null, project: null });
+    const totalWonBadge = createBadge(totalWon, 'won', { title: 'Won Leads', status: 'won', project: null });
+    
+    totalRow.children[1].appendChild(totalBadge);
+    totalRow.children[2].appendChild(totalWonBadge);
+    totalRow.children[3].textContent = totalRate + '%';
+    
+    // Add aggregated stage conversation counts for total row
+    stages.forEach((stage, idx) => {
+      const cell = totalRow.children[4 + idx];
+      const typeCounts = new Map();
+      projectList.forEach(proj => {
+        const stageMap = projectBreakdown.get(proj);
+        if (stageMap) {
+          const typeMap = stageMap.get(stage.id);
+          if (typeMap) {
+            typeMap.forEach((count, type) => {
+              typeCounts.set(type, (typeCounts.get(type) || 0) + count);
+            });
+          }
+        }
+      });
+      if (typeCounts.size > 0) {
+        typeCounts.forEach((count, type) => {
+          const badge = createMessageTypeBadge(
+            `${formatMessageType(type)}: ${count}`,
+            { 
+              title: `${stagesMap.get(stage.id)} - ${formatMessageType(type)}`,
+              stageId: stage.id,
+              messageType: type,
+              project: null
+            }
+          );
+          cell.appendChild(badge);
+          cell.appendChild(document.createElement('br'));
+        });
+      } else {
+        cell.textContent = '-';
+      }
+    });
+    
     tbody.appendChild(totalRow);
 
-    // ---- PROJECT ROWS ----
+    // Project rows
     rows.forEach(r => {
       const row = document.createElement('tr');
-      row.innerHTML = `<td>${r.proj}</td><td class="text-center"></td><td class="text-center"></td><td class="text-center"></td>`;
-
-      row.children[1].appendChild(createBadge(r.total, 'total', { title: r.proj + ' - All Leads', project: r.proj }, true));
-      row.children[2].appendChild(createBadge(r.won,   'won',   { title: r.proj + ' - Won Leads', status: 'won', project: r.proj }, true));
-      row.children[3].appendChild(createBadge(r.rate + '%', 'rate', null, false)); // NOT clickable
-
+      row.innerHTML = `
+        <td>${r.proj}</td>
+        <td class="text-center"></td>
+        <td class="text-center"></td>
+        <td class="text-center"></td>
+        ${stages.map(s => '<td class="text-center stage-cell"></td>').join('')}
+      `;
+      
+      const totalBadge = createBadge(r.total, 'total', { title: r.proj + ' - All Leads', project: r.proj });
+      const wonBadge = createBadge(r.won, 'won', { title: r.proj + ' - Won Leads', status: 'won', project: r.proj });
+      
+      row.children[1].appendChild(totalBadge);
+      row.children[2].appendChild(wonBadge);
+      row.children[3].textContent = r.rate + '%';
+      
+      // Add project-specific stage conversation counts
+      const stageMap = projectBreakdown.get(r.proj);
+      stages.forEach((stage, idx) => {
+        const cell = row.children[4 + idx];
+        if (stageMap) {
+          const typeMap = stageMap.get(stage.id);
+          if (typeMap && typeMap.size > 0) {
+            typeMap.forEach((count, type) => {
+              const badge = createMessageTypeBadge(
+                `${formatMessageType(type)}: ${count}`,
+                { 
+                  title: `${r.proj} - ${stagesMap.get(stage.id)} - ${formatMessageType(type)}`,
+                  stageId: stage.id,
+                  messageType: type,
+                  project: r.proj
+                }
+              );
+              cell.appendChild(badge);
+              cell.appendChild(document.createElement('br'));
+            });
+          } else {
+            cell.textContent = '-';
+          }
+        } else {
+          cell.textContent = '-';
+        }
+      });
+      
       tbody.appendChild(row);
     });
 
+    tableEl.appendChild(tbody);
+
     const container = document.getElementById('table-container');
     container.innerHTML = '';
-    container.appendChild(table);
+    container.appendChild(tableEl);
 
     hideLoader();
   }
 
   // -------------------------------------------------
-  // 7. Start
+  // 11. Format message type for display (updated for Uncontacted)
+  // -------------------------------------------------
+  function formatMessageType(type) {
+    if (type === 'Uncontacted') return 'Uncontacted';
+    return type.replace('TYPE_', '').replace(/_/g, ' ');
+  }
+
+  // -------------------------------------------------
+  // 12. Create badge with working click handler
+  // -------------------------------------------------
+  function createBadge(text, type, filterObj) {
+    const span = document.createElement('span');
+    span.className = `badge-clickable badge-${type} me-1`;
+    span.textContent = text;
+    span.onclick = () => showDetails(filterObj);
+    return span;
+  }
+
+  // -------------------------------------------------
+  // 13. Create message type badge with click handler
+  // -------------------------------------------------
+  function createMessageTypeBadge(text, filterObj) {
+    const span = document.createElement('span');
+    span.className = 'message-type-badge';
+    span.style.cursor = 'pointer';
+    span.textContent = text;
+    span.onclick = () => showDetails(filterObj);
+    span.onmouseover = () => span.style.opacity = '0.8';
+    span.onmouseout = () => span.style.opacity = '1';
+    return span;
+  }
+
+  // -------------------------------------------------
+  // 14. Start
   // -------------------------------------------------
   document.addEventListener('DOMContentLoaded', init);
 </script>
