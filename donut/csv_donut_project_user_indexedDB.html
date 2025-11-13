@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opportunities Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: #f5f6fa;
+    }
+    .widget {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .control-group .btn-sm {
+      height: 38px;
+      font-size: 14px;
+    }
+    .refresh-btn {
+      min-width: 120px;
+    }
+    .control-group label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+    label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+    .form-select, .btn-sm {
+      height:55px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .chart-container {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+      padding: 12px;
+      background: #f1f3f5;
+      border-radius: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #d3dce6;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .legend-item:hover {
+      background-color: #e9ecef;
+    }
+    .legend-item.hidden {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .modal-content {
+      border-radius: 10px;
+    }
+    .modal-header {
+      border-bottom: 1px solid #eaeaea;
+    }
+    .modal-footer {
+      border-top: 1px solid #eaeaea;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .quick-selections {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .clear-filter-btn {
+      height: 38px;
+      align-self: flex-end;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .export-btn-container {
+      display: flex;
+      gap: 10px;
+    }
+    #sunburstChart {
+      cursor: pointer;
+    }
+    .lead-table th {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+    .lead-table td {
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .pagination {
+      margin: 0;
+      font-size: 13px;
+    }
+    .pagination .page-link {
+      padding: 4px 10px;
+      font-size: 13px;
+    }
+    .modal-body {
+      padding: 12px 16px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .modal-body .table-responsive {
+      padding-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="controls">
+      <div class="d-flex gap-3 mb-3">
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="pipeline">Pipeline</label>
+          <select id="pipeline" class="form-select">
+            <option value="">Select Pipeline</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="project">Interested Project</label>
+          <select id="project" class="form-select">
+            <option value="">All Projects</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="sourceCategory">Source Category</label>
+          <select id="sourceCategory" class="form-select">
+            <option value="">All Source Categories</option>
+          </select>
+        </div>
+        <div class="control-group flex-fill" style="min-width: 200px;">
+          <label for="source">Source</label>
+          <select id="source" class="form-select">
+            <option value="">All Sources</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 flex-wrap">
+        <div class="control-group">
+          <button id="forceRefresh" class="btn btn-primary btn-sm refresh-btn w-100"> Refresh </button>
+        </div>
+        <div class="control-group">
+          <button id="openDateModal" class="btn btn-outline-primary btn-sm w-100">Select Date Range</button>
+        </div>
+        <div class="control-group">
+          <button id="clearAllFilters" class="btn btn-secondary btn-sm clear-filter-btn w-100">Clear Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-header">
+        <div class="chart-title" id="chartTitle">All Projects</div>
+        <div class="export-btn-container">
+          <button id="exportBtn" class="btn btn-sm btn-success" style="display: none;">Export Project Data</button>
+          <button id="backBtn" class="btn btn-sm btn-secondary" style="display: none;">Back to All Projects</button>
+        </div>
+      </div>
+      <div id="sunburstChart"></div>
+      <div id="legend" class="chart-legend"></div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Date Selection Modal -->
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-labelledby="dateSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dateSelectionModalLabel">Select Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="modalDateRange" class="form-label">Date Range</label>
+            <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+          </div>
+          <div class="quick-selections">
+            <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
+            <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="clearFilter">Clear Filter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
+  <script type="module">
+    import { loadConfig, fetchPipelines, fetchAllUsers, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
+
+    let CONFIG = {};
+    let locationId = '';
+    let usersMap = new Map();
+    let pipelines = [];
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+    let colorMap = new Map();
+    let hiddenProjects = new Set();
+    let allProjects = new Set();
+    let allSources = [];
+    let allSourceCategories = [];
+    const BACKGROUND_REFRESH_INTERVAL = 10 * 60 * 1000;
+
+    let currentPipelineId = null;
+    let opportunitiesData = [];
+    let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+    let drillDownProject = null;
+    let currentFilteredOpportunities = [];
+    let lastClickedOpportunities = [];
+    let lastClickedUser = null; // Track clicked user
+
+    async function checkForRefresh() {
+      const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
+      if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('Refresh detected in another widget, syncing data...');
+        
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+        
+        try {
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length > 0) {
+            console.log(`Synced ${opportunitiesData.length} opportunities`);
+            await renderTableAndChart();
+          }
+          
+          lastRefreshCheck = currentRefresh;
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }
+    }
+
+    setInterval(checkForRefresh, 5000);
+
+    function escapeSingleQuotes(str) {
+      return str.replace(/'/g, "\\'");
+    }
+
+    function showSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideSpinner() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function formatDate(date) {
+      if (!date) return '';
+      return date.toISOString().split('T')[0].replace(/-/g, '/');
+    }
+
+    function updateDateRangeButton() {
+      const button = document.getElementById('openDateModal');
+      if (selectedStartDate && selectedEndDate) {
+        button.textContent = `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`;
+      } else {
+        button.textContent = 'Select Date Range';
+      }
+    }
+
+    function updatePipelines() {
+      const pipelineSelect = document.getElementById('pipeline');
+      const currentValue = pipelineSelect.value;
+      pipelineSelect.innerHTML = '<option value="">Select Pipeline</option>';
+      pipelines.forEach(pipeline => {
+        const option = document.createElement('option');
+        option.value = pipeline.id;
+        option.textContent = pipeline.name;
+        pipelineSelect.appendChild(option);
+      });
+      pipelineSelect.value = currentValue || (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf') ? 'QXOLzVjXSw1VQajFLuzf' : pipelines.length > 0 ? pipelines[0].id : '');
+    }
+
+    function updateProjects() {
+      const projectSelect = document.getElementById('project');
+      const currentValue = projectSelect.value;
+      projectSelect.innerHTML = '<option value="">All Projects</option>';
+      allProjects.forEach(project => {
+        if (project && project !== 'N/A') {
+          const option = document.createElement('option');
+          option.value = project;
+          option.textContent = project;
+          projectSelect.appendChild(option);
+        }
+      });
+      projectSelect.value = currentValue || '';
+    }
+
+    function updateSourceCategories() {
+      const sourceCategorySelect = document.getElementById('sourceCategory');
+      const currentValue = sourceCategorySelect.value;
+      sourceCategorySelect.innerHTML = '<option value="">All Source Categories</option>';
+      allSourceCategories.forEach(category => {
+        if (category && category !== 'N/A') {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          sourceCategorySelect.appendChild(option);
+        }
+      });
+      sourceCategorySelect.value = currentValue || '';
+    }
+
+    function updateSources() {
+      const sourceSelect = document.getElementById('source');
+      const currentValue = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">All Sources</option>';
+      allSources.forEach(source => {
+        if (source && source !== 'N/A' && source.trim() !== '') {
+          const option = document.createElement('option');
+          option.value = source;
+          option.textContent = source;
+          sourceSelect.appendChild(option);
+        }
+      });
+      sourceSelect.value = currentValue || '';
+    }
+
+    function getDateRange(range) {
+      const today = new Date();
+      let start, end;
+      switch (range) {
+        case 'thisWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay());
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'lastWeek':
+          start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 7);
+          end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          break;
+        case 'last7Days':
+          start = new Date(today);
+          start.setDate(today.getDate() - 7);
+          end = new Date(today);
+          break;
+        case 'thisMonth':
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case 'lastMonth':
+          start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 0);
+          break;
+        case 'thisYear':
+          start = new Date(today.getFullYear(), 0, 1);
+          end = new Date(today.getFullYear(), 11, 31);
+          break;
+        default:
+          start = null;
+          end = null;
+      }
+      return { start, end };
+    }
+
+    function clearAllFilters() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelineSelect.value = locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf') ? 'QXOLzVjXSw1VQajFLuzf' : pipelines.length > 0 ? pipelines[0].id : '';
+      document.getElementById('project').value = '';
+      document.getElementById('sourceCategory').value = '';
+      document.getElementById('source').value = '';
+      dateRangePicker.clear();
+      selectedStartDate = null;
+      selectedEndDate = null;
+      hiddenProjects.clear();
+      drillDownProject = null;
+      lastClickedUser = null;
+      lastClickedOpportunities = [];
+      updateDateRangeButton();
+      renderTableAndChart();
+    }
+
+    function exportToCSV() {
+      let dataToExport = lastClickedOpportunities.length > 0 ? lastClickedOpportunities : currentFilteredOpportunities;
+      let filename = `opportunities_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (drillDownProject) {
+        dataToExport = currentFilteredOpportunities.filter(op => op.project === drillDownProject);
+        filename = `opportunities_${drillDownProject}_${new Date().toISOString().split('T')[0]}.csv`;
+      }
+      
+      if (dataToExport.length === 0) {
+        alert('No data to export');
+        return;
+      }
+
+      const headers = ['Contact Name', 'Email', 'Phone', 'Assigned User', 'Project', 'Status', 'Source', 'Source Category', 'Opportunity ID'];
+      const rows = dataToExport.map(op => [
+        op.contact?.name || 'N/A',
+        op.contact?.email || 'N/A',
+        op.contact?.phone || 'N/A',
+        usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`,
+        op.project || 'N/A',
+        op.status || 'N/A',
+        op.source || 'N/A',
+        op.sourceCategory || 'N/A',
+        op.id || 'N/A'
+      ]);
+
+      let csv = headers.join(',') + '\n';
+      rows.forEach(row => {
+        csv += row.map(cell => {
+          const val = String(cell).replace(/"/g, '""');
+          return `"${val}"`;
+        }).join(',') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    async function renderTableAndChart() {
+      console.log('Rendering chart with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
+      const pipelineId = document.getElementById('pipeline').value || null;
+      const project = document.getElementById('project').value || null;
+      const sourceCategory = document.getElementById('sourceCategory').value || null;
+      const source = document.getElementById('source').value || null;
+      showSpinner();
+      try {
+        if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
+          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
+          if (opportunitiesData.length === 0) {
+            console.log('Cache empty, fetching from API');
+            opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          } else {
+            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
+          }
+          currentPipelineId = pipelineId;
+        }
+
+        allProjects = new Set(opportunitiesData.map(op => op.project).filter(p => p && p !== 'N/A'));
+        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc && sc !== 'N/A'))].sort();
+        allSources = [...new Set(opportunitiesData.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+
+        updateProjects();
+        updateSourceCategories();
+        updateSources();
+
+        const customFields = {
+          project: project,
+          sourceCategory: sourceCategory,
+          channels: source ? [source] : [],
+          sourceCategories: sourceCategory ? [sourceCategory] : []
+        };
+
+        let opportunities = applyFilters(opportunitiesData, pipelineId, selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : null, selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : null, hiddenProjects, customFields);
+
+        currentFilteredOpportunities = opportunities;
+
+        let displayOpportunities = opportunities;
+        if (drillDownProject) {
+          displayOpportunities = opportunities.filter(op => op.project === drillDownProject);
+        }
+
+        const projectUserCounts = {};
+        displayOpportunities.forEach(op => {
+          const proj = op.project || 'N/A';
+          const user = usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`;
+          if (!projectUserCounts[proj]) projectUserCounts[proj] = {};
+          projectUserCounts[proj][user] = (projectUserCounts[proj][user] || 0) + 1;
+        });
+
+        const labels = [];
+        const parents = [];
+        const values = [];
+        const ids = [];
+        const colors = [];
+        const customdata = [];
+        const colorScale = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+                           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+
+        if (drillDownProject) {
+          const users = projectUserCounts[drillDownProject] || {};
+          Object.entries(users).forEach(([user, count], i) => {
+            const segmentOpps = displayOpportunities.filter(op => 
+              (op.project || 'N/A') === drillDownProject && 
+              (usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`) === user
+            );
+            labels.push(user);
+            parents.push('');
+            values.push(count);
+            ids.push(`${drillDownProject}-${user}`);
+            colors.push(colorScale[i % colorScale.length]);
+            customdata.push(segmentOpps);
+          });
+        } else {
+          Object.entries(projectUserCounts).forEach(([proj, users], i) => {
+            const total = Object.values(users).reduce((a, b) => a + b, 0);
+            labels.push(proj);
+            parents.push('');
+            values.push(total);
+            ids.push(proj);
+            if (!colorMap.has(proj)) {
+              colorMap.set(proj, colorScale[i % colorScale.length]);
+            }
+            colors.push(colorMap.get(proj));
+            customdata.push(null);
+          });
+
+          Object.entries(projectUserCounts).forEach(([proj, users]) => {
+            Object.entries(users).forEach(([user, count]) => {
+              const segmentOpps = displayOpportunities.filter(op => 
+                (op.project || 'N/A') === proj && 
+                (usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`) === user
+              );
+              labels.push(user);
+              parents.push(proj);
+              values.push(count);
+              ids.push(`${proj}-${user}`);
+              colors.push(colorMap.get(proj));
+              customdata.push(segmentOpps);
+            });
+          });
+        }
+
+        const legend = document.getElementById('legend');
+        legend.innerHTML = Array.from(allProjects).map(proj => {
+          const isHidden = hiddenProjects.has(proj);
+          return `
+            <div class="legend-item ${isHidden ? 'hidden' : ''}" onclick="toggleProject('${escapeSingleQuotes(proj)}')">
+              <div class="legend-color" style="background: ${colorMap.get(proj) || '#ccc'}"></div>
+              <span>${proj}</span>
+            </div>
+          `;
+        }).join('');
+
+        const totalCount = lastClickedUser && drillDownProject 
+          ? (projectUserCounts[drillDownProject]?.[lastClickedUser] || 0)
+          : displayOpportunities.length;
+
+        const data = [{
+          type: 'sunburst',
+          ids: ids,
+          labels: labels,
+          parents: parents,
+          values: values,
+          marker: {
+            colors: colors,
+            line: { width: 1, color: 'white' }
+          },
+          hoverinfo: 'label+value+percent parent',
+          hovertemplate: '<b>%{label}</b><br>Count: %{value}<br>% of Parent: %{percentParent:.1%}<extra></extra>',
+          textinfo: 'label',
+          insidetextorientation: 'radial',
+          branchvalues: 'total',
+          maxdepth: drillDownProject ? 1 : 2,
+          customdata: customdata
+        }];
+
+        const layout = {
+          margin: { l: 0, r: 0, b: 0, t: 0 },
+          width: 1000,
+          height: 1000,
+          sunburstcolorway: colorScale,
+          annotations: [{
+            x: 0.5,
+            y: 0.5,
+            text: `Total<br>${totalCount}`,
+            showarrow: false,
+            font: { size: 24, color: '#000' }
+          }]
+        };
+
+        Plotly.newPlot('sunburstChart', data, layout).then(() => {
+          const chart = document.getElementById('sunburstChart');
+          chart.removeAllListeners('plotly_click');
+          chart.on('plotly_click', function(eventData) {
+            const point = eventData.points[0];
+            const clickedCustomData = point.customdata;
+
+            if (!drillDownProject && point.parent === '' && allProjects.has(point.label)) {
+              selectProject(point.label);
+              renderTableAndChart();
+              return;
+            }
+
+            if (Array.isArray(clickedCustomData) && clickedCustomData.length > 0) {
+              lastClickedOpportunities = clickedCustomData;
+              lastClickedUser = point.label;
+              showLeadDetailsModal(clickedCustomData);
+              // Update total count immediately
+              const userCount = clickedCustomData.length;
+              document.querySelector('#sunburstChart .sunburst-annotation text').textContent = `Total\n${userCount}`;
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error rendering chart:', error);
+        document.getElementById('sunburstChart').innerHTML = '<p>Error loading data. Please try again.</p>';
+      } finally {
+        hideSpinner();
+      }
+    }
+
+    function showLeadDetailsModal(opportunities) {
+      const pageSize = 25;
+      let currentPage = 1;
+      const totalPages = Math.ceil(opportunities.length / pageSize);
+
+      const renderPage = () => {
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pageData = opportunities.slice(start, end);
+
+        const tbody = pageData.map(op => `
+          <tr>
+            <td>${op.contact?.name || 'N/A'}</td>
+            <td>${op.contact?.email || 'N/A'}</td>
+            <td>${op.contact?.phone || 'N/A'}</td>
+            <td>${usersMap.get(op.assignedTo) || 'N/A'}</td>
+            <td>${op.project || 'N/A'}</td>
+            <td>${op.status || 'N/A'}</td>
+            <td>${op.source || 'N/A'}</td>
+            <td>${op.sourceCategory || 'N/A'}</td>
+            <td><small>${op.id || 'N/A'}</small></td>
+          </tr>
+        `).join('');
+
+        const pagination = `
+          <nav aria-label="Lead pagination">
+            <ul class="pagination mb-0">
+              <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" ${currentPage === 1 ? '' : `data-page="${currentPage - 1}"`}>Previous</a>
+              </li>
+              <li class="page-item disabled"><span class="page-link">Page ${currentPage} of ${totalPages}</span></li>
+              <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" ${currentPage === totalPages ? '' : `data-page="${currentPage + 1}"`}>Next</a>
+              </li>
+            </ul>
+          </nav>
+        `;
+
+        return { tbody, pagination };
+      };
+
+      const { tbody, pagination } = renderPage();
+
+      const modalHtml = `
+        <div class="modal fade" id="leadDetailsModal" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Lead Details (${opportunities.length} records)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0 lead-table">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Assigned User</th>
+                        <th>Project</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>Source Category</th>
+                        <th>ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>${tbody}</tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <div>${pagination}</div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const existing = document.getElementById('leadDetailsModal');
+      if (existing) existing.remove();
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+      const modal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
+      modal.show();
+
+      document.querySelectorAll('#leadDetailsModal .page-link[data-page]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          currentPage = parseInt(e.target.dataset.page);
+          const { tbody: newTbody, pagination: newPagination } = renderPage();
+          document.querySelector('#leadDetailsModal tbody').innerHTML = newTbody;
+          document.querySelector('#leadDetailsModal .modal-footer > div').innerHTML = newPagination;
+          document.querySelectorAll('#leadDetailsModal .page-link[data-page]').forEach(l => {
+            l.addEventListener('click', handlePageClick);
+          });
+        });
+      });
+
+      function handlePageClick(e) {
+        e.preventDefault();
+        currentPage = parseInt(e.target.dataset.page);
+        const { tbody: newTbody, pagination: newPagination } = renderPage();
+        document.querySelector('#leadDetailsModal tbody').innerHTML = newTbody;
+        document.querySelector('#leadDetailsModal .modal-footer > div').innerHTML = newPagination;
+        document.querySelectorAll('#leadDetailsModal .page-link[data-page]').forEach(l => l.addEventListener('click', handlePageClick));
+      }
+    }
+
+    function toggleProject(proj) {
+      if (hiddenProjects.has(proj)) {
+        hiddenProjects.delete(proj);
+      } else {
+        hiddenProjects.add(proj);
+      }
+      renderTableAndChart();
+    }
+
+    function selectProject(projectName) {
+      drillDownProject = projectName;
+      lastClickedUser = null;
+      lastClickedOpportunities = [];
+      document.getElementById('chartTitle').textContent = `Project: ${projectName}`;
+      document.getElementById('exportBtn').style.display = 'inline-block';
+      document.getElementById('backBtn').style.display = 'inline-block';
+    }
+
+    function goBackToAllProjects() {
+      drillDownProject = null;
+      lastClickedUser = null;
+      lastClickedOpportunities = [];
+      document.getElementById('chartTitle').textContent = 'All Projects';
+      document.getElementById('exportBtn').style.display = 'none';
+      document.getElementById('backBtn').style.display = 'none';
+      renderTableAndChart();
+    }
+
+    async function initWidget() {
+      const { config, locationId: locId } = await loadConfig();
+      if (!config) {
+        document.getElementById('sunburstChart').innerHTML = '<p>No configuration available for this location.</p>';
+        hideSpinner();
+        return;
+      }
+      CONFIG = config;
+      locationId = locId;
+
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      updatePipelines();
+
+      const pipelineSelect = document.getElementById('pipeline');
+      if (pipelines.length > 0) {
+        if (locationId === 'E0H7r1mN6ry0kv4uGZ6L' && pipelines.some(p => p.id === 'QXOLzVjXSw1VQajFLuzf')) {
+          pipelineSelect.value = 'QXOLzVjXSw1VQajFLuzf';
+        } else {
+          pipelineSelect.value = pipelines[0].id;
+        }
+      }
+      currentPipelineId = pipelineSelect.value;
+
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(user => [user.id, user.name]));
+
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode: "range",
+        dateFormat: "Y/m/d",
+        onClose: async (dates) => {
+          if (dates.length === 2) {
+            selectedStartDate = dates[0];
+            selectedEndDate = dates[1];
+            updateDateRangeButton();
+            await renderTableAndChart();
+            bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+          }
+        }
+      });
+
+      document.getElementById('openDateModal').addEventListener('click', () => {
+        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+        modal.show();
+      });
+
+      document.querySelectorAll('.quick-selections button').forEach(button => {
+        button.addEventListener('click', async function() {
+          const range = this.dataset.range;
+          const dates = getDateRange(range);
+          dateRangePicker.setDate([dates.start, dates.end]);
+          selectedStartDate = dates.start;
+          selectedEndDate = dates.end;
+          updateDateRangeButton();
+          await renderTableAndChart();
+          bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+        });
+      });
+
+      document.getElementById('clearFilter').addEventListener('click', async () => {
+        dateRangePicker.clear();
+        selectedStartDate = null;
+        selectedEndDate = null;
+        updateDateRangeButton();
+        await renderTableAndChart();
+        bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+      });
+
+      document.getElementById('pipeline').addEventListener('change', renderTableAndChart);
+      document.getElementById('project').addEventListener('change', renderTableAndChart);
+      document.getElementById('sourceCategory').addEventListener('change', renderTableAndChart);
+      document.getElementById('source').addEventListener('change', renderTableAndChart);
+      document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+      document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+      document.getElementById('backBtn').addEventListener('click', goBackToAllProjects);
+
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated - clearing all caches');
+        
+        try {
+          const savedPipelineId = document.getElementById('pipeline').value;
+          
+          progressManager.show('Initializing refresh...');
+          
+          progressManager.setProgress(15, 'Clearing cache...');
+          await clearIndexedDB();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          progressManager.setProgress(25, 'Fetching pipelines...');
+          pipelines = await fetchPipelines(CONFIG, locationId);
+          updatePipelines();
+          document.getElementById('pipeline').value = savedPipelineId;
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          progressManager.setProgress(40, 'Fetching opportunities...');
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
+          
+          currentPipelineId = savedPipelineId;
+          
+          progressManager.setProgress(90, 'Rendering chart...');
+          await renderTableAndChart();
+          
+          progressManager.setProgress(95, 'Syncing to other widgets...');
+          localStorage.setItem('ghl_last_refresh', Date.now().toString());
+          
+          progressManager.setProgress(100, 'Refresh complete!');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          progressManager.hide();
+          
+        } catch (error) {
+          console.error('Force refresh failed:', error);
+          progressManager.setProgress(100, 'Error during refresh. Please try again.');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          progressManager.hide();
+        }
+      });
+
+      await renderTableAndChart();
+      setInterval(backgroundRefresh, BACKGROUND_REFRESH_INTERVAL);
+    }
+
+    async function backgroundRefresh() {
+      console.log('Background refresh started');
+      try {
+        const pipelineId = document.getElementById('pipeline').value;
+        if (pipelineId && pipelineId === currentPipelineId && opportunitiesData.length > 0) {
+          const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
+          if (newOpps.length > 0) {
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
+            opportunitiesData = [...opportunitiesData, ...newOpps];
+            await renderTableAndChart();
+          }
+        }
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
+    }
+
+    window.toggleProject = toggleProject;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initWidget();
+    });
+  </script>
+</body>
+</html>
