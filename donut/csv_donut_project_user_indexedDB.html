@@ -51,7 +51,7 @@
       font-size: 14px;
     }
     .form-select, .btn-sm {
-      height: 55px;
+      height:55px;
       font-size: 14px;
       width: 100%;
       box-sizing: border-box;
@@ -188,9 +188,6 @@
     .modal-body .table-responsive {
       padding-left: 12px;
     }
-    #exportBtn, #backBtn {
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -240,8 +237,8 @@
       <div class="chart-header">
         <div class="chart-title" id="chartTitle">All Projects</div>
         <div class="export-btn-container">
-          <button id="exportBtn" class="btn btn-sm btn-success">Export as CSV</button>
-          <button id="backBtn" class="btn btn-sm btn-secondary">Back to All Projects</button>
+          <button id="exportBtn" class="btn btn-sm btn-success" style="display: none;">Export Project Data</button>
+          <button id="backBtn" class="btn btn-sm btn-secondary" style="display: none;">Back to All Projects</button>
         </div>
       </div>
       <div id="sunburstChart"></div>
@@ -307,24 +304,31 @@
     let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
     let drillDownProject = null;
     let currentFilteredOpportunities = [];
-    let lastClickedOpportunities = [];
 
     async function checkForRefresh() {
       const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
+      
       if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
+        console.log('Refresh detected in another widget, syncing data...');
+        
         const pipelineId = document.getElementById('pipeline').value;
         if (!pipelineId) return;
+        
         try {
           opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
           if (opportunitiesData.length > 0) {
+            console.log(`Synced ${opportunitiesData.length} opportunities`);
             await renderTableAndChart();
           }
+          
           lastRefreshCheck = currentRefresh;
         } catch (error) {
           console.error('Sync error:', error);
         }
       }
     }
+
     setInterval(checkForRefresh, 5000);
 
     function escapeSingleQuotes(str) {
@@ -462,15 +466,27 @@
       selectedEndDate = null;
       hiddenProjects.clear();
       drillDownProject = null;
-      lastClickedOpportunities = [];
       updateDateRangeButton();
       renderTableAndChart();
     }
 
     function exportToCSV() {
-      let dataToExport = drillDownProject ? currentFilteredOpportunities.filter(op => op.project === drillDownProject) : currentFilteredOpportunities;
-      if (lastClickedOpportunities.length > 0) {
-        dataToExport = lastClickedOpportunities;
+      let dataToExport = currentFilteredOpportunities;
+      let filename = `opportunities_${new Date().toISOString().split('T')[0]}.csv`;
+      let projectName = null;
+
+      if (drillDownProject) {
+        projectName = drillDownProject;
+      } else {
+        const selectedProject = document.getElementById('project').value;
+        if (selectedProject) {
+          projectName = selectedProject;
+        }
+      }
+
+      if (projectName) {
+        dataToExport = currentFilteredOpportunities.filter(op => op.project === projectName);
+        filename = `opportunities_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
       }
       
       if (dataToExport.length === 0) {
@@ -478,19 +494,11 @@
         return;
       }
 
-      const filename = drillDownProject ? `${drillDownProject}_opportunities_${new Date().toISOString().split('T')[0]}.csv` : `opportunities_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      const headers = ['Contact Name', 'Email', 'Phone', 'Assigned User', 'Project', 'Status', 'Source', 'Source Category', 'Opportunity ID'];
+      const headers = ['Project', 'Assigned User', 'Status'];
       const rows = dataToExport.map(op => [
-        op.contact?.name || 'N/A',
-        op.contact?.email || 'N/A',
-        op.contact?.phone || 'N/A',
-        usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`,
         op.project || 'N/A',
-        op.status || 'N/A',
-        op.source || 'N/A',
-        op.sourceCategory || 'N/A',
-        op.id || 'N/A'
+        usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`,
+        op.status || 'N/A'
       ]);
 
       let csv = headers.join(',') + '\n';
@@ -513,6 +521,7 @@
     }
 
     async function renderTableAndChart() {
+      console.log('Rendering chart with startDate:', selectedStartDate, 'endDate:', selectedEndDate);
       const pipelineId = document.getElementById('pipeline').value || null;
       const project = document.getElementById('project').value || null;
       const sourceCategory = document.getElementById('sourceCategory').value || null;
@@ -521,8 +530,12 @@
       try {
         if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
           opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
+          
           if (opportunitiesData.length === 0) {
+            console.log('Cache empty, fetching from API');
             opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
+          } else {
+            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
           }
           currentPipelineId = pipelineId;
         }
@@ -571,6 +584,7 @@
         if (drillDownProject) {
           const projectColor = colorMap.get(drillDownProject) || '#ccc';
           const users = projectUserCounts[drillDownProject] || {};
+          
           Object.entries(users).forEach(([user, count]) => {
             const segmentOpps = displayOpportunities.filter(op => 
               (op.project || 'N/A') === drillDownProject && 
@@ -580,7 +594,7 @@
             parents.push('');
             values.push(count);
             ids.push(`${drillDownProject}-${user}`);
-            colors.push(projectColor);
+            colors.push(projectColor); // SAME COLOR AS PROJECT
             customdata.push(segmentOpps);
           });
         } else {
@@ -598,7 +612,7 @@
           });
 
           Object.entries(projectUserCounts).forEach(([proj, users]) => {
-            const projColor = colorMap.get(proj);
+            const projectColor = colorMap.get(proj);
             Object.entries(users).forEach(([user, count]) => {
               const segmentOpps = displayOpportunities.filter(op => 
                 (op.project || 'N/A') === proj && 
@@ -608,13 +622,14 @@
               parents.push(proj);
               values.push(count);
               ids.push(`${proj}-${user}`);
-              colors.push(projColor);
+              colors.push(projectColor); // SAME AS PARENT PROJECT
               customdata.push(segmentOpps);
             });
           });
         }
 
-        document.getElementById('legend').innerHTML = Array.from(allProjects).map(proj => {
+        const legend = document.getElementById('legend');
+        legend.innerHTML = Array.from(allProjects).map(proj => {
           const isHidden = hiddenProjects.has(proj);
           return `
             <div class="legend-item ${isHidden ? 'hidden' : ''}" onclick="toggleProject('${escapeSingleQuotes(proj)}')">
@@ -659,21 +674,45 @@
 
         Plotly.newPlot('sunburstChart', data, layout).then(() => {
           const chart = document.getElementById('sunburstChart');
+          chart.removeAllListeners('plotly_click');
           chart.on('plotly_click', function(eventData) {
             const point = eventData.points[0];
+            const clickedCustomData = point.customdata;
 
-            if (!drillDownProject && point.parent === '' && allProjects.has(point.label)) {
-              selectProject(point.label);
+            if (!drillDownProject && point.parent === '') {
+              const clickedProject = point.label;
+              // Allow drill-down for ANY project (including N/A)
+              selectProject(clickedProject);
               renderTableAndChart();
               return;
             }
 
-            if (Array.isArray(point.customdata) && point.customdata.length > 0) {
-              lastClickedOpportunities = point.customdata;
-              showLeadDetailsModal(point.customdata);
+            if (Array.isArray(clickedCustomData) && clickedCustomData.length > 0) {
+              showLeadDetailsModal(clickedCustomData);
             }
           });
         });
+
+        // Update UI: Export + Back buttons
+        const exportBtn = document.getElementById('exportBtn');
+        const backBtn = document.getElementById('backBtn');
+        const selectedProject = document.getElementById('project').value;
+
+        if (drillDownProject) {
+          document.getElementById('chartTitle').textContent = `Project: ${drillDownProject}`;
+          exportBtn.textContent = `Export ${drillDownProject} Data`;
+          exportBtn.style.display = 'inline-block';
+          backBtn.style.display = 'inline-block';
+        } else if (selectedProject) {
+          document.getElementById('chartTitle').textContent = `Project: ${selectedProject}`;
+          exportBtn.textContent = `Export ${selectedProject} Data`;
+          exportBtn.style.display = 'inline-block';
+          backBtn.style.display = 'inline-block';
+        } else {
+          document.getElementById('chartTitle').textContent = 'All Projects';
+          exportBtn.style.display = 'none';
+          backBtn.style.display = 'none';
+        }
       } catch (error) {
         console.error('Error rendering chart:', error);
         document.getElementById('sunburstChart').innerHTML = '<p>Error loading data. Please try again.</p>';
@@ -698,10 +737,7 @@
             <td>${op.contact?.email || 'N/A'}</td>
             <td>${op.contact?.phone || 'N/A'}</td>
             <td>${usersMap.get(op.assignedTo) || 'N/A'}</td>
-            <td>${op.project || 'N/A'}</td>
             <td>${op.status || 'N/A'}</td>
-            <td>${op.source || 'N/A'}</td>
-            <td>${op.sourceCategory || 'N/A'}</td>
             <td><small>${op.id || 'N/A'}</small></td>
           </tr>
         `).join('');
@@ -742,10 +778,7 @@
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Assigned User</th>
-                        <th>Project</th>
                         <th>Status</th>
-                        <th>Source</th>
-                        <th>Source Category</th>
                         <th>ID</th>
                       </tr>
                     </thead>
@@ -803,18 +836,11 @@
 
     function selectProject(projectName) {
       drillDownProject = projectName;
-      lastClickedOpportunities = [];
-      document.getElementById('chartTitle').textContent = `Project: ${projectName}`;
-      document.getElementById('exportBtn').style.display = 'inline-block';
-      document.getElementById('backBtn').style.display = 'inline-block';
+      renderTableAndChart();
     }
 
     function goBackToAllProjects() {
       drillDownProject = null;
-      lastClickedOpportunities = [];
-      document.getElementById('chartTitle').textContent = 'All Projects';
-      document.getElementById('exportBtn').style.display = 'none';
-      document.getElementById('backBtn').style.display = 'none';
       document.getElementById('project').value = '';
       renderTableAndChart();
     }
@@ -860,7 +886,8 @@
       });
 
       document.getElementById('openDateModal').addEventListener('click', () => {
-        new bootstrap.Modal(document.getElementById('dateSelectionModal')).show();
+        const modal = new bootstrap.Modal(document.getElementById('dateSelectionModal'));
+        modal.show();
       });
 
       document.querySelectorAll('.quick-selections button').forEach(button => {
@@ -886,47 +913,51 @@
       });
 
       document.getElementById('pipeline').addEventListener('change', renderTableAndChart);
-      document.getElementById('project').addEventListener('change', async () => {
-        const selectedProjectValue = document.getElementById('project').value;
-        if (selectedProjectValue) {
-          selectProject(selectedProjectValue);
-          await renderTableAndChart();
-        } else {
-          goBackToAllProjects();
-        }
-      });
+      document.getElementById('project').addEventListener('change', renderTableAndChart);
       document.getElementById('sourceCategory').addEventListener('change', renderTableAndChart);
-      document.getElementById('source').addEventListener('change', renderTableAndChart);
+      document.getElementById('source').addEventListener('change', () => renderTableAndChart());
       document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
       document.getElementById('exportBtn').addEventListener('click', exportToCSV);
       document.getElementById('backBtn').addEventListener('click', goBackToAllProjects);
 
       document.getElementById('forceRefresh').addEventListener('click', async () => {
+        console.log('Force refresh initiated - clearing all caches');
+        
         try {
           const savedPipelineId = document.getElementById('pipeline').value;
+          
           progressManager.show('Initializing refresh...');
+          
           progressManager.setProgress(15, 'Clearing cache...');
           await clearIndexedDB();
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           progressManager.setProgress(25, 'Fetching pipelines...');
           pipelines = await fetchPipelines(CONFIG, locationId);
           updatePipelines();
           document.getElementById('pipeline').value = savedPipelineId;
-          await new Promise(r => setTimeout(r, 200));
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
           progressManager.setProgress(40, 'Fetching opportunities...');
           opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
+          
           currentPipelineId = savedPipelineId;
+          
           progressManager.setProgress(90, 'Rendering chart...');
           await renderTableAndChart();
+          
           progressManager.setProgress(95, 'Syncing to other widgets...');
           localStorage.setItem('ghl_last_refresh', Date.now().toString());
+          
           progressManager.setProgress(100, 'Refresh complete!');
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(resolve => setTimeout(resolve, 500));
           progressManager.hide();
+          
+          console.log('Force refresh completed successfully');
         } catch (error) {
           console.error('Force refresh failed:', error);
           progressManager.setProgress(100, 'Error during refresh. Please try again.');
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
           progressManager.hide();
         }
       });
@@ -936,11 +967,13 @@
     }
 
     async function backgroundRefresh() {
+      console.log('Background refresh started');
       try {
         const pipelineId = document.getElementById('pipeline').value;
         if (pipelineId && pipelineId === currentPipelineId && opportunitiesData.length > 0) {
           const newOpps = await fetchNewOpportunities(CONFIG, locationId, pipelineId);
           if (newOpps.length > 0) {
+            console.log(`Background refresh: ${newOpps.length} new opportunities found`);
             opportunitiesData = [...opportunitiesData, ...newOpps];
             await renderTableAndChart();
           }
