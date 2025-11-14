@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Campaigns Report</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
+
+  <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --text: #374151;
+      --border: #d1d5db;
+      --background: #f8fafc;
+    }
+
+    body {
+      font-family: 'Cem Seui', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: white;
+    }
+
+    .widget {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 15px;
+      position: relative;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+
+    label {
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    select, input[type="text"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      background: white;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 15px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-container {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table thead th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px;
+      border-bottom: 2px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .table tbody tr {
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    .table tbody td {
+      font-size: 13px;
+      padding: 10px;
+      color: #4b5563;
+    }
+
+    .count-badge {
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      min-width: 50px;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .widget-loading-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button-group .btn {
+      white-space: nowrap;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <!-- Loading Overlay -->
+    <div class="widget-loading-overlay" id="widgetLoadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Filters (Only Pipeline + Date) -->
+    <div class="container-fluid">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="control-group">
+            <label for="pipeline">Pipeline</label>
+            <select id="pipeline" class="form-select"></select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="control-group">
+            <label>Date Range</label>
+            <button id="openDateModal" class="btn btn-outline-primary w-100">Select Date Range</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12">
+          <div class="button-group">
+            <button id="refresh" class="btn btn-outline-danger btn-sm">Refresh</button>
+            <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sources Report Table -->
+    <div id="sources-report-container" style="margin-top: 30px; display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">Campaigns Report</h6>
+          <span id="totalLeads" class="text-muted fw-normal"></span>
+        </div>
+        <div class="table-container">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th class="text-end">Leads</th>
+              </tr>
+            </thead>
+            <tbody id="sourcesTableBody">
+              <!-- Filled by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Date Modal (No Quick Buttons) -->
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Select Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="modalDateRange" class="form-control" placeholder="Select range"/>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="clearFilter">Clear</button>
+          <button class="btn btn-primary" id="doneButton">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leads Detail Modal -->
+  <div class="modal fade" id="opportunitiesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 80vw;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="opportunitiesModalLabel">Leads</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 id="modalSubtitle"></h6>
+            <button class="btn btn-outline-primary btn-sm" id="exportBtn">
+              <i class="bi bi-filetype-csv"></i> Export
+            </button>
+          </div>
+          <div class="table-responsive" style="max-height: 60vh;">
+            <table class="table table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Campaign</th>
+                  <th>Agent</th>
+                  <th>Status</th>
+                  <th>Phone</th>
+                  <th>Project</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="opportunitiesTableBody"></tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between mt-3">
+            <span id="paginationInfo" class="text-muted"></span>
+            <div>
+              <button class="btn btn-outline-primary btn-sm" id="prevPageBtn" disabled>Previous</button>
+              <button class="btn btn-outline-primary btn-sm" id="nextPageBtn" disabled>Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script type="module">
+    import {
+      loadConfig,
+      fetchPipelines,
+      fetchAllUsers,
+      fetchAllOpportunities,
+      applyFilters,
+      formatDateTimeWithOffset,
+      clearIndexedDB,
+      progressManager
+    } from '../ghlData.js?v=1.0.3';
+
+    // === GLOBALS ===
+    let CONFIG = {}, locationId = '', pipelines = [], currentOpportunities = [];
+    let usersMap = new Map(), opportunitiesCache = [], currentPipelineId = null;
+    let selectedStartDate = null, selectedEndDate = null;
+    let currentPage = 1, itemsPerPage = 15;
+    let dateRangePicker, spinnerOverlay = null;
+
+    // === SPINNER ===
+    function showSpinner() { if (spinnerOverlay) spinnerOverlay.style.display = 'flex'; }
+    function hideSpinner() { if (spinnerOverlay) spinnerOverlay.style.display = 'none'; }
+
+    // === DOM READY ===
+    document.addEventListener('DOMContentLoaded', async () => {
+      spinnerOverlay = document.getElementById('widgetLoadingOverlay');
+      showSpinner();
+
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) throw new Error("No config");
+        CONFIG = config; locationId = locId;
+
+        await initFilters();
+        await refresh();
+      } catch (err) {
+        document.body.innerHTML = `<p class="text-danger text-center">Error: ${err.message}</p>`;
+      } finally {
+        hideSpinner();
+      }
+    });
+
+    async function initFilters() {
+      const pipelineSelect = document.getElementById('pipeline');
+      pipelines = await fetchPipelines(CONFIG, locationId);
+      const users = await fetchAllUsers(CONFIG, locationId);
+      usersMap = new Map(users.map(u => [u.id, u.name]));
+
+      pipelines.forEach(p => {
+        const opt = new Option(p.name, p.id);
+        pipelineSelect.appendChild(opt);
+      });
+
+      dateRangePicker = flatpickr('#modalDateRange', { mode: "range", dateFormat: "Y-m-d" });
+
+      // Events
+      document.getElementById('pipeline').addEventListener('change', refresh);
+      document.getElementById('refresh').addEventListener('click', hardRefresh);
+      document.getElementById('clearFilters').addEventListener('click', clearAll);
+      document.getElementById('openDateModal').addEventListener('click', () => new bootstrap.Modal('#dateSelectionModal').show());
+      document.getElementById('doneButton').addEventListener('click', applyDate);
+      document.getElementById('clearFilter').addEventListener('click', clearDate);
+      document.getElementById('prevPageBtn').addEventListener('click', () => { currentPage--; renderModal(); });
+      document.getElementById('nextPageBtn').addEventListener('click', () => { currentPage++; renderModal(); });
+
+      if (pipelines.length > 0) {
+        pipelineSelect.value = pipelines[0].id;
+      }
+    }
+
+    async function refresh() {
+      showSpinner();
+      try {
+        const pipelineId = document.getElementById('pipeline').value;
+        if (!pipelineId) return;
+
+        const opps = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false, true);
+        opportunitiesCache = opps;
+        currentPipelineId = pipelineId;
+
+        await renderSourcesReport();
+      } finally {
+        hideSpinner();
+      }
+    }
+
+    async function hardRefresh() {
+      progressManager.show('Refreshing...');
+      await clearIndexedDB();
+      opportunitiesCache = []; currentPipelineId = null;
+      await refresh();
+      progressManager.hide();
+    }
+
+    async function renderSourcesReport() {
+      if (!currentPipelineId || opportunitiesCache.length === 0) {
+        document.getElementById('sources-report-container').style.display = 'none';
+        return;
+      }
+
+      const filtered = applyFilters(opportunitiesCache, currentPipelineId, selectedStartDate, selectedEndDate, new Set(), {});
+      const countBySource = {};
+
+      filtered.forEach(op => {
+        const src = op.source || '(No Source)';
+        countBySource[src] = (countBySource[src] || 0) + 1;
+      });
+
+      const sorted = Object.entries(countBySource)
+        .map(([source, count]) => ({ source, count, opps: filtered.filter(o => (o.source || '(No Source)') === source) }))
+        .sort((a, b) => b.count - a.count);
+
+      const tbody = document.getElementById('sourcesTableBody');
+      tbody.innerHTML = '';
+      const total = sorted.reduce((s, i) => s + i.count, 0);
+      document.getElementById('totalLeads').textContent = `${total} Total Leads`;
+
+      if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted py-4">No leads found</td></tr>`;
+      } else {
+        sorted.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="fw-medium">${item.source}</td>
+            <td class="text-end"><span class="count-badge">${item.count}</span></td>
+          `;
+          row.onclick = () => showLeadsModal(item.source, item.opps);
+          tbody.appendChild(row);
+        });
+      }
+
+      document.getElementById('sources-report-container').style.display = 'block';
+    }
+
+    function showLeadsModal(source, opportunities) {
+      currentOpportunities = opportunities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      currentPage = 1;
+      document.getElementById('opportunitiesModalLabel').textContent = `Leads - ${source}`;
+      document.getElementById('exportBtn').onclick = () => exportCSV(currentOpportunities, source);
+      renderModal();
+      new bootstrap.Modal('#opportunitiesModal').show();
+    }
+
+    function renderModal() {
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = Math.min(start + itemsPerPage, currentOpportunities.length);
+      const tbody = document.getElementById('opportunitiesTableBody');
+      tbody.innerHTML = '';
+
+      for (let i = start; i < end; i++) {
+        const op = currentOpportunities[i];
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${op.id}</td>
+          <td>${op.name}</td>
+          <td>${op.contact?.name || ''}</td>
+          <td>${op.source || ''}</td>
+          <td>${usersMap.get(op.assignedTo) || ''}</td>
+          <td>${op.status || ''}</td>
+          <td>${op.contact?.phone || ''}</td>
+          <td>${op.project || ''}</td>
+          <td>${formatDateTimeWithOffset(op.createdAt).split(' ')[0]}</td>
+        `;
+        tbody.appendChild(row);
+      }
+
+      document.getElementById('paginationInfo').textContent = `Showing ${start + 1}-${end} of ${currentOpportunities.length}`;
+      document.getElementById('prevPageBtn').disabled = currentPage === 1;
+      document.getElementById('nextPageBtn').disabled = end >= currentOpportunities.length;
+    }
+
+    function exportCSV(data, source) {
+      const headers = ['ID','Name','Contact','Source','Agent','Status','Phone','Project','Created'];
+      const rows = data.map(op => [
+        op.id, op.name, op.contact?.name || '', op.source || '',
+        usersMap.get(op.assignedTo) || '', op.status || '', op.contact?.phone || 0, op.project || '', formatDateTimeWithOffset(op.createdAt).split(' ')[0]
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: `leads_${source.replace(/[^a-z0-9]/gi, '_')}.csv` });
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function applyDate() {
+      const dates = dateRangePicker.selectedDates;
+      if (dates.length === 2) {
+        selectedStartDate = flatpickr.formatDate(dates[0], "Y-m-d");
+        selectedEndDate = flatpickr.formatDate(dates[1], "Y-m-d");
+      }
+      bootstrap.Modal.getInstance('#dateSelectionModal').hide();
+      refresh();
+    }
+
+    function clearDate() {
+      selectedStartDate = selectedEndDate = null;
+      dateRangePicker.clear();
+      bootstrap.Modal.getInstance('#dateSelectionModal').hide();
+      refresh();
+    }
+
+    function clearAll() {
+      selectedStartDate = selectedEndDate = null;
+      dateRangePicker.clear();
+      document.getElementById('openDateModal').textContent = 'Select Date Range';
+      refresh();
+    }
+
+    function updateHeight() {
+      const h = document.documentElement.scrollHeight;
+      try { window.parent.postMessage({ type: 'setHeight', height: h }, '*'); } catch {}
+    }
+    window.addEventListener('message', e => { if (e.data.type === 'ping') updateHeight(); });
+    setInterval(updateHeight, 1000);
+  </script>
+</body>
+</html>
