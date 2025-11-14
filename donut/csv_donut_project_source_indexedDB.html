@@ -185,6 +185,9 @@
     .modal-body .table-responsive {
       padding-left: 12px;
     }
+    #exportBtn, #backBtn {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -234,8 +237,8 @@
       <div class="chart-header">
         <div class="chart-title" id="chartTitle">All Projects</div>
         <div class="export-btn-container">
-          <button id="exportBtn" class="btn btn-sm btn-success" style="display: none;">Export Project Data</button>
-          <button id="backBtn" class="btn btn-sm btn-secondary" style="display: none;">Back to All Projects</button>
+          <button id="exportBtn" class="btn btn-sm btn-success">Export as CSV</button>
+          <button id="backBtn" class="btn btn-sm btn-secondary">Back to All Projects</button>
         </div>
       </div>
       <div id="sunburstChart"></div>
@@ -263,7 +266,6 @@
             <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
             <button class="btn btn-outline-primary btn-sm" data-range="lastWeek">Last Week</button>
             <button class="btn btn-outline-primary btn-sm" data-range="last7Days">Last 7 Days</button>
-            dezelfde
             <button class="btn btn-outline-primary btn-sm" data-range="thisMonth">This Month</button>
             <button class="btn btn-outline-primary btn-sm" data-range="lastMonth">Last Month</button>
             <button class="btn btn-outline-primary btn-sm" data-range="thisYear">This Year</button>
@@ -673,6 +675,7 @@
       document.getElementById('chartTitle').textContent = `Project: ${projectName}`;
       document.getElementById('exportBtn').style.display = 'inline-block';
       document.getElementById('backBtn').style.display = 'inline-block';
+      console.log('selectProject called for:', projectName, 'buttons should be visible now');
       renderProjectDetail(projectName);
     }
 
@@ -736,6 +739,7 @@
       document.getElementById('chartTitle').textContent = 'All Projects';
       document.getElementById('exportBtn').style.display = 'none';
       document.getElementById('backBtn').style.display = 'none';
+      document.getElementById('project').value = '';
       renderTableAndChart();
     }
 
@@ -786,7 +790,14 @@
       });
 
       document.getElementById('pipeline').addEventListener('change', renderTableAndChart);
-      document.getElementById('project').addEventListener('change', renderTableAndChart);
+      document.getElementById('project').addEventListener('change', async () => {
+        const selectedProjectValue = document.getElementById('project').value;
+        if (selectedProjectValue) {
+          selectProject(selectedProjectValue);
+        } else {
+          goBackToAllProjects();
+        }
+      });
       document.getElementById('sourceCategory').addEventListener('change', renderTableAndChart);
       document.getElementById('source').addEventListener('change', () => { console.log('Source filter changed:', document.getElementById('source').value); renderTableAndChart(); });
       document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
