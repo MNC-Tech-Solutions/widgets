@@ -79,6 +79,9 @@
             border-radius: 15px 15px 0 0;
             color: var(--secondary-color);
             font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .card-body {
             padding: 2rem;
@@ -265,35 +268,6 @@
             background-color: rgba(52, 152, 219, 0.05);
             border-bottom: 2px solid rgba(52, 152, 219, 0.1);
         }
-        .nav-tabs .nav-link {
-            border: none;
-        }
-        .view-toggle-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            margin-bottom: 1rem;
-        }
-        .view-toggle-btn:hover {
-            background: var(--secondary-color);
-        }
-        .view-toggle-btn.active {
-            background: var(--secondary-color);
-        }
-        .table-view {
-            display: none;
-        }
-        .table-view.active {
-            display: block;
-        }
-        .card-view.active {
-            display: block;
-        }
         .badge-aging-5 {
             background: #90EE90 !important;
             color: black;
@@ -325,6 +299,21 @@
             position: relative;
             height: 400px;
             margin-bottom: 2rem;
+        }
+        .export-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .export-btn:hover {
+            background: #27ae60;
+            transform: scale(1.05);
         }
     </style>
 </head>
@@ -390,6 +379,9 @@
                 <div class="card">
                     <div class="card-header">
                         <span><i class="fas fa-user-slash me-2"></i>Uncontacted Leads</span>
+                        <button class="export-btn" onclick="exportUncontactedLeadsCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
@@ -423,6 +415,9 @@
                 <div class="card">
                     <div class="card-header">
                         <span><i class="fas fa-hourglass-end me-2"></i>Sales Rep Performance & Lead Aging</span>
+                        <button class="export-btn" onclick="exportLeadsAgingCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="chart-container">
@@ -479,6 +474,7 @@
         let currentSearchTerm = '';
         let agingChart = null;
         let currentDailyRepActivityMap = {};
+        let allUncontactedLeads = [];
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const searchInput = document.getElementById('uncontactedSearchInput');
@@ -613,9 +609,8 @@
 
         async function fetchAllConversations() {
             const conversations = [];
-            let startAfterDate = null;          // raw timestamp (number) or null
+            let startAfterDate = null;
             const limit = 100;
-            let fetched = 0;
 
             const locationId = selectedLocation.defaultLocationId;
             const accessToken = selectedLocation.accessToken;
@@ -624,7 +619,6 @@
             const baseUrl = 'https://services.leadconnectorhq.com/conversations/search';
 
             while (true) {
-                // ----- build query string -----
                 const params = new URLSearchParams({
                     locationId: locationId,
                     limit: limit.toString(),
@@ -637,9 +631,7 @@
                 }
 
                 const url = `${baseUrl}?${params.toString()}`;
-                console.log('Request →', url);          // <-- debug
 
-                // ----- API call -----
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -660,29 +652,19 @@
 
                 if (batch.length === 0) break;
 
-                // ----- store this page -----
                 conversations.push(...batch);
-                fetched += batch.length;
 
-                console.log(`Fetched ${fetched} / ${total} conversations…`);
+                if (batch.length < limit) break;
+                if (total > 0 && conversations.length >= total) break;
 
-                // ----- stop conditions -----
-                if (batch.length < limit) break;                 // last page
-                if (total > 0 && fetched >= total) break;        // safety
-
-                // ----- next pagination key -----
                 const lastItem = batch[batch.length - 1];
-                if (!lastItem?.lastMessageDate) {
-                    console.warn('lastMessageDate missing on last item → stop', lastItem);
-                    break;
-                }
-                startAfterDate = lastItem.lastMessageDate;       // raw number
+                if (!lastItem?.lastMessageDate) break;
+                startAfterDate = lastItem.lastMessageDate;
             }
 
             console.log(`Finished – ${conversations.length} conversations fetched.`);
             return conversations;
         }
-
 
         async function getContactDisplayName(contact) {
             const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName;
@@ -739,58 +721,6 @@
             renderDailySalesActivityTableView();
         }
 
-        function renderDailySalesActivityCardView() {
-            const container = document.getElementById('dailyContent');
-
-            if (Object.keys(currentDailyRepActivityMap).length === 0) {
-                container.innerHTML = `
-                    <div class="no-data-container">
-                        <i class="fas fa-inbox"></i>
-                        <p>No activity data for this date</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = '<div class="daily-stats-grid">';
-
-            const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
-            
-            sortedReps.forEach(([rep, activity]) => {
-                const totalForRep = activity.whatsapp.length + activity.call.length;
-                html += `
-                    <div class="rep-card">
-                        <div class="rep-name">
-                            <i class="fas fa-user-tie"></i> ${escapeHtml(rep)}
-                        </div>
-                        <div class="contact-stat">
-                            <span class="contact-label">
-                                <i class="fab fa-whatsapp"></i> WhatsApp
-                            </span>
-                            <span class="contact-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')">
-                                ${activity.whatsapp.length}
-                            </span>
-                        </div>
-                        <div class="contact-stat">
-                            <span class="contact-label">
-                                <i class="fas fa-phone"></i> Calls
-                            </span>
-                            <span class="contact-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')">
-                                ${activity.call.length}
-                            </span>
-                        </div>
-                        <div class="total-row">
-                            <span>Total Contacts</span>
-                            <span>${totalForRep}</span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
         function renderDailySalesActivityTableView() {
             const container = document.getElementById('dailyTableContent');
 
@@ -811,7 +741,10 @@
             let html = `
                 <div class="card">
                     <div class="card-header">
-                        Daily Sales Activity
+                        <span>Daily Sales Activity</span>
+                        <button class="export-btn" onclick="exportDailySalesActivityCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -858,6 +791,7 @@
             );
 
             let uncontactedLeads = allFetchedContacts.filter(contact => !contactedContactIds.has(contact.id));
+            allUncontactedLeads = uncontactedLeads;
 
             if (currentSearchTerm) {
                 uncontactedLeads = uncontactedLeads.filter(contact => {
@@ -1194,6 +1128,138 @@
             container.querySelector('.alert')?.remove();
             container.insertAdjacentHTML('afterbegin', html);
             setTimeout(() => container.querySelector('.alert')?.remove(), 5000);
+        }
+
+        // CSV Export Functions
+        function downloadCSV(filename, csvContent) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function escapeCSV(value) {
+            if (!value) return '';
+            const str = String(value);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        async function exportDailySalesActivityCSV() {
+            const selectedDate = dateSelector.value;
+            let csv = 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
+
+            const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
+            
+            sortedReps.forEach(([rep, activity]) => {
+                const totalForRep = activity.whatsapp.length + activity.call.length;
+                csv += `${escapeCSV(rep)},${activity.whatsapp.length},${activity.call.length},${totalForRep}\n`;
+            });
+
+            downloadCSV(`Daily_Sales_Activity_${selectedDate}.csv`, csv);
+        }
+
+        async function exportUncontactedLeadsCSV() {
+            const contactedContactIds = new Set(
+                allFetchedConversations.map(conv => conv.contactId)
+            );
+
+            let uncontactedLeads = allFetchedContacts.filter(contact => !contactedContactIds.has(contact.id));
+
+            let csv = 'Lead Name,Phone,Email,Assigned Sales Rep\n';
+
+            for (const contact of uncontactedLeads) {
+                const name = await getContactDisplayName(contact);
+                const phone = contact.phone || '—';
+                const email = contact.email || '—';
+                const repId = contact.assignedTo || '—';
+                const repName = usersMap[repId] || repId;
+
+                csv += `${escapeCSV(name)},${escapeCSV(phone)},${escapeCSV(email)},${escapeCSV(repName)}\n`;
+            }
+
+            downloadCSV('Uncontacted_Leads.csv', csv);
+        }
+
+        async function exportLeadsAgingCSV() {
+            const contactMap = {};
+
+            allFetchedContacts.forEach(contact => {
+                if (!contactMap[contact.id]) {
+                    contactMap[contact.id] = { ...contact, conversations: [] };
+                }
+            });
+
+            allFetchedConversations.forEach(conv => {
+                if (contactMap[conv.contactId]) {
+                    contactMap[conv.contactId].conversations.push(conv);
+                }
+            });
+
+            const allAgingRecords = [];
+            for (const contact of Object.values(contactMap)) {
+                const repId = contact.assignedTo || 'Unassigned';
+                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+                const isAttended = contact.conversations.length > 0;
+
+                let agingBucket = 'attended';
+                if (!isAttended) {
+                    const createdDate = new Date(contact.dateAdded);
+                    const now = new Date();
+                    const daysPassed = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+
+                    if (daysPassed <= 5) agingBucket = '0to5';
+                    else if (daysPassed <= 10) agingBucket = '5to10';
+                    else if (daysPassed <= 15) agingBucket = '10to15';
+                    else if (daysPassed <= 30) agingBucket = '15to30';
+                    else agingBucket = 'over30';
+                }
+
+                allAgingRecords.push({ contact, rep: repName, isAttended, agingBucket });
+            }
+
+            const repData = {};
+            allAgingRecords.forEach(record => {
+                if (!repData[record.rep]) {
+                    repData[record.rep] = {
+                        rep: record.rep,
+                        totalLeads: 0,
+                        attendedLeads: [],
+                        unattendedLeads: [],
+                        aging0to5: [],
+                        aging5to10: [],
+                        aging10to15: [],
+                        aging15to30: [],
+                        agingOver30: []
+                    };
+                }
+
+                const d = repData[record.rep];
+                d.totalLeads++;
+                if (record.isAttended) {
+                    d.attendedLeads.push(record.contact);
+                } else {
+                    d.unattendedLeads.push(record.contact);
+                    if (record.agingBucket === '0to5') d.aging0to5.push(record.contact);
+                    else if (record.agingBucket === '5to10') d.aging5to10.push(record.contact);
+                    else if (record.agingBucket === '10to15') d.aging10to15.push(record.contact);
+                    else if (record.agingBucket === '15to30') d.aging15to30.push(record.contact);
+                    else if (record.agingBucket === 'over30') d.agingOver30.push(record.contact);
+                }
+            });
+
+            const sortedReps = Object.values(repData).sort((a, b) => a.rep.localeCompare(b.rep));
+
+            let csv = 'Sales Rep,Total Leads,Attended,Unattended,0-5d,5-10d,10-15d,15-30d,>30d\n';
+
+            sortedReps.forEach(data => {
+                csv += `${escapeCSV(data.rep)},${data.totalLeads},${data.attendedLeads.length},${data.unattendedLeads.length},${data.aging0to5.length},${data.aging5to10.length},${data.aging10to15.length},${data.aging15to30.length},${data.agingOver30.length}\n`;
+            });
+
+            downloadCSV('Leads_Aging_Report.csv', csv);
         }
 
         async function showLeadsList(element, category) {
