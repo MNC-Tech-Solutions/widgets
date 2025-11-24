@@ -539,7 +539,7 @@
   <script type="module">
     import {
       loadConfig,
-      fetchPipelines,
+      fetchPipelinesV2,
       fetchAllUsers,
       fetchAllOpportunities,
       fetchNewOpportunities,
@@ -548,7 +548,7 @@
       clearIndexedDB,
       getAllByIndex,
       progressManager
-    } from '../ghlData.js?v=1.0.3';  // Add version number;
+    } from '../ghlDataV2.js?v=1.0.0';  // Add version number;
 
     let CONFIG = {};
     let locationId = '';
@@ -928,7 +928,7 @@
         }
       });
 
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(user => [user.id, user.name]));
 
@@ -963,7 +963,7 @@
         
         // Step 2: Fetch pipelines
         progressManager.setProgress(30, 'Fetching pipelines...');
-        pipelines = await fetchPipelines(CONFIG, locationId);
+        pipelines = await fetchPipelinesV2(CONFIG, locationId);
         updatePipelines();
         await new Promise(resolve => setTimeout(resolve, 200));
         

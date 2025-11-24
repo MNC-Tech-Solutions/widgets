@@ -339,7 +339,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
+    import { loadConfig, fetchPipelinesV2, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlDataV2.js?v=1.0.0';
 
     let CONFIG = {};
     let locationId = '';
@@ -725,7 +725,7 @@
       CONFIG = config;
       locationId = locId;
 
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       updatePipelines();
 
       const pipelineSelect = document.getElementById('pipeline');
@@ -805,7 +805,7 @@
           await new Promise(resolve => setTimeout(resolve, 300));
           
           progressManager.setProgress(25, 'Fetching pipelines...');
-          pipelines = await fetchPipelines(CONFIG, locationId);
+          pipelines = await fetchPipelinesV2(CONFIG, locationId);
           updatePipelines();
           document.getElementById('pipeline').value = savedPipelineId;
           await new Promise(resolve => setTimeout(resolve, 200));

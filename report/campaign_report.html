@@ -285,14 +285,14 @@
   <script type="module">
     import {
       loadConfig,
-      fetchPipelines,
+      fetchPipelinesV2,
       fetchAllUsers,
       fetchAllOpportunities,
       applyFilters,
       formatDateTimeWithOffset,
       clearIndexedDB,
       progressManager
-    } from '../ghlData.js?v=1.0.3';
+    } from '../ghlDataV2.js?v=1.0.0';
 
     // === GLOBALS ===
     let CONFIG = {}, locationId = '', pipelines = [], currentOpportunities = [];
@@ -326,7 +326,7 @@
 
     async function initFilters() {
       const pipelineSelect = document.getElementById('pipeline');
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(u => [u.id, u.name]));
 

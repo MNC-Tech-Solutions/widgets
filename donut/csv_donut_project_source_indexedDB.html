@@ -283,7 +283,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelines, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex, progressManager } from '../ghlData.js?v=1.0.3';
+    import { loadConfig, fetchPipelinesV2, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearIndexedDB, getAllByIndex, progressManager } from '../ghlDataV2.js?v=1.0.0';
 
     let CONFIG = {};
     let locationId = '';
@@ -753,7 +753,7 @@
       if (!config) { document.getElementById('sunburstChart').innerHTML = '<p>No configuration available for this location.</p>'; hideSpinner(); return; }
       CONFIG = config; locationId = locId;
 
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       updatePipelines();
 
       const pipelineSelect = document.getElementById('pipeline');
@@ -810,7 +810,7 @@
           const savedPipelineId = document.getElementById('pipeline').value;
           progressManager.show('Initializing refresh...');
           progressManager.setProgress(15, 'Clearing cache...'); await clearIndexedDB(); await new Promise(r => setTimeout(r, 300));
-          progressManager.setProgress(25, 'Fetching pipelines...'); pipelines = await fetchPipelines(CONFIG, locationId); updatePipelines(); document.getElementById('pipeline').value = savedPipelineId; await new Promise(r => setTimeout(r, 200));
+          progressManager.setProgress(25, 'Fetching pipelines...'); pipelines = await fetchPipelinesV2(CONFIG, locationId); updatePipelines(); document.getElementById('pipeline').value = savedPipelineId; await new Promise(r => setTimeout(r, 200));
           progressManager.setProgress(40, 'Fetching opportunities...'); opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, savedPipelineId, true, true);
           currentPipelineId = savedPipelineId;
           progressManager.setProgress(90, 'Rendering chart...'); await renderTableAndChart();

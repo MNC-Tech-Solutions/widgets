@@ -113,11 +113,11 @@
 <script type="module">
   import {
     loadConfig,
-    fetchPipelines,
+    fetchPipelinesV2,
     fetchAllUsers,
     fetchAllOpportunities,
     formatDateTimeWithOffset
-  } from '../ghlData.js?v=1.0.3';
+  } from '../ghlDataV2.js?v=1.0.0';
 
   // -------------------------------------------------
   // 1. Get locationId from URL
@@ -355,7 +355,7 @@
       if (!config) throw new Error('No config');
       CONFIG = config;
 
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(u => [u.id, u.name]));
 

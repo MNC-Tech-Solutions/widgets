@@ -167,12 +167,12 @@
   <script type="module">
     import {
       loadConfig,
-      fetchPipelines,
+      fetchPipelinesV2,
       fetchAllUsers,
       fetchAllOpportunities,
       applyFilters,
       clearIndexedDB
-    } from '../ghlData.js';
+    } from '../ghlDataV2.js?v=1.0.0';
 
     const teams = {
       'Team 1 (KL Kyra)': ['Shafiqah', 'Nurul Ain', 'Shah', 'Haikal', 'Hazim', 'Najmi'],
@@ -268,7 +268,7 @@
         console.log('Loaded config:', config, 'Location ID:', locationId);
 
         // Fetch pipelines and select first pipeline ID
-        const pipelines = await fetchPipelines(config, locationId);
+        const pipelines = await fetchPipelinesV2(config, locationId);
         console.log('Available pipelines (use one of these IDs if first pipeline is incorrect):', pipelines.map(p => ({ id: p.id, name: p.name })));
         if (!pipelines || pipelines.length === 0) {
           console.error('No pipelines found. Check GHL API credentials and locationId:', locationId);

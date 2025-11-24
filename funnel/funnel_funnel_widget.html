@@ -554,14 +554,14 @@
   <script type="module">
     import {
       loadConfig,
-      fetchPipelines,
+      fetchPipelinesV2,
       fetchAllUsers,
       fetchAllOpportunities,
       fetchNewOpportunities,
       applyFilters,
       formatDateTimeWithOffset,
       clearIndexedDB
-    } from '../ghlData.js';
+    } from '../ghlDataV2.js?v=1.0.0';
 
     let CONFIG = {};
     let locationId = '';
@@ -903,7 +903,7 @@
         }
       });
 
-      pipelines = await fetchPipelines(CONFIG, locationId);
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(user => [user.id, user.name]));
 
@@ -927,7 +927,7 @@
       showWidgetSpinner();
       try {
         await clearIndexedDB();
-        pipelines = await fetchPipelines(CONFIG, locationId);
+        pipelines = await fetchPipelinesV2(CONFIG, locationId);
         const users = await fetchAllUsers(CONFIG, locationId);
         usersMap = new Map(users.map(user => [user.id, user.name]));
         updatePipelines();
