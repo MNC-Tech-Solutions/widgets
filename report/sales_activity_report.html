@@ -352,8 +352,24 @@
             <!-- Daily Sales Activity Tab -->
             <div class="tab-pane fade show active" id="daily-content">
                 <div class="date-picker-container">
-                    <label for="dateSelector"><i class="fas fa-calendar-alt me-2"></i>Select Date</label>
-                    <input type="date" id="dateSelector" class="form-control">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                            <input type="date" id="dateStart" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
+                            <input type="date" id="dateEnd" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-primary" onclick="applyDateRange()">
+                            <i class="fas fa-search me-2"></i>Apply Date Range
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetDateRange()">
+                            <i class="fas fa-undo me-2"></i>Reset to Today
+                        </button>
+                    </div>
                 </div>
 
                 <div class="row mb-4">
@@ -475,20 +491,70 @@
         let agingChart = null;
         let currentDailyRepActivityMap = {};
         let allUncontactedLeads = [];
+        let currentDateRangeStart = null;
+        let currentDateRangeEnd = null;
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const searchInput = document.getElementById('uncontactedSearchInput');
-        const dateSelector = document.getElementById('dateSelector');
+        const dateStart = document.getElementById('dateStart');
+        const dateEnd = document.getElementById('dateEnd');
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
 
         document.addEventListener('DOMContentLoaded', initializeApp);
 
-        dateSelector.addEventListener('change', renderDailySalesActivityForDate);
         searchInput.addEventListener('keyup', (e) => {
             currentSearchTerm = e.target.value.toLowerCase();
             currentUncontactedPage = 1;
             renderUncontactedLeads();
         });
+
+        function applyDateRange() {
+            if (!dateStart.value || !dateEnd.value) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            // Parse dates from input (YYYY-MM-DD format)
+            const [startYear, startMonth, startDay] = dateStart.value.split('-');
+            const [endYear, endMonth, endDay] = dateEnd.value.split('-');
+            
+            // Create dates in UTC to avoid timezone issues
+            currentDateRangeStart = new Date(startYear, parseInt(startMonth) - 1, startDay, 0, 0, 0, 0);
+            currentDateRangeEnd = new Date(endYear, parseInt(endMonth) - 1, endDay, 23, 59, 59, 999);
+            
+            console.log('Applied Date Range:', {
+                start: currentDateRangeStart.toISOString(),
+                end: currentDateRangeEnd.toISOString(),
+                startValue: dateStart.value,
+                endValue: dateEnd.value
+            });
+            
+            if (currentDateRangeStart > currentDateRangeEnd) {
+                alert('Start date must be before end date');
+                return;
+            }
+            renderDailySalesActivityForDateRange();
+        }
+
+        function resetDateRange() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            dateStart.value = dateStr;
+            dateEnd.value = dateStr;
+            
+            currentDateRangeStart = new Date(year, today.getMonth(), today.getDate(), 0, 0, 0, 0);
+            currentDateRangeEnd = new Date(year, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+            
+            console.log('Reset to Today:', {
+                start: currentDateRangeStart.toISOString(),
+                end: currentDateRangeEnd.toISOString()
+            });
+            
+            renderDailySalesActivityForDateRange();
+        }
 
         async function initializeApp() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -528,9 +594,14 @@
                 console.log('Conversations fetched:', allFetchedConversations.length);
 
                 const today = new Date();
-                dateSelector.valueAsDate = today;
+                dateStart.valueAsDate = today;
+                dateEnd.valueAsDate = today;
+                currentDateRangeStart = new Date(today);
+                currentDateRangeStart.setHours(0, 0, 0, 0);
+                currentDateRangeEnd = new Date(today);
+                currentDateRangeEnd.setHours(23, 59, 59, 999);
                 
-                renderDailySalesActivityForDate();
+                renderDailySalesActivityForDateRange();
                 await renderUncontactedLeads();
                 await renderLeadsAging();
             } catch (error) {
@@ -618,7 +689,10 @@
 
             const baseUrl = 'https://services.leadconnectorhq.com/conversations/search';
 
-            while (true) {
+            let fetchCount = 0;
+            const maxFetches = 1000; // Safety limit to prevent infinite loops
+
+            while (fetchCount < maxFetches) {
                 const params = new URLSearchParams({
                     locationId: locationId,
                     limit: limit.toString(),
@@ -631,6 +705,7 @@
                 }
 
                 const url = `${baseUrl}?${params.toString()}`;
+                console.log(`Fetching batch ${fetchCount + 1}...`);
 
                 const response = await fetch(url, {
                     method: 'GET',
@@ -650,19 +725,38 @@
                 const batch = data.conversations || [];
                 const total = data.total || 0;
 
-                if (batch.length === 0) break;
+                if (batch.length === 0) {
+                    console.log('No more conversations to fetch');
+                    break;
+                }
 
                 conversations.push(...batch);
+                fetchCount++;
 
-                if (batch.length < limit) break;
-                if (total > 0 && conversations.length >= total) break;
+                // Check if we've fetched all available conversations
+                if (batch.length < limit) {
+                    console.log('Batch smaller than limit - reached end');
+                    break;
+                }
+
+                if (total > 0 && conversations.length >= total) {
+                    console.log(`Reached total count: ${total}`);
+                    break;
+                }
 
                 const lastItem = batch[batch.length - 1];
-                if (!lastItem?.lastMessageDate) break;
+                if (!lastItem?.lastMessageDate) {
+                    console.log('No lastMessageDate on last item - stopping');
+                    break;
+                }
+
                 startAfterDate = lastItem.lastMessageDate;
+                
+                // Add small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
 
-            console.log(`Finished – ${conversations.length} conversations fetched.`);
+            console.log(`Finished – ${conversations.length} conversations fetched in ${fetchCount} requests.`);
             return conversations;
         }
 
@@ -677,45 +771,73 @@
             return date.toLocaleDateString('en-US', options);
         }
 
-        function renderDailySalesActivityForDate() {
-            const selectedDate = new Date(dateSelector.valueAsDate);
-            selectedDate.setHours(0, 0, 0, 0);
-
-            const dailyConversations = allFetchedConversations.filter(conv => {
-                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
-                convDate.setHours(0, 0, 0, 0);
-                return convDate.getTime() === selectedDate.getTime();
-            });
-
+        function renderDailySalesActivityForDateRange() {
             const repActivityMap = {};
+            let totalWhatsappCount = 0;
+            let totalCallCount = 0;
+            let matchedConversations = 0;
             
-            dailyConversations.forEach(conv => {
-                const repId = conv.assignedTo || 'Unassigned';
-                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+            console.log('Filtering conversations:', {
+                totalConversations: allFetchedConversations.length,
+                filterStart: currentDateRangeStart,
+                filterEnd: currentDateRangeEnd
+            });
+            
+            allFetchedConversations.forEach((conv, index) => {
+                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
+                const isInRange = convDate >= currentDateRangeStart && convDate <= currentDateRangeEnd;
                 
-                if (!repActivityMap[repName]) {
-                    repActivityMap[repName] = { whatsapp: [], call: [] };
+                if (index < 3) {
+                    console.log(`Sample Conv ${index}:`, {
+                        date: convDate.toISOString(),
+                        startOk: convDate >= currentDateRangeStart,
+                        endOk: convDate <= currentDateRangeEnd,
+                        inRange: isInRange,
+                        type: conv.lastMessageType || conv.type
+                    });
                 }
                 
-                const messageType = conv.lastMessageType || conv.type;
-                
-                if (messageType === 'TYPE_WHATSAPP') {
-                    repActivityMap[repName].whatsapp.push(conv);
-                } else if (messageType === 'TYPE_PHONE' || messageType === 'TYPE_CALL') {
-                    repActivityMap[repName].call.push(conv);
+                if (isInRange) {
+                    matchedConversations++;
+                    const repId = conv.assignedTo || 'Unassigned';
+                    const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+                    
+                    if (!repActivityMap[repName]) {
+                        repActivityMap[repName] = { 
+                            whatsappCount: 0, 
+                            callCount: 0,
+                            dailyBreakdown: {}
+                        };
+                    }
+                    
+                    const messageType = conv.lastMessageType || conv.type;
+                    const dayKey = convDate.toISOString().split('T')[0];
+                    
+                    if (!repActivityMap[repName].dailyBreakdown[dayKey]) {
+                        repActivityMap[repName].dailyBreakdown[dayKey] = { whatsapp: 0, call: 0 };
+                    }
+                    
+                    if (messageType === 'TYPE_WHATSAPP') {
+                        repActivityMap[repName].whatsappCount++;
+                        repActivityMap[repName].dailyBreakdown[dayKey].whatsapp++;
+                        totalWhatsappCount++;
+                    } else if (messageType === 'TYPE_PHONE' || messageType === 'TYPE_CALL') {
+                        repActivityMap[repName].callCount++;
+                        repActivityMap[repName].dailyBreakdown[dayKey].call++;
+                        totalCallCount++;
+                    }
                 }
             });
 
-            let totalWhatsapp = 0;
-            let totalCall = 0;
-            
-            Object.values(repActivityMap).forEach(activity => {
-                totalWhatsapp += activity.whatsapp.length;
-                totalCall += activity.call.length;
+            console.log('Filtering Complete:', {
+                totalMatched: matchedConversations,
+                totalWhatsapp: totalWhatsappCount,
+                totalCall: totalCallCount,
+                reps: Object.keys(repActivityMap)
             });
 
-            document.getElementById('whatsappCount').textContent = totalWhatsapp;
-            document.getElementById('callCount').textContent = totalCall;
+            document.getElementById('whatsappCount').textContent = totalWhatsappCount;
+            document.getElementById('callCount').textContent = totalCallCount;
 
             currentDailyRepActivityMap = repActivityMap;
             renderDailySalesActivityTableView();
@@ -730,7 +852,7 @@
                         <div class="card-body">
                             <div class="no-data-container">
                                 <i class="fas fa-inbox"></i>
-                                <p>No activity data for this date</p>
+                                <p>No activity data for this date range</p>
                             </div>
                         </div>
                     </div>
@@ -738,10 +860,17 @@
                 return;
             }
 
+            const startDateStr = dateStart.value || new Date().toISOString().split('T')[0];
+            const endDateStr = dateEnd.value || new Date().toISOString().split('T')[0];
+            const dateRangeLabel = startDateStr === endDateStr ? startDateStr : `${startDateStr} to ${endDateStr}`;
+
             let html = `
                 <div class="card">
                     <div class="card-header">
-                        <span>Daily Sales Activity</span>
+                        <div>
+                            <span>Daily Sales Activity (${dateRangeLabel})</span>
+                            <small class="d-block text-muted mt-1">Total contacts across all days in range</small>
+                        </div>
                         <button class="export-btn" onclick="exportDailySalesActivityCSV()">
                             <i class="fas fa-download me-2"></i>Export CSV
                         </button>
@@ -755,6 +884,7 @@
                                         <th>WhatsApp Contacts</th>
                                         <th>Call Contacts</th>
                                         <th>Total Contacts</th>
+                                        <th>Daily Breakdown</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -763,13 +893,19 @@
             const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
             
             sortedReps.forEach(([rep, activity]) => {
-                const totalForRep = activity.whatsapp.length + activity.call.length;
+                const totalForRep = activity.whatsappCount + activity.callCount;
+                
                 html += `
                     <tr>
                         <td><strong>${escapeHtml(rep)}</strong></td>
-                        <td><span class="badge bg-primary clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')">${activity.whatsapp.length}</span></td>
-                        <td><span class="badge bg-success clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')">${activity.call.length}</span></td>
+                        <td><span class="badge bg-primary clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')" title="Click to view leads">${activity.whatsappCount}</span></td>
+                        <td><span class="badge bg-success clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')" title="Click to view leads">${activity.callCount}</span></td>
                         <td><strong>${totalForRep}</strong></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showDailyBreakdown('${escapeHtml(rep)}')">
+                                <i class="fas fa-chart-bar me-1"></i>Details
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
@@ -1149,17 +1285,22 @@
         }
 
         async function exportDailySalesActivityCSV() {
-            const selectedDate = dateSelector.value;
+            const startDate = dateStart.value || new Date().toISOString().split('T')[0];
+            const endDate = dateEnd.value || new Date().toISOString().split('T')[0];
             let csv = 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
 
             const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
             
             sortedReps.forEach(([rep, activity]) => {
-                const totalForRep = activity.whatsapp.length + activity.call.length;
-                csv += `${escapeCSV(rep)},${activity.whatsapp.length},${activity.call.length},${totalForRep}\n`;
+                const totalForRep = activity.whatsappCount + activity.callCount;
+                csv += `${escapeCSV(rep)},${activity.whatsappCount},${activity.callCount},${totalForRep}\n`;
             });
 
-            downloadCSV(`Daily_Sales_Activity_${selectedDate}.csv`, csv);
+            const filename = startDate === endDate ? 
+                `Daily_Sales_Activity_${startDate}.csv` : 
+                `Daily_Sales_Activity_${startDate}_to_${endDate}.csv`;
+            
+            downloadCSV(filename, csv);
         }
 
         async function exportUncontactedLeadsCSV() {
@@ -1357,18 +1498,13 @@
         }
 
         async function showDailyLeadsList(repName, messageType) {
-            const selectedDate = new Date(dateSelector.valueAsDate);
-            selectedDate.setHours(0, 0, 0, 0);
-
             const leads = allFetchedConversations.filter(conv => {
+                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
                 const convRepId = conv.assignedTo || 'Unassigned';
                 const convRepName = convRepId === 'Unassigned' ? 'Unassigned' : (usersMap[convRepId] || convRepId);
                 const convMessageType = conv.lastMessageType || conv.type;
                 
-                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
-                convDate.setHours(0, 0, 0, 0);
-                
-                return convRepName === repName && convMessageType === messageType && convDate.getTime() === selectedDate.getTime();
+                return convRepName === repName && convMessageType === messageType && convDate >= currentDateRangeStart && convDate <= currentDateRangeEnd;
             });
 
             if (leads.length === 0) return;
@@ -1399,9 +1535,63 @@
             }
 
             const typeLabel = messageType === 'TYPE_WHATSAPP' ? 'WhatsApp' : 'Call';
-            document.getElementById('modalTitle').textContent = `${repName} - ${typeLabel} Contacts`;
+            const startDateStr = dateStart.value || new Date().toISOString().split('T')[0];
+            const endDateStr = dateEnd.value || new Date().toISOString().split('T')[0];
+            const dateRangeLabel = startDateStr === endDateStr ? startDateStr : `${startDateStr} to ${endDateStr}`;
+            
+            document.getElementById('modalTitle').textContent = `${repName} - ${typeLabel} Contacts (${dateRangeLabel})`;
             document.getElementById('leadDetailsContent').innerHTML = html;
             leadDetailsModal.show();
+        }
+
+        function showDailyBreakdown(repName) {
+            const repData = currentDailyRepActivityMap[repName];
+            if (!repData) return;
+
+            let html = '<div class="daily-breakdown-container">';
+            html += '<div class="mb-3 d-flex justify-content-between align-items-center">';
+            html += '<h6 class="mb-0">Daily Activity Breakdown</h6>';
+            html += `<button class="btn btn-sm btn-success" onclick="exportDailyBreakdownCSV('${escapeHtml(repName)}')"><i class="fas fa-download me-1"></i>Export CSV</button>`;
+            html += '</div>';
+            html += '<table class="table table-sm"><thead><tr><th>Date</th><th>WhatsApp</th><th>Calls</th><th>Total</th></tr></thead><tbody>';
+
+            const sortedDays = Object.entries(repData.dailyBreakdown)
+                .sort(([dayA], [dayB]) => dayB.localeCompare(dayA)); // Sort newest first
+
+            sortedDays.forEach(([day, counts]) => {
+                const total = counts.whatsapp + counts.call;
+                const dayDate = new Date(day);
+                const formattedDay = dayDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                html += `<tr><td>${formattedDay}</td><td>${counts.whatsapp}</td><td>${counts.call}</td><td><strong>${total}</strong></td></tr>`;
+            });
+
+            html += '</tbody></table>';
+            html += '</div>';
+
+            document.getElementById('modalTitle').textContent = `${repName} - Daily Breakdown`;
+            document.getElementById('leadDetailsContent').innerHTML = html;
+            leadDetailsModal.show();
+        }
+
+        function exportDailyBreakdownCSV(repName) {
+            const repData = currentDailyRepActivityMap[repName];
+            if (!repData) return;
+
+            let csv = 'Date,WhatsApp,Calls,Total\n';
+
+            const sortedDays = Object.entries(repData.dailyBreakdown)
+                .sort(([dayA], [dayB]) => dayB.localeCompare(dayA)); // Sort newest first
+
+            sortedDays.forEach(([day, counts]) => {
+                const total = counts.whatsapp + counts.call;
+                csv += `${day},${counts.whatsapp},${counts.call},${total}\n`;
+            });
+
+            const startDate = dateStart.value || new Date().toISOString().split('T')[0];
+            const endDate = dateEnd.value || new Date().toISOString().split('T')[0];
+            const filename = `Daily_Breakdown_${escapeHtml(repName)}_${startDate}_to_${endDate}.csv`;
+            
+            downloadCSV(filename, csv);
         }
     </script>
 </body>
