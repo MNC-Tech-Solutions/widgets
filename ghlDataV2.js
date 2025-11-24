@@ -251,7 +251,7 @@ async function loadConfig() {
   }
 }
 
-async function fetchPipelinesV2(config, locationId) {
+async function fetchPipelines(config, locationId) {
   const cachedPipelines = await getCache('pipelines', locationId);
   if (cachedPipelines) return cachedPipelines;
 
