@@ -714,7 +714,7 @@ export {
   getLocationId,
   selectConfig,
   loadConfig,
-  fetchPipelinesV2,
+  fetchPipelines,
   fetchPipelinesV2,
   fetchAllUsers,
   fetchAllOpportunities,
