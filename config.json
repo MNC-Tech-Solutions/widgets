@@ -106,5 +106,15 @@
         "customFieldIds": {
             "sourceCategory": "XXBTH0R0GakEX7TpD29v"
         }
+    },
+    {
+        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImRlTzlkNTVnY0EySU5NSGhLMlJDIiwidmVyc2lvbiI6MSwiaWF0IjoxNzU1NzYzNTIyNTA2LCJzdWIiOiJCZlc1YlA1Q1RmYmFhR3pVRU45NiJ9.Loyae_34ZTgEUwpTbErX9DzRQ8G5vsKjttocII_52uk",
+        "accessToken": "pit-21bb5da8-7f62-47d6-bf7b-498839021248",
+        "defaultLocationId": "rtYVCVKq2G8uI1Q38qda",
+        "name": "AGB",
+        "customFieldIds": {
+            "sourceCategory": "xUVnZ9s6GovfkJrLF0Io",
+            "project": "Qu91wQDXmiddMpDAQl7Z"
+        }
     }
 ]
