@@ -436,6 +436,11 @@
                         </button>
                     </div>
                     <div class="card-body">
+                        <div class="mb-3">
+                            <select class="form-control" id="projectFilter" onchange="renderLeadsAging()" style="line-height: 2;">
+                                <option value="">All Projects</option>
+                            </select>
+                        </div>
                         <div class="chart-container">
                             <canvas id="agingChart"></canvas>
                         </div>
@@ -493,11 +498,14 @@
         let allUncontactedLeads = [];
         let currentDateRangeStart = null;
         let currentDateRangeEnd = null;
+        let allProjects = new Set();
+        let currentProjectFilter = '';
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const searchInput = document.getElementById('uncontactedSearchInput');
         const dateStart = document.getElementById('dateStart');
         const dateEnd = document.getElementById('dateEnd');
+        const projectFilter = document.getElementById('projectFilter');
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
 
         document.addEventListener('DOMContentLoaded', initializeApp);
@@ -566,7 +574,9 @@
             }
 
             try {
-                const configData = await fetch('../config.json').then(r => r.json());
+                // Add cache-busting to config.json
+                const configUrl = `../config.json?t=${Date.now()}`;
+                const configData = await fetch(configUrl).then(r => r.json());
                 selectedLocation = configData.find(loc => loc.defaultLocationId === locationIdFromUrl);
 
                 if (!selectedLocation) {
@@ -601,6 +611,7 @@
                 currentDateRangeEnd = new Date(today);
                 currentDateRangeEnd.setHours(23, 59, 59, 999);
                 
+                populateProjectFilter();
                 renderDailySalesActivityForDateRange();
                 await renderUncontactedLeads();
                 await renderLeadsAging();
@@ -610,6 +621,48 @@
             } finally {
                 hideLoading();
             }
+        }
+
+        function populateProjectFilter() {
+            allProjects.clear();
+            
+            allFetchedContacts.forEach(contact => {
+                // Get the custom field ID from config
+                const projectFieldId = selectedLocation.customFieldIds?.project;
+                
+                if (projectFieldId && contact.customFields) {
+                    // Find the custom field value for this contact
+                    const projectField = contact.customFields.find(cf => cf.id === projectFieldId);
+                    
+                    if (projectField && projectField.value) {
+                        const value = projectField.value;
+                        
+                        // Handle if value is an array
+                        if (Array.isArray(value)) {
+                            value.forEach(v => {
+                                if (v) allProjects.add(String(v));
+                            });
+                        } else if (typeof value === 'string') {
+                            allProjects.add(value);
+                        }
+                    }
+                }
+            });
+
+            const sortedProjects = Array.from(allProjects).sort();
+            const projectFilterElement = document.getElementById('projectFilter');
+            
+            // Keep the first option (All Projects)
+            projectFilterElement.innerHTML = '<option value="">All Projects</option>';
+            
+            sortedProjects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project;
+                option.textContent = project;
+                projectFilterElement.appendChild(option);
+            });
+
+            console.log('Projects found:', sortedProjects);
         }
 
         async function fetchUsersMap() {
@@ -987,6 +1040,7 @@
 
         async function renderLeadsAging() {
             const contactMap = {};
+            currentProjectFilter = document.getElementById('projectFilter').value;
 
             allFetchedContacts.forEach(contact => {
                 if (!contactMap[contact.id]) {
@@ -1002,6 +1056,28 @@
 
             const allAgingRecords = [];
             for (const contact of Object.values(contactMap)) {
+                // Apply project filter if selected
+                if (currentProjectFilter) {
+                    const projectFieldId = selectedLocation.customFieldIds?.project;
+                    if (projectFieldId && contact.customFields) {
+                        const projectField = contact.customFields.find(cf => cf.id === projectFieldId);
+                        let hasProject = false;
+                        
+                        if (projectField && projectField.value) {
+                            const value = projectField.value;
+                            if (Array.isArray(value)) {
+                                hasProject = value.some(v => String(v) === currentProjectFilter);
+                            } else {
+                                hasProject = String(value) === currentProjectFilter;
+                            }
+                        }
+                        
+                        if (!hasProject) continue;
+                    } else {
+                        continue;
+                    }
+                }
+
                 const repId = contact.assignedTo || 'Unassigned';
                 const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
                 const isAttended = contact.conversations.length > 0;
@@ -1121,6 +1197,8 @@
                 agingChart.destroy();
             }
 
+            const chartTitle = currentProjectFilter ? `Lead Aging - ${currentProjectFilter}` : 'Lead Aging - All Projects';
+
             agingChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -1169,6 +1247,14 @@
                     plugins: {
                         legend: {
                             position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: chartTitle,
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
                         }
                     },
                     scales: {
