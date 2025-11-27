@@ -116,29 +116,12 @@
             font-weight: 700;
             color: var(--primary-color);
         }
-        .date-picker-container {
+        .global-filters {
             background: white;
             padding: 2rem;
             border-radius: 15px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
-        }
-        .date-picker-container label {
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-        }
-        #dateSelector {
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        #dateSelector:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
         .daily-stats-grid {
             display: grid;
@@ -323,11 +306,40 @@
             <h1><i class="fas fa-chart-line me-3"></i>SJ360 Reports Dashboard</h1>
         </div>
     </div>
-
     <div class="container-fluid">
         <div class="loading-spinner" id="loadingSpinner">
             <div class="spinner-border text-primary"></div>
             <p class="mt-3">Fetching data...</p>
+        </div>
+
+        <!-- GLOBAL FILTERS -->
+        <div class="global-filters">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                    <input type="date" id="dateStart" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
+                    <input type="date" id="dateEnd" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label for="projectFilter"><i class="fas fa-project-diagram me-2"></i>Interested Project</label>
+                    <select class="form-control" id="projectFilter">
+                        <option value="">All Projects</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                    <i class="fas fa-undo me-2"></i>Reset to Today
+                </button>
+            </div>
         </div>
 
         <ul class="nav nav-tabs mb-4">
@@ -351,27 +363,6 @@
         <div class="tab-content">
             <!-- Daily Sales Activity Tab -->
             <div class="tab-pane fade show active" id="daily-content">
-                <div class="date-picker-container">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
-                            <input type="date" id="dateStart" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
-                            <input type="date" id="dateEnd" class="form-control">
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <button class="btn btn-primary" onclick="applyDateRange()">
-                            <i class="fas fa-search me-2"></i>Apply Date Range
-                        </button>
-                        <button class="btn btn-secondary" onclick="resetDateRange()">
-                            <i class="fas fa-undo me-2"></i>Reset to Today
-                        </button>
-                    </div>
-                </div>
-
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="stat-box">
@@ -386,7 +377,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div id="dailyTableContent"></div>
             </div>
 
@@ -436,11 +426,6 @@
                         </button>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <select class="form-control" id="projectFilter" onchange="renderLeadsAging()" style="line-height: 2;">
-                                <option value="">All Projects</option>
-                            </select>
-                        </div>
                         <div class="chart-container">
                             <canvas id="agingChart"></canvas>
                         </div>
@@ -491,15 +476,16 @@
         let usersMap = {};
         const ITEMS_PER_PAGE = 20;
         let currentUncontactedPage = 1;
-        let currentAgingPage = 1;
         let currentSearchTerm = '';
         let agingChart = null;
-        let currentDailyRepActivityMap = {};
+        let currentDailyRepActivityMap = [];
         let allUncontactedLeads = [];
-        let currentDateRangeStart = null;
-        let currentDateRangeEnd = null;
         let allProjects = new Set();
-        let currentProjectFilter = '';
+
+        // Global filter state
+        let filterStartDate = null;
+        let filterEndDate = null;
+        let filterProject = '';
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const searchInput = document.getElementById('uncontactedSearchInput');
@@ -509,81 +495,72 @@
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
 
         document.addEventListener('DOMContentLoaded', initializeApp);
-
         searchInput.addEventListener('keyup', (e) => {
             currentSearchTerm = e.target.value.toLowerCase();
             currentUncontactedPage = 1;
             renderUncontactedLeads();
         });
 
-        function applyDateRange() {
-            if (!dateStart.value || !dateEnd.value) {
+        function applyFilters() {
+            const startVal = dateStart.value;
+            const endVal = dateEnd.value;
+
+            if (!startVal || !endVal) {
                 alert('Please select both start and end dates');
                 return;
             }
-            // Parse dates from input (YYYY-MM-DD format)
-            const [startYear, startMonth, startDay] = dateStart.value.split('-');
-            const [endYear, endMonth, endDay] = dateEnd.value.split('-');
-            
-            // Create dates in UTC to avoid timezone issues
-            currentDateRangeStart = new Date(startYear, parseInt(startMonth) - 1, startDay, 0, 0, 0, 0);
-            currentDateRangeEnd = new Date(endYear, parseInt(endMonth) - 1, endDay, 23, 59, 59, 999);
-            
-            console.log('Applied Date Range:', {
-                start: currentDateRangeStart.toISOString(),
-                end: currentDateRangeEnd.toISOString(),
-                startValue: dateStart.value,
-                endValue: dateEnd.value
-            });
-            
-            if (currentDateRangeStart > currentDateRangeEnd) {
-                alert('Start date must be before end date');
+
+            const [sy, sm, sd] = startVal.split('-');
+            const [ey, em, ed] = endVal.split('-');
+            filterStartDate = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+            filterEndDate = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+
+            if (filterStartDate > filterEndDate) {
+                alert('Start date must be before or equal to end date');
                 return;
             }
+
+            filterProject = projectFilter.value;
+
+            // Re-render all reports
             renderDailySalesActivityForDateRange();
+            renderUncontactedLeads();
+            renderLeadsAging();
         }
 
-        function resetDateRange() {
+        function resetFilters() {
             const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-            
-            dateStart.value = dateStr;
-            dateEnd.value = dateStr;
-            
-            currentDateRangeStart = new Date(year, today.getMonth(), today.getDate(), 0, 0, 0, 0);
-            currentDateRangeEnd = new Date(year, today.getMonth(), today.getDate(), 23, 59, 59, 999);
-            
-            console.log('Reset to Today:', {
-                start: currentDateRangeStart.toISOString(),
-                end: currentDateRangeEnd.toISOString()
-            });
-            
-            renderDailySalesActivityForDateRange();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${y}-${m}-${d}`;
+
+            dateStart.value = todayStr;
+            dateEnd.value = todayStr;
+            projectFilter.value = '';
+
+            filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
+            filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+            filterProject = '';
+
+            applyFilters();
         }
 
         async function initializeApp() {
             const urlParams = new URLSearchParams(window.location.search);
             const locationIdFromUrl = urlParams.get('locationId');
-
             if (!locationIdFromUrl) {
                 showConfigStatus('Error: No locationId parameter in URL. Add ?locationId=YOUR_ID', 'error');
                 return;
             }
-
             try {
-                // Add cache-busting to config.json
                 const configUrl = `../config.json?t=${Date.now()}`;
                 const configData = await fetch(configUrl).then(r => r.json());
                 selectedLocation = configData.find(loc => loc.defaultLocationId === locationIdFromUrl);
-
                 if (!selectedLocation) {
                     showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found in config.json`, 'error');
                     return;
                 }
-
                 showConfigStatus(`Connected to location: ${selectedLocation.name}`, 'success');
                 fetchData();
             } catch (err) {
@@ -594,27 +571,18 @@
         async function fetchData() {
             if (!selectedLocation) return;
             showLoading();
-
             try {
                 usersMap = await fetchUsersMap();
                 allFetchedContacts = await fetchAllContacts();
                 allFetchedConversations = await fetchAllConversations();
 
-                console.log('Contacts fetched:', allFetchedContacts.length);
-                console.log('Conversations fetched:', allFetchedConversations.length);
+                populateProjectFilter();
 
+                // Set default to today
                 const today = new Date();
                 dateStart.valueAsDate = today;
                 dateEnd.valueAsDate = today;
-                currentDateRangeStart = new Date(today);
-                currentDateRangeStart.setHours(0, 0, 0, 0);
-                currentDateRangeEnd = new Date(today);
-                currentDateRangeEnd.setHours(23, 59, 59, 999);
-                
-                populateProjectFilter();
-                renderDailySalesActivityForDateRange();
-                await renderUncontactedLeads();
-                await renderLeadsAging();
+                resetFilters(); // This triggers all renders
             } catch (error) {
                 showConfigStatus(`API Error: ${error.message}`, 'error');
                 console.error(error);
@@ -625,44 +593,37 @@
 
         function populateProjectFilter() {
             allProjects.clear();
-            
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+
             allFetchedContacts.forEach(contact => {
-                // Get the custom field ID from config
-                const projectFieldId = selectedLocation.customFieldIds?.project;
-                
                 if (projectFieldId && contact.customFields) {
-                    // Find the custom field value for this contact
-                    const projectField = contact.customFields.find(cf => cf.id === projectFieldId);
-                    
-                    if (projectField && projectField.value) {
-                        const value = projectField.value;
-                        
-                        // Handle if value is an array
-                        if (Array.isArray(value)) {
-                            value.forEach(v => {
-                                if (v) allProjects.add(String(v));
-                            });
-                        } else if (typeof value === 'string') {
-                            allProjects.add(value);
-                        }
+                    const field = contact.customFields.find(cf => cf.id === projectFieldId);
+                    if (field && field.value) {
+                        const vals = Array.isArray(field.value) ? field.value : [field.value];
+                        vals.forEach(v => v && allProjects.add(String(v)));
                     }
                 }
             });
 
-            const sortedProjects = Array.from(allProjects).sort();
-            const projectFilterElement = document.getElementById('projectFilter');
-            
-            // Keep the first option (All Projects)
-            projectFilterElement.innerHTML = '<option value="">All Projects</option>';
-            
-            sortedProjects.forEach(project => {
-                const option = document.createElement('option');
-                option.value = project;
-                option.textContent = project;
-                projectFilterElement.appendChild(option);
+            const sorted = Array.from(allProjects).sort();
+            projectFilter.innerHTML = '<option value="">All Projects</option>';
+            sorted.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                projectFilter.appendChild(opt);
             });
+        }
 
-            console.log('Projects found:', sortedProjects);
+        // Helper: Check if contact matches current project filter
+        function contactMatchesProject(contact) {
+            if (!filterProject) return true;
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+            if (!projectFieldId || !contact.customFields) return false;
+            const field = contact.customFields.find(cf => cf.id === projectFieldId);
+            if (!field || !field.value) return false;
+            const values = Array.isArray(field.value) ? field.value : [field.value];
+            return values.some(v => String(v) === filterProject);
         }
 
         async function fetchUsersMap() {
@@ -676,22 +637,13 @@
                         'Version': '2021-07-28'
                     }
                 });
-
-                if (!response.ok) {
-                    console.warn(`Users API error: ${response.status}`);
-                    return usersMap;
-                }
-
+                if (!response.ok) return usersMap;
                 const data = await response.json();
-                const users = data.users || [];
-                users.forEach(user => {
-                    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-                    usersMap[user.id] = fullName || user.email || user.id;
+                (data.users || []).forEach(user => {
+                    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || user.id;
+                    usersMap[user.id] = name;
                 });
-                console.log(`Fetched ${users.length} users.`);
-            } catch (err) {
-                console.warn('Error fetching users:', err.message);
-            }
+            } catch (err) { console.warn('Users fetch error:', err); }
             return usersMap;
         }
 
@@ -699,11 +651,9 @@
             let contacts = [];
             let searchAfter = null;
             const limit = 100;
-
             while (true) {
                 const body = { locationId: selectedLocation.defaultLocationId, pageLimit: limit };
                 if (searchAfter) body.searchAfter = searchAfter;
-
                 const response = await fetch('https://services.leadconnectorhq.com/contacts/search', {
                     method: 'POST',
                     headers: {
@@ -713,21 +663,15 @@
                     },
                     body: JSON.stringify(body)
                 });
-
                 if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
-
                 const data = await response.json();
                 const batch = data.contacts || [];
                 if (batch.length === 0) break;
-
                 contacts = contacts.concat(batch);
                 if (batch.length < limit) break;
-
-                const last = batch[batch.length - 1];
-                if (!last.searchAfter) break;
-                searchAfter = last.searchAfter;
+                searchAfter = batch[batch.length - 1].searchAfter;
+                if (!searchAfter) break;
             }
-            console.log(`Fetched ${contacts.length} contacts.`);
             return contacts;
         }
 
@@ -735,193 +679,108 @@
             const conversations = [];
             let startAfterDate = null;
             const limit = 100;
-
-            const locationId = selectedLocation.defaultLocationId;
-            const accessToken = selectedLocation.accessToken;
-            const apiVersion = selectedLocation.apiVersion || '2021-07-28';
-
-            const baseUrl = 'https://services.leadconnectorhq.com/conversations/search';
-
+            const maxFetches = 1000;
             let fetchCount = 0;
-            const maxFetches = 1000; // Safety limit to prevent infinite loops
 
             while (fetchCount < maxFetches) {
                 const params = new URLSearchParams({
-                    locationId: locationId,
+                    locationId: selectedLocation.defaultLocationId,
                     limit: limit.toString(),
                     sort: 'desc',
                     sortBy: 'last_message_date'
                 });
-
-                if (startAfterDate !== null) {
-                    params.append('startAfterDate', startAfterDate.toString());
-                }
-
-                const url = `${baseUrl}?${params.toString()}`;
-                console.log(`Fetching batch ${fetchCount + 1}...`);
+                if (startAfterDate) params.append('startAfterDate', startAfterDate);
+                const url = `https://services.leadconnectorhq.com/conversations/search?${params}`;
 
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json',
-                        'Version': apiVersion
+                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
+                        'Version': selectedLocation.apiVersion || '2021-07-28'
                     }
                 });
-
                 if (!response.ok) {
                     const err = await response.text();
                     throw new Error(`Conversations API error: ${response.status} – ${err}`);
                 }
-
                 const data = await response.json();
                 const batch = data.conversations || [];
-                const total = data.total || 0;
-
-                if (batch.length === 0) {
-                    console.log('No more conversations to fetch');
-                    break;
-                }
-
+                if (batch.length === 0) break;
                 conversations.push(...batch);
                 fetchCount++;
-
-                // Check if we've fetched all available conversations
-                if (batch.length < limit) {
-                    console.log('Batch smaller than limit - reached end');
-                    break;
-                }
-
-                if (total > 0 && conversations.length >= total) {
-                    console.log(`Reached total count: ${total}`);
-                    break;
-                }
-
-                const lastItem = batch[batch.length - 1];
-                if (!lastItem?.lastMessageDate) {
-                    console.log('No lastMessageDate on last item - stopping');
-                    break;
-                }
-
-                startAfterDate = lastItem.lastMessageDate;
-                
-                // Add small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
+                if (batch.length < limit) break;
+                const last = batch[batch.length - 1];
+                if (!last?.lastMessageDate) break;
+                startAfterDate = last.lastMessageDate;
+                await new Promise(r => setTimeout(r, 100));
             }
-
-            console.log(`Finished – ${conversations.length} conversations fetched in ${fetchCount} requests.`);
             return conversations;
         }
 
         async function getContactDisplayName(contact) {
-            const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName;
-            return name || '—';
+            return [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName || '—';
         }
 
         function formatDateWithDay(dateString) {
-            const date = new Date(dateString);
-            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-            return date.toLocaleDateString('en-US', options);
+            return new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
         }
 
         function renderDailySalesActivityForDateRange() {
             const repActivityMap = {};
             let totalWhatsappCount = 0;
             let totalCallCount = 0;
-            let matchedConversations = 0;
-            
-            console.log('Filtering conversations:', {
-                totalConversations: allFetchedConversations.length,
-                filterStart: currentDateRangeStart,
-                filterEnd: currentDateRangeEnd
-            });
-            
-            allFetchedConversations.forEach((conv, index) => {
-                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
-                const isInRange = convDate >= currentDateRangeStart && convDate <= currentDateRangeEnd;
-                
-                if (index < 3) {
-                    console.log(`Sample Conv ${index}:`, {
-                        date: convDate.toISOString(),
-                        startOk: convDate >= currentDateRangeStart,
-                        endOk: convDate <= currentDateRangeEnd,
-                        inRange: isInRange,
-                        type: conv.lastMessageType || conv.type
-                    });
-                }
-                
-                if (isInRange) {
-                    matchedConversations++;
-                    const repId = conv.assignedTo || 'Unassigned';
-                    const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
-                    
-                    if (!repActivityMap[repName]) {
-                        repActivityMap[repName] = { 
-                            whatsappCount: 0, 
-                            callCount: 0,
-                            dailyBreakdown: {}
-                        };
-                    }
-                    
-                    const messageType = conv.lastMessageType || conv.type;
-                    const dayKey = convDate.toISOString().split('T')[0];
-                    
-                    if (!repActivityMap[repName].dailyBreakdown[dayKey]) {
-                        repActivityMap[repName].dailyBreakdown[dayKey] = { whatsapp: 0, call: 0 };
-                    }
-                    
-                    if (messageType === 'TYPE_WHATSAPP') {
-                        repActivityMap[repName].whatsappCount++;
-                        repActivityMap[repName].dailyBreakdown[dayKey].whatsapp++;
-                        totalWhatsappCount++;
-                    } else if (messageType === 'TYPE_PHONE' || messageType === 'TYPE_CALL') {
-                        repActivityMap[repName].callCount++;
-                        repActivityMap[repName].dailyBreakdown[dayKey].call++;
-                        totalCallCount++;
-                    }
-                }
-            });
 
-            console.log('Filtering Complete:', {
-                totalMatched: matchedConversations,
-                totalWhatsapp: totalWhatsappCount,
-                totalCall: totalCallCount,
-                reps: Object.keys(repActivityMap)
+            allFetchedConversations.forEach(conv => {
+                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
+                if (convDate < filterStartDate || convDate > filterEndDate) return;
+
+                const contact = allFetchedContacts.find(c => c.id === conv.contactId);
+                if (!contact || !contactMatchesProject(contact)) return;
+
+                const repId = conv.assignedTo || 'Unassigned';
+                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+                const messageType = conv.lastMessageType || conv.type;
+
+                if (!repActivityMap[repName]) {
+                    repActivityMap[repName] = { whatsappCount: 0, callCount: 0, dailyBreakdown: {} };
+                }
+
+                const dayKey = convDate.toISOString().split('T')[0];
+                if (!repActivityMap[repName].dailyBreakdown[dayKey]) {
+                    repActivityMap[repName].dailyBreakdown[dayKey] = { whatsapp: 0, call: 0 };
+                }
+
+                if (messageType === 'TYPE_WHATSAPP') {
+                    repActivityMap[repName].whatsappCount++;
+                    repActivityMap[repName].dailyBreakdown[dayKey].whatsapp++;
+                    totalWhatsappCount++;
+                } else if (messageType === 'TYPE_PHONE' || messageType === 'TYPE_CALL') {
+                    repActivityMap[repName].callCount++;
+                    repActivityMap[repName].dailyBreakdown[dayKey].call++;
+                    totalCallCount++;
+                }
             });
 
             document.getElementById('whatsappCount').textContent = totalWhatsappCount;
             document.getElementById('callCount').textContent = totalCallCount;
-
             currentDailyRepActivityMap = repActivityMap;
             renderDailySalesActivityTableView();
         }
 
         function renderDailySalesActivityTableView() {
             const container = document.getElementById('dailyTableContent');
-
             if (Object.keys(currentDailyRepActivityMap).length === 0) {
-                container.innerHTML = `
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="no-data-container">
-                                <i class="fas fa-inbox"></i>
-                                <p>No activity data for this date range</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                container.innerHTML = `<div class="card"><div class="card-body"><div class="no-data-container"><i class="fas fa-inbox"></i><p>No activity data for the selected filters</p></div></div></div>`;
                 return;
             }
 
-            const startDateStr = dateStart.value || new Date().toISOString().split('T')[0];
-            const endDateStr = dateEnd.value || new Date().toISOString().split('T')[0];
-            const dateRangeLabel = startDateStr === endDateStr ? startDateStr : `${startDateStr} to ${endDateStr}`;
-
+            const dateRangeLabel = dateStart.value === dateEnd.value ? dateStart.value : `${dateStart.value} to ${dateEnd.value}`;
+            const projectLabel = filterProject ? ` | Project: ${filterProject}` : '';
             let html = `
                 <div class="card">
                     <div class="card-header">
                         <div>
-                            <span>Daily Sales Activity (${dateRangeLabel})</span>
+                            <span>Daily Sales Activity (${dateRangeLabel}${projectLabel})</span>
                             <small class="d-block text-muted mt-1">Total contacts across all days in range</small>
                         </div>
                         <button class="export-btn" onclick="exportDailySalesActivityCSV()">
@@ -943,55 +802,40 @@
                                 <tbody>
             `;
 
-            const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
-            
-            sortedReps.forEach(([rep, activity]) => {
-                const totalForRep = activity.whatsappCount + activity.callCount;
-                
-                html += `
-                    <tr>
-                        <td><strong>${escapeHtml(rep)}</strong></td>
-                        <td><span class="badge bg-primary clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')" title="Click to view leads">${activity.whatsappCount}</span></td>
-                        <td><span class="badge bg-success clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')" title="Click to view leads">${activity.callCount}</span></td>
-                        <td><strong>${totalForRep}</strong></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="showDailyBreakdown('${escapeHtml(rep)}')">
-                                <i class="fas fa-chart-bar me-1"></i>Details
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+            Object.entries(currentDailyRepActivityMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([rep, activity]) => {
+                    const total = activity.whatsappCount + activity.callCount;
+                    html += `
+                        <tr>
+                            <td><strong>${escapeHtml(rep)}</strong></td>
+                            <td><span class="badge bg-primary clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')">${activity.whatsappCount}</span></td>
+                            <td><span class="badge bg-success clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')">${activity.callCount}</span></td>
+                            <td><strong>${total}</strong></td>
+                            <td><button class="btn btn-sm btn-outline-secondary" onclick="showDailyBreakdown('${escapeHtml(rep)}')"><i class="fas fa-chart-bar me-1"></i>Details</button></td>
+                        </tr>`;
+                });
 
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-
+            html += `</tbody></table></div></div></div>`;
             container.innerHTML = html;
         }
 
         async function renderUncontactedLeads() {
-            const contactedContactIds = new Set(
-                allFetchedConversations.map(conv => conv.contactId)
-            );
-
-            let uncontactedLeads = allFetchedContacts.filter(contact => !contactedContactIds.has(contact.id));
-            allUncontactedLeads = uncontactedLeads;
+            const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
+            let uncontacted = allFetchedContacts.filter(contact => {
+                const addedDate = new Date(contact.dateAdded);
+                return !contactedIds.has(contact.id) && contactMatchesProject(contact) &&
+                    (!filterStartDate || addedDate >= filterStartDate) &&
+                    (!filterEndDate || addedDate <= filterEndDate);
+            });
 
             if (currentSearchTerm) {
-                uncontactedLeads = uncontactedLeads.filter(contact => {
+                uncontacted = uncontacted.filter(contact => {
                     const name = `${contact.firstName || ''} ${contact.lastName || ''} ${contact.contactName || ''}`.toLowerCase();
                     const phone = (contact.phone || '').toLowerCase();
                     const email = (contact.email || '').toLowerCase();
-                    const repId = contact.assignedTo || '';
-                    const repName = (usersMap[repId] || repId).toLowerCase();
-                    
-                    const searchStr = `${name} ${phone} ${email} ${repName}`;
-                    return searchStr.includes(currentSearchTerm);
+                    const repName = (usersMap[contact.assignedTo || ''] || '').toLowerCase();
+                    return `${name} ${phone} ${email} ${repName}`.includes(currentSearchTerm);
                 });
             }
 
@@ -999,149 +843,82 @@
             const info = document.getElementById('uncontactedInfo');
             const pag = document.getElementById('uncontactedPagination');
 
-            if (!uncontactedLeads.length) {
+            if (uncontacted.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center">No uncontacted leads found.</td></tr>';
-                info.textContent = '';
-                pag.innerHTML = '';
+                info.textContent = ''; pag.innerHTML = '';
                 return;
             }
 
-            const total = uncontactedLeads.length;
-            const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+            const totalPages = Math.ceil(uncontacted.length / ITEMS_PER_PAGE);
             const start = (currentUncontactedPage - 1) * ITEMS_PER_PAGE;
-            const end = Math.min(start + ITEMS_PER_PAGE, total);
-            const pageData = uncontactedLeads.slice(start, end);
+            const end = Math.min(start + ITEMS_PER_PAGE, uncontacted.length);
+            const pageData = uncontacted.slice(start, end);
 
             tbody.innerHTML = '';
             for (const contact of pageData) {
                 const name = await getContactDisplayName(contact);
                 const phone = contact.phone || '—';
                 const email = contact.email || '—';
-                const repId = contact.assignedTo || '—';
-                const repName = usersMap[repId] || repId;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${escapeHtml(name)}</td>
-                        <td>${escapeHtml(phone)}</td>
-                        <td>${escapeHtml(email)}</td>
-                        <td>${escapeHtml(repName)}</td>
-                    </tr>
-                `;
+                const repName = usersMap[contact.assignedTo || ''] || 'Unassigned';
+                tbody.innerHTML += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(phone)}</td><td>${escapeHtml(email)}</td><td>${escapeHtml(repName)}</td></tr>`;
             }
 
-            info.textContent = `Showing ${start + 1}–${end} of ${total} uncontacted leads`;
-
-            renderPagination(pag, totalPages, currentUncontactedPage, page => {
-                currentUncontactedPage = page;
+            info.textContent = `Showing ${start + 1}–${end} of ${uncontacted.length} uncontacted leads`;
+            renderPagination(pag, totalPages, currentUncontactedPage, p => {
+                currentUncontactedPage = p;
                 renderUncontactedLeads();
             });
         }
 
         async function renderLeadsAging() {
-            const contactMap = {};
-            currentProjectFilter = document.getElementById('projectFilter').value;
+            const repData = {};
+            window.repDataCache = repData;
 
-            allFetchedContacts.forEach(contact => {
-                if (!contactMap[contact.id]) {
-                    contactMap[contact.id] = { ...contact, conversations: [] };
-                }
-            });
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
 
-            allFetchedConversations.forEach(conv => {
-                if (contactMap[conv.contactId]) {
-                    contactMap[conv.contactId].conversations.push(conv);
-                }
-            });
-
-            const allAgingRecords = [];
-            for (const contact of Object.values(contactMap)) {
-                // Apply project filter if selected
-                if (currentProjectFilter) {
-                    const projectFieldId = selectedLocation.customFieldIds?.project;
-                    if (projectFieldId && contact.customFields) {
-                        const projectField = contact.customFields.find(cf => cf.id === projectFieldId);
-                        let hasProject = false;
-                        
-                        if (projectField && projectField.value) {
-                            const value = projectField.value;
-                            if (Array.isArray(value)) {
-                                hasProject = value.some(v => String(v) === currentProjectFilter);
-                            } else {
-                                hasProject = String(value) === currentProjectFilter;
-                            }
-                        }
-                        
-                        if (!hasProject) continue;
-                    } else {
-                        continue;
-                    }
-                }
+                const addedDate = new Date(contact.dateAdded);
+                if (filterStartDate && addedDate < filterStartDate) continue;
+                if (filterEndDate && addedDate > filterEndDate) continue;
 
                 const repId = contact.assignedTo || 'Unassigned';
                 const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
-                const isAttended = contact.conversations.length > 0;
+                
+                // Check if contact has any conversations (not filtered by date)
+                const isAttended = allFetchedConversations.some(c => c.contactId === contact.id);
+                const daysOld = Math.floor((Date.now() - addedDate) / 86400000);
 
-                let agingBucket = 'attended';
-                if (!isAttended) {
-                    const createdDate = new Date(contact.dateAdded);
-                    const now = new Date();
-                    const daysPassed = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
-
-                    if (daysPassed <= 5) agingBucket = '0to5';
-                    else if (daysPassed <= 10) agingBucket = '5to10';
-                    else if (daysPassed <= 15) agingBucket = '10to15';
-                    else if (daysPassed <= 30) agingBucket = '15to30';
-                    else agingBucket = 'over30';
-                }
-
-                allAgingRecords.push({ contact, rep: repName, isAttended, agingBucket });
-            }
-
-            const repData = {};
-            allAgingRecords.forEach(record => {
-                if (!repData[record.rep]) {
-                    repData[record.rep] = {
-                        rep: record.rep,
+                if (!repData[repName]) {
+                    repData[repName] = {
+                        rep: repName,
                         totalLeads: 0,
-                        attendedLeads: [],
-                        unattendedLeads: [],
-                        aging0to5: [],
-                        aging5to10: [],
-                        aging10to15: [],
-                        aging15to30: [],
-                        agingOver30: []
+                        attendedLeads: [], unattendedLeads: [],
+                        aging0to5: [], aging5to10: [], aging10to15: [], aging15to30: [], agingOver30: []
                     };
                 }
-
-                const d = repData[record.rep];
+                const d = repData[repName];
                 d.totalLeads++;
-                if (record.isAttended) {
-                    d.attendedLeads.push(record.contact);
+                if (isAttended) {
+                    d.attendedLeads.push(contact);
                 } else {
-                    d.unattendedLeads.push(record.contact);
-                    if (record.agingBucket === '0to5') d.aging0to5.push(record.contact);
-                    else if (record.agingBucket === '5to10') d.aging5to10.push(record.contact);
-                    else if (record.agingBucket === '10to15') d.aging10to15.push(record.contact);
-                    else if (record.agingBucket === '15to30') d.aging15to30.push(record.contact);
-                    else if (record.agingBucket === 'over30') d.agingOver30.push(record.contact);
+                    d.unattendedLeads.push(contact);
+                    if (daysOld <= 5) d.aging0to5.push(contact);
+                    else if (daysOld <= 10) d.aging5to10.push(contact);
+                    else if (daysOld <= 15) d.aging10to15.push(contact);
+                    else if (daysOld <= 30) d.aging15to30.push(contact);
+                    else d.agingOver30.push(contact);
                 }
-            });
+            }
 
             const sortedReps = Object.values(repData).sort((a, b) => a.rep.localeCompare(b.rep));
-            
             renderAgingChart(sortedReps);
-            
-            const total = sortedReps.length;
-            const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
-            const start = (currentAgingPage - 1) * ITEMS_PER_PAGE;
-            const end = Math.min(start + ITEMS_PER_PAGE, total);
-            const pageData = sortedReps.slice(start, end);
 
             const tbody = document.getElementById('agingTableBody');
-            tbody.innerHTML = '';
+            tbody.innerHTML = sortedReps.length === 0
+                ? '<tr><td colspan="9" class="text-center">No data for selected filters.</td></tr>'
+                : '';
 
-            pageData.forEach(data => {
+            sortedReps.forEach(data => {
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${escapeHtml(data.rep)}</strong></td>
@@ -1153,185 +930,63 @@
                         <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(this, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
                         <td><span class="badge badge-aging-30 clickable-badge" onclick="showLeadsList(this, 'Aging 15-30d')">${data.aging15to30.length}</span></td>
                         <td><span class="badge badge-aging-more clickable-badge" onclick="showLeadsList(this, 'Aging >30d')">${data.agingOver30.length}</span></td>
-                    </tr>
-                `;
+                    </tr>`;
             });
-
-            if (pageData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No data available.</td></tr>';
-            }
-
-            let agingPagContainer = document.getElementById('agingPagination');
-            if (!agingPagContainer) {
-                const card = document.querySelector('#aging-content .card .card-body');
-                const nav = document.createElement('nav');
-                nav.setAttribute('aria-label', 'Aging pagination');
-                const ul = document.createElement('ul');
-                ul.className = 'pagination justify-content-center';
-                ul.id = 'agingPagination';
-                nav.appendChild(ul);
-                card.appendChild(nav);
-                agingPagContainer = ul;
-            }
-
-            renderPagination(agingPagContainer, totalPages, currentAgingPage, page => {
-                currentAgingPage = page;
-                renderLeadsAging();
-            });
-
-            window.repDataCache = repData;
         }
 
         function renderAgingChart(sortedReps) {
             const ctx = document.getElementById('agingChart');
             if (!ctx) return;
+            if (agingChart) agingChart.destroy();
 
-            const repNames = sortedReps.map(r => r.rep);
-            const aging0to5 = sortedReps.map(r => r.aging0to5.length);
-            const aging5to10 = sortedReps.map(r => r.aging5to10.length);
-            const aging10to15 = sortedReps.map(r => r.aging10to15.length);
-            const aging15to30 = sortedReps.map(r => r.aging15to30.length);
-            const agingOver30 = sortedReps.map(r => r.agingOver30.length);
-
-            if (agingChart) {
-                agingChart.destroy();
-            }
-
-            const chartTitle = currentProjectFilter ? `Lead Aging - ${currentProjectFilter}` : 'Lead Aging - All Projects';
+            const title = filterProject ? `Lead Aging - ${filterProject}` : 'Lead Aging - All Projects';
 
             agingChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: repNames,
+                    labels: sortedReps.map(r => r.rep),
                     datasets: [
-                        {
-                            label: '0-5d',
-                            data: aging0to5,
-                            backgroundColor: 'rgba(0, 180, 219, 0.8)',
-                            borderColor: 'rgba(0, 180, 219, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: '5-10d',
-                            data: aging5to10,
-                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                            borderColor: 'rgba(102, 126, 234, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: '10-15d',
-                            data: aging10to15,
-                            backgroundColor: 'rgba(240, 147, 251, 0.8)',
-                            borderColor: 'rgba(240, 147, 251, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: '15-30d',
-                            data: aging15to30,
-                            backgroundColor: 'rgba(250, 112, 154, 0.8)',
-                            borderColor: 'rgba(250, 112, 154, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: '>30d',
-                            data: agingOver30,
-                            backgroundColor: 'rgba(255, 107, 107, 0.8)',
-                            borderColor: 'rgba(255, 107, 107, 1)',
-                            borderWidth: 1
-                        }
+                        { label: '0-5d', data: sortedReps.map(r => r.aging0to5.length), backgroundColor: 'rgba(0, 180, 219, 0.8)' },
+                        { label: '5-10d', data: sortedReps.map(r => r.aging5to10.length), backgroundColor: 'rgba(102, 126, 234, 0.8)' },
+                        { label: '10-15d', data: sortedReps.map(r => r.aging10to15.length), backgroundColor: 'rgba(240, 147, 251, 0.8)' },
+                        { label: '15-30d', data: sortedReps.map(r => r.aging15to30.length), backgroundColor: 'rgba(250, 112, 154, 0.8)' },
+                        { label: '>30d', data: sortedReps.map(r => r.agingOver30.length), backgroundColor: 'rgba(255, 107, 107, 0.8)' }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: chartTitle,
-                            font: {
-                                size: 14,
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true
-                        }
-                    }
+                    plugins: { legend: { position: 'top' }, title: { display: true, text: title, font: { size: 14, weight: 'bold' } } },
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
                 }
             });
         }
 
-        function renderPagination(container, totalPages, currentPage, onPageChange) {
+        function renderPagination(container, totalPages, currentPage, onChange) {
             container.innerHTML = '';
-
-            const createItem = (text, page, disabled = false, active = false) => {
+            const create = (text, page, disabled = false, active = false) => {
                 const li = document.createElement('li');
                 li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
                 const a = document.createElement('a');
                 a.className = 'page-link';
                 a.href = '#';
                 a.textContent = text;
-                a.style.cursor = disabled ? 'not-allowed' : 'pointer';
-                
                 if (!disabled && page >= 1 && page <= totalPages) {
-                    a.addEventListener('click', e => {
-                        e.preventDefault();
-                        onPageChange(page);
-                    });
+                    a.addEventListener('click', e => { e.preventDefault(); onChange(page); });
                 }
                 li.appendChild(a);
                 return li;
             };
-
-            container.appendChild(createItem('First', 1, currentPage === 1));
-            container.appendChild(createItem('Prev', currentPage - 1, currentPage === 1));
-
-            const maxVisible = 7;
-            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-            if (endPage - startPage + 1 < maxVisible) startPage = Math.max(1, endPage - maxVisible + 1);
-
-            if (startPage > 1) {
-                container.appendChild(createItem('1', 1));
-                if (startPage > 2) {
-                    const dots = document.createElement('li');
-                    dots.className = 'page-item disabled';
-                    const span = document.createElement('a');
-                    span.className = 'page-link';
-                    span.textContent = '…';
-                    dots.appendChild(span);
-                    container.appendChild(dots);
-                }
-            }
-
+            container.appendChild(create('First', 1, currentPage === 1));
+            container.appendChild(create('Prev', currentPage - 1, currentPage === 1));
+            let startPage = Math.max(1, currentPage - 3);
+            let endPage = Math.min(totalPages, startPage + 6);
+            if (endPage - startPage + 1 < 7) startPage = Math.max(1, endPage - 6);
             for (let p = startPage; p <= endPage; p++) {
-                container.appendChild(createItem(p, p, false, p === currentPage));
+                container.appendChild(create(p, p, false, p === currentPage));
             }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    const dots = document.createElement('li');
-                    dots.className = 'page-item disabled';
-                    const span = document.createElement('a');
-                    span.className = 'page-link';
-                    span.textContent = '…';
-                    dots.appendChild(span);
-                    container.appendChild(dots);
-                }
-                container.appendChild(createItem(totalPages, totalPages));
-            }
-
-            container.appendChild(createItem('Next', currentPage + 1, currentPage === totalPages));
-            container.appendChild(createItem('Last', totalPages, currentPage === totalPages));
+            container.appendChild(create('Next', currentPage + 1, currentPage === totalPages));
+            container.appendChild(create('Last', totalPages, currentPage === totalPages));
         }
 
         function escapeHtml(text) {
@@ -1352,332 +1007,209 @@
             setTimeout(() => container.querySelector('.alert')?.remove(), 5000);
         }
 
-        // CSV Export Functions
-        function downloadCSV(filename, csvContent) {
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // CSV Exports
+        function downloadCSV(filename, content) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
         }
 
-        function escapeCSV(value) {
-            if (!value) return '';
-            const str = String(value);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                return `"${str.replace(/"/g, '""')}"`;
-            }
-            return str;
+        function escapeCSV(val) {
+            if (!val) return '';
+            const s = String(val);
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
         }
 
         async function exportDailySalesActivityCSV() {
-            const startDate = dateStart.value || new Date().toISOString().split('T')[0];
-            const endDate = dateEnd.value || new Date().toISOString().split('T')[0];
             let csv = 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
-
-            const sortedReps = Object.entries(currentDailyRepActivityMap).sort(([a], [b]) => a.localeCompare(b));
-            
-            sortedReps.forEach(([rep, activity]) => {
-                const totalForRep = activity.whatsappCount + activity.callCount;
-                csv += `${escapeCSV(rep)},${activity.whatsappCount},${activity.callCount},${totalForRep}\n`;
-            });
-
-            const filename = startDate === endDate ? 
-                `Daily_Sales_Activity_${startDate}.csv` : 
-                `Daily_Sales_Activity_${startDate}_to_${endDate}.csv`;
-            
-            downloadCSV(filename, csv);
+            Object.entries(currentDailyRepActivityMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([rep, act]) => {
+                    const total = act.whatsappCount + act.callCount;
+                    csv += `${escapeCSV(rep)},${act.whatsappCount},${act.callCount},${total}\n`;
+                });
+            const fn = dateStart.value === dateEnd.value
+                ? `Daily_Activity_${dateStart.value}${filterProject ? '_' + filterProject : ''}.csv`
+                : `Daily_Activity_${dateStart.value}_to_${dateEnd.value}${filterProject ? '_' + filterProject : ''}.csv`;
+            downloadCSV(fn, csv);
         }
 
         async function exportUncontactedLeadsCSV() {
-            const contactedContactIds = new Set(
-                allFetchedConversations.map(conv => conv.contactId)
-            );
-
-            let uncontactedLeads = allFetchedContacts.filter(contact => !contactedContactIds.has(contact.id));
-
+            const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
+            const leads = allFetchedContacts.filter(contact => {
+                const addedDate = new Date(contact.dateAdded);
+                return !contactedIds.has(contact.id) && contactMatchesProject(contact) &&
+                    (!filterStartDate || addedDate >= filterStartDate) &&
+                    (!filterEndDate || addedDate <= filterEndDate);
+            });
             let csv = 'Lead Name,Phone,Email,Assigned Sales Rep\n';
-
-            for (const contact of uncontactedLeads) {
-                const name = await getContactDisplayName(contact);
-                const phone = contact.phone || '—';
-                const email = contact.email || '—';
-                const repId = contact.assignedTo || '—';
-                const repName = usersMap[repId] || repId;
-
-                csv += `${escapeCSV(name)},${escapeCSV(phone)},${escapeCSV(email)},${escapeCSV(repName)}\n`;
+            for (const c of leads) {
+                const name = await getContactDisplayName(c);
+                const phone = c.phone || '—';
+                const email = c.email || '—';
+                const rep = usersMap[c.assignedTo || ''] || 'Unassigned';
+                csv += `${escapeCSV(name)},${escapeCSV(phone)},${escapeCSV(email)},${escapeCSV(rep)}\n`;
             }
-
-            downloadCSV('Uncontacted_Leads.csv', csv);
+            downloadCSV(`Uncontacted_Leads${filterProject ? '_' + filterProject : ''}.csv`, csv);
         }
 
         async function exportLeadsAgingCSV() {
-            const contactMap = {};
-
-            allFetchedContacts.forEach(contact => {
-                if (!contactMap[contact.id]) {
-                    contactMap[contact.id] = { ...contact, conversations: [] };
-                }
-            });
-
-            allFetchedConversations.forEach(conv => {
-                if (contactMap[conv.contactId]) {
-                    contactMap[conv.contactId].conversations.push(conv);
-                }
-            });
-
-            const allAgingRecords = [];
-            for (const contact of Object.values(contactMap)) {
-                const repId = contact.assignedTo || 'Unassigned';
-                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
-                const isAttended = contact.conversations.length > 0;
-
-                let agingBucket = 'attended';
-                if (!isAttended) {
-                    const createdDate = new Date(contact.dateAdded);
-                    const now = new Date();
-                    const daysPassed = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
-
-                    if (daysPassed <= 5) agingBucket = '0to5';
-                    else if (daysPassed <= 10) agingBucket = '5to10';
-                    else if (daysPassed <= 15) agingBucket = '10to15';
-                    else if (daysPassed <= 30) agingBucket = '15to30';
-                    else agingBucket = 'over30';
-                }
-
-                allAgingRecords.push({ contact, rep: repName, isAttended, agingBucket });
-            }
-
             const repData = {};
-            allAgingRecords.forEach(record => {
-                if (!repData[record.rep]) {
-                    repData[record.rep] = {
-                        rep: record.rep,
-                        totalLeads: 0,
-                        attendedLeads: [],
-                        unattendedLeads: [],
-                        aging0to5: [],
-                        aging5to10: [],
-                        aging10to15: [],
-                        aging15to30: [],
-                        agingOver30: []
-                    };
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
+                const addedDate = new Date(contact.dateAdded);
+                if (filterStartDate && addedDate < filterStartDate) continue;
+                if (filterEndDate && addedDate > filterEndDate) continue;
+                const repName = contact.assignedTo ? (usersMap[contact.assignedTo] || contact.assignedTo) : 'Unassigned';
+                const hasConv = allFetchedConversations.some(c => c.contactId === contact.id);
+                const days = Math.floor((Date.now() - addedDate) / 86400000);
+                if (!repData[repName]) repData[repName] = { total: 0, attended: 0, unattended: 0, a5: 0, a10: 0, a15: 0, a30: 0, a30p: 0 };
+                repData[repName].total++;
+                if (hasConv) repData[repName].attended++;
+                else {
+                    repData[repName].unattended++;
+                    if (days <= 5) repData[repName].a5++;
+                    else if (days <= 10) repData[repName].a10++;
+                    else if (days <= 15) repData[repName].a15++;
+                    else if (days <= 30) repData[repName].a30++;
+                    else repData[repName].a30p++;
                 }
-
-                const d = repData[record.rep];
-                d.totalLeads++;
-                if (record.isAttended) {
-                    d.attendedLeads.push(record.contact);
-                } else {
-                    d.unattendedLeads.push(record.contact);
-                    if (record.agingBucket === '0to5') d.aging0to5.push(record.contact);
-                    else if (record.agingBucket === '5to10') d.aging5to10.push(record.contact);
-                    else if (record.agingBucket === '10to15') d.aging10to15.push(record.contact);
-                    else if (record.agingBucket === '15to30') d.aging15to30.push(record.contact);
-                    else if (record.agingBucket === 'over30') d.agingOver30.push(record.contact);
-                }
-            });
-
-            const sortedReps = Object.values(repData).sort((a, b) => a.rep.localeCompare(b.rep));
-
+            }
             let csv = 'Sales Rep,Total Leads,Attended,Unattended,0-5d,5-10d,10-15d,15-30d,>30d\n';
-
-            sortedReps.forEach(data => {
-                csv += `${escapeCSV(data.rep)},${data.totalLeads},${data.attendedLeads.length},${data.unattendedLeads.length},${data.aging0to5.length},${data.aging5to10.length},${data.aging10to15.length},${data.aging15to30.length},${data.agingOver30.length}\n`;
+            Object.keys(repData).sort().forEach(r => {
+                const d = repData[r];
+                csv += `${escapeCSV(r)},${d.total},${d.attended},${d.unattended},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
             });
-
-            downloadCSV('Leads_Aging_Report.csv', csv);
+            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}.csv`, csv);
         }
 
-        async function showLeadsList(element, category) {
-            const repName = element.closest('tr').querySelector('td').textContent;
-            const repData = window.repDataCache[repName];
-
+        // Modal functions
+        async function showLeadsList(el, category) {
+            const repName = el.closest('tr').querySelector('td').textContent.trim();
+            const data = window.repDataCache[repName];
             let leads = [];
-            if (category === 'Attended') leads = repData.attendedLeads;
-            else if (category === 'Unattended') leads = repData.unattendedLeads;
-            else if (category === 'Aging 0-5d') leads = repData.aging0to5;
-            else if (category === 'Aging 5-10d') leads = repData.aging5to10;
-            else if (category === 'Aging 10-15d') leads = repData.aging10to15;
-            else if (category === 'Aging 15-30d') leads = repData.aging15to30;
-            else if (category === 'Aging >30d') leads = repData.agingOver30;
-
-            if (leads.length === 0) return;
-
-            let html = '';
-            for (const contact of leads) {
-                const name = await getContactDisplayName(contact);
-                const phone = contact.phone || '—';
-                const email = contact.email || '—';
-                
-                const conv = allFetchedConversations.find(c => c.contactId === contact.id);
-                const lastMessageDate = conv?.lastMessageDate ? formatDateWithDay(conv.lastMessageDate) : formatDateWithDay(contact.dateAdded);
-
-                html += `
-                    <div class="lead-item" onclick="showLeadDetail('${contact.id}')">
-                        <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
-                        <div class="lead-info">
-                            <div><span class="detail-label">Phone:</span> <span class="detail-value">${escapeHtml(phone)}</span></div>
-                            <div><span class="detail-label">Email:</span> <span class="detail-value">${escapeHtml(email)}</span></div>
-                            <div><span class="detail-label">Last Message:</span> <span class="detail-value">${lastMessageDate}</span></div>
-                        </div>
-                    </div>
-                `;
+            switch (category) {
+                case 'Attended': leads = data.attendedLeads; break;
+                case 'Unattended': leads = data.unattendedLeads; break;
+                case 'Aging 0-5d': leads = data.aging0to5; break;
+                case 'Aging 5-10d': leads = data.aging5to10; break;
+                case 'Aging 10-15d': leads = data.aging10to15; break;
+                case 'Aging 15-30d': leads = data.aging15to30; break;
+                case 'Aging >30d': leads = data.agingOver30; break;
             }
-
+            let html = '';
+            for (const c of leads) {
+                const name = await getContactDisplayName(c);
+                const phone = c.phone || '—';
+                const email = c.email || '—';
+                const lastDate = allFetchedConversations.find(conv => conv.contactId === c.id)?.lastMessageDate || c.dateAdded;
+                html += `<div class="lead-item" onclick="showLeadDetail('${c.id}')">
+                    <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
+                    <div class="lead-info">
+                        <div><span class="detail-label">Phone:</span> ${escapeHtml(phone)}</div>
+                        <div><span class="detail-label">Email:</span> ${escapeHtml(email)}</div>
+                        <div><span class="detail-label">Last Activity:</span> ${formatDateWithDay(lastDate)}</div>
+                    </div>
+                </div>`;
+            }
             document.getElementById('modalTitle').textContent = `${repName} - ${category}`;
-            document.getElementById('leadDetailsContent').innerHTML = html;
+            document.getElementById('leadDetailsContent').innerHTML = html || '<p>No leads in this category.</p>';
             leadDetailsModal.show();
         }
 
-        async function showLeadDetail(contactId) {
-            const contact = allFetchedContacts.find(c => c.id === contactId);
+        async function showLeadDetail(id) {
+            const contact = allFetchedContacts.find(c => c.id === id);
             if (!contact) return;
-
             const name = await getContactDisplayName(contact);
             const phone = contact.phone || '—';
             const email = contact.email || '—';
-            const createdDate = new Date(contact.dateAdded).toLocaleDateString();
-            const repId = contact.assignedTo || 'Unassigned';
-            const repName = usersMap[repId] || repId;
-            const conversations = (allFetchedConversations.filter(c => c.contactId === contactId) || []).length;
-
+            const rep = usersMap[contact.assignedTo || ''] || 'Unassigned';
+            const created = new Date(contact.dateAdded).toLocaleDateString();
+            const convCount = allFetchedConversations.filter(c => c.contactId === id).length;
             let html = `
-                <div class="lead-detail">
-                    <div class="detail-label">Name:</div>
-                    <div class="detail-value">${escapeHtml(name)}</div>
-                </div>
-                <hr>
-                <div class="lead-detail">
-                    <div class="detail-label">Phone:</div>
-                    <div class="detail-value">${escapeHtml(phone)}</div>
-                </div>
-                <hr>
-                <div class="lead-detail">
-                    <div class="detail-label">Email:</div>
-                    <div class="detail-value">${escapeHtml(email)}</div>
-                </div>
-                <hr>
-                <div class="lead-detail">
-                    <div class="detail-label">Assigned To:</div>
-                    <div class="detail-value">${escapeHtml(repName)}</div>
-                </div>
-                <hr>
-                <div class="lead-detail">
-                    <div class="detail-label">Date Added:</div>
-                    <div class="detail-value">${createdDate}</div>
-                </div>
-                <hr>
-                <div class="lead-detail">
-                    <div class="detail-label">Conversations:</div>
-                    <div class="detail-value">${conversations}</div>
-                </div>
+                <div><strong>Name:</strong> ${escapeHtml(name)}</div><hr>
+                <div><strong>Phone:</strong> ${escapeHtml(phone)}</div><hr>
+                <div><strong>Email:</strong> ${escapeHtml(email)}</div><hr>
+                <div><strong>Assigned To:</strong> ${escapeHtml(rep)}</div><hr>
+                <div><strong>Date Added:</strong> ${created}</div><hr>
+                <div><strong>Conversations:</strong> ${convCount}</div>
             `;
-
-            if (contact.tags && contact.tags.length > 0) {
-                html += `<hr><div class="lead-detail"><div class="detail-label">Tags:</div><div class="detail-value">${contact.tags.map(t => `<span class="badge bg-info me-1">${escapeHtml(t)}</span>`).join('')}</div></div>`;
+            if (contact.tags?.length) {
+                html += `<hr><div><strong>Tags:</strong> ${contact.tags.map(t => `<span class="badge bg-info me-1">${escapeHtml(t)}</span>`).join('')}</div>`;
             }
-
-            document.getElementById('modalTitle').textContent = escapeHtml(name);
+            document.getElementById('modalTitle').textContent = name;
             document.getElementById('leadDetailsContent').innerHTML = html;
             leadDetailsModal.show();
         }
 
-        async function showDailyLeadsList(repName, messageType) {
-            const leads = allFetchedConversations.filter(conv => {
-                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
-                const convRepId = conv.assignedTo || 'Unassigned';
-                const convRepName = convRepId === 'Unassigned' ? 'Unassigned' : (usersMap[convRepId] || convRepId);
-                const convMessageType = conv.lastMessageType || conv.type;
-                
-                return convRepName === repName && convMessageType === messageType && convDate >= currentDateRangeStart && convDate <= currentDateRangeEnd;
-            });
+        async function showDailyLeadsList(repName, type) {
+            const leads = allFetchedConversations
+                .filter(conv => {
+                    const date = new Date(conv.lastMessageDate || conv.dateAdded);
+                    if (date < filterStartDate || date > filterEndDate) return false;
+                    const contact = allFetchedContacts.find(c => c.id === conv.contactId);
+                    if (!contact || !contactMatchesProject(contact)) return false;
+                    const r = conv.assignedTo ? (usersMap[conv.assignedTo] || conv.assignedTo) : 'Unassigned';
+                    const t = conv.lastMessageType || conv.type;
+                    return r === repName && (type === 'TYPE_WHATSAPP' ? t === 'TYPE_WHATSAPP' : (t === 'TYPE_PHONE' || t === 'TYPE_CALL'));
+                });
 
-            if (leads.length === 0) return;
-
+            const uniqueIds = new Set(leads.map(l => l.contactId));
             let html = '';
-            const uniqueContactIds = new Set(leads.map(l => l.contactId));
-            
-            for (const contactId of uniqueContactIds) {
-                const contact = allFetchedContacts.find(c => c.id === contactId);
+            for (const id of uniqueIds) {
+                const contact = allFetchedContacts.find(c => c.id === id);
                 if (!contact) continue;
-
-                const conv = leads.find(l => l.contactId === contactId);
+                const conv = leads.find(l => l.contactId === id);
                 const name = await getContactDisplayName(contact);
                 const phone = contact.phone || '—';
                 const email = contact.email || '—';
-                const lastMessageDate = conv?.lastMessageDate ? formatDateWithDay(conv.lastMessageDate) : '—';
-
-                html += `
-                    <div class="lead-item" onclick="showLeadDetail('${contact.id}')">
-                        <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
-                        <div class="lead-info">
-                            <div><span class="detail-label">Phone:</span> <span class="detail-value">${escapeHtml(phone)}</span></div>
-                            <div><span class="detail-label">Email:</span> <span class="detail-value">${escapeHtml(email)}</span></div>
-                            <div><span class="detail-label">Last Message:</span> <span class="detail-value">${lastMessageDate}</span></div>
-                        </div>
+                const date = conv?.lastMessageDate ? formatDateWithDay(conv.lastMessageDate) : '—';
+                html += `<div class="lead-item" onclick="showLeadDetail('${id}')">
+                    <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
+                    <div class="lead-info">
+                        <div><span class="detail-label">Phone:</span> ${escapeHtml(phone)}</div>
+                        <div><span class="detail-label">Email:</span> ${escapeHtml(email)}</div>
+                        <div><span class="detail-label">Last Message:</span> ${date}</div>
                     </div>
-                `;
+                </div>`;
             }
-
-            const typeLabel = messageType === 'TYPE_WHATSAPP' ? 'WhatsApp' : 'Call';
-            const startDateStr = dateStart.value || new Date().toISOString().split('T')[0];
-            const endDateStr = dateEnd.value || new Date().toISOString().split('T')[0];
-            const dateRangeLabel = startDateStr === endDateStr ? startDateStr : `${startDateStr} to ${endDateStr}`;
-            
-            document.getElementById('modalTitle').textContent = `${repName} - ${typeLabel} Contacts (${dateRangeLabel})`;
-            document.getElementById('leadDetailsContent').innerHTML = html;
+            const typeLabel = type === 'TYPE_WHATSAPP' ? 'WhatsApp' : 'Call';
+            document.getElementById('modalTitle').textContent = `${repName} - ${typeLabel} Contacts`;
+            document.getElementById('leadDetailsContent').innerHTML = html || '<p>No contacts found.</p>';
             leadDetailsModal.show();
         }
 
         function showDailyBreakdown(repName) {
-            const repData = currentDailyRepActivityMap[repName];
-            if (!repData) return;
-
-            let html = '<div class="daily-breakdown-container">';
-            html += '<div class="mb-3 d-flex justify-content-between align-items-center">';
-            html += '<h6 class="mb-0">Daily Activity Breakdown</h6>';
-            html += `<button class="btn btn-sm btn-success" onclick="exportDailyBreakdownCSV('${escapeHtml(repName)}')"><i class="fas fa-download me-1"></i>Export CSV</button>`;
-            html += '</div>';
-            html += '<table class="table table-sm"><thead><tr><th>Date</th><th>WhatsApp</th><th>Calls</th><th>Total</th></tr></thead><tbody>';
-
-            const sortedDays = Object.entries(repData.dailyBreakdown)
-                .sort(([dayA], [dayB]) => dayB.localeCompare(dayA)); // Sort newest first
-
-            sortedDays.forEach(([day, counts]) => {
-                const total = counts.whatsapp + counts.call;
-                const dayDate = new Date(day);
-                const formattedDay = dayDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-                html += `<tr><td>${formattedDay}</td><td>${counts.whatsapp}</td><td>${counts.call}</td><td><strong>${total}</strong></td></tr>`;
-            });
-
-            html += '</tbody></table>';
-            html += '</div>';
-
+            const data = currentDailyRepActivityMap[repName];
+            if (!data) return;
+            let html = `<div class="mb-3 d-flex justify-content-between"><h6>Daily Activity Breakdown</h6>
+                <button class="btn btn-sm btn-success" onclick="exportDailyBreakdownCSV('${escapeHtml(repName)}')">Export CSV</button></div>
+                <table class="table table-sm"><thead><tr><th>Date</th><th>WhatsApp</th><th>Calls</th><th>Total</th></tr></thead><tbody>`;
+            Object.entries(data.dailyBreakdown)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .forEach(([day, c]) => {
+                    const total = c.whatsapp + c.call;
+                    const formatted = new Date(day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    html += `<tr><td>${formatted}</td><td>${c.whatsapp}</td><td>${c.call}</td><td><strong>${total}</strong></td></tr>`;
+                });
+            html += `</tbody></table>`;
             document.getElementById('modalTitle').textContent = `${repName} - Daily Breakdown`;
             document.getElementById('leadDetailsContent').innerHTML = html;
             leadDetailsModal.show();
         }
 
         function exportDailyBreakdownCSV(repName) {
-            const repData = currentDailyRepActivityMap[repName];
-            if (!repData) return;
-
+            const data = currentDailyRepActivityMap[repName];
+            if (!data) return;
             let csv = 'Date,WhatsApp,Calls,Total\n';
-
-            const sortedDays = Object.entries(repData.dailyBreakdown)
-                .sort(([dayA], [dayB]) => dayB.localeCompare(dayA)); // Sort newest first
-
-            sortedDays.forEach(([day, counts]) => {
-                const total = counts.whatsapp + counts.call;
-                csv += `${day},${counts.whatsapp},${counts.call},${total}\n`;
-            });
-
-            const startDate = dateStart.value || new Date().toISOString().split('T')[0];
-            const endDate = dateEnd.value || new Date().toISOString().split('T')[0];
-            const filename = `Daily_Breakdown_${escapeHtml(repName)}_${startDate}_to_${endDate}.csv`;
-            
-            downloadCSV(filename, csv);
+            Object.entries(data.dailyBreakdown)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .forEach(([day, c]) => {
+                    csv += `${day},${c.whatsapp},${c.call},${c.whatsapp + c.call}\n`;
+                });
+            downloadCSV(`Breakdown_${repName}_${dateStart.value}_to_${dateEnd.value}.csv`, csv);
         }
     </script>
 </body>
