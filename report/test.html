@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJ360 Reports Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        .dashboard-header h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .dashboard-header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .nav-tabs {
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            gap: 0.5rem;
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            background: transparent;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 0.75rem 1.5rem;
+        }
+        .nav-tabs .nav-link:hover {
+            color: var(--primary-color);
+            background: #f0f0f0;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background: white;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            background: white;
+        }
+        .card-header {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(44, 62, 80, 0.05));
+            border-bottom: 2px solid rgba(52, 152, 219, 0.1);
+            font-weight: 700;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-body {
+            padding: 2rem;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(46, 204, 113, 0.1));
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        .stat-box-title {
+            color: #6c757d;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .stat-box-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .global-filters {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        .daily-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .rep-card {
+            background: white;
+            color: var(--secondary-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        .rep-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(52, 152, 219, 0.4);
+        }
+        .rep-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+        }
+        .contact-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            color: var(--secondary-color);
+        }
+        .contact-stat:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .contact-label {
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--secondary-color);
+        }
+        .contact-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .contact-badge:hover {
+            background: var(--secondary-color);
+            transform: scale(1.08);
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            margin-top: 1rem;
+            border-top: 2px solid var(--primary-color);
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--primary-color);
+        }
+        .no-data-container {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.05), rgba(52, 152, 219, 0.05));
+            border-radius: 12px;
+            border: 2px dashed #e9ecef;
+        }
+        .no-data-container i {
+            font-size: 3rem;
+            color: #bdc3c7;
+            margin-bottom: 1rem;
+        }
+        .no-data-container p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 500;
+        }
+        .modal-body {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .lead-item {
+            padding: 1rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f8f9fa;
+        }
+        .lead-item:hover {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-color);
+        }
+        .lead-name {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+            min-width: 120px;
+            display: inline-block;
+        }
+        .table th {
+            border-top: none;
+            font-weight: 700;
+            color: var(--secondary-color);
+            background-color: rgba(52, 152, 219, 0.05);
+            border-bottom: 2px solid rgba(52, 152, 219, 0.1);
+        }
+        .badge-aging-5 {
+            background: #90EE90 !important;
+            color: black;
+        }
+        .badge-aging-10 {
+            background: #FFD700 !important;
+            color: black;
+        }
+        .badge-aging-15 {
+            background: #FFA500 !important;
+            color: black;
+        }
+        .badge-aging-30 {
+            background: #FF6347 !important;
+            color: white;
+        }
+        .badge-aging-more {
+            background: #DC143C !important;
+            color: white;
+        }
+        .clickable-badge {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .clickable-badge:hover {
+            transform: scale(1.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+        .export-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        .export-btn:hover {
+            background: #27ae60;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <h1><i class="fas fa-chart-line me-3"></i>SJ360 Reports Dashboard</h1>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-3">Fetching data...</p>
+        </div>
+
+        <!-- GLOBAL FILTERS -->
+        <div class="global-filters">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                    <input type="date" id="dateStart" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
+                    <input type="date" id="dateEnd" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label for="projectFilter"><i class="fas fa-project-diagram me-2"></i>Interested Project</label>
+                    <select class="form-control" id="projectFilter">
+                        <option value="">All Projects</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                    <i class="fas fa-undo me-2"></i>Reset to Today
+                </button>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <button class="nav-link active" id="daily-tab" data-bs-toggle="tab" data-bs-target="#daily-content">
+                    <i class="fas fa-calendar-day me-2"></i>Daily Sales Activity
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="uncontacted-tab" data-bs-toggle="tab" data-bs-target="#uncontacted-content">
+                    <i class="fas fa-user-slash me-2"></i>Uncontacted Leads
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="aging-tab" data-bs-toggle="tab" data-bs-target="#aging-content">
+                    <i class="fas fa-hourglass-end me-2"></i>Leads Aging
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Daily Sales Activity Tab -->
+            <div class="tab-pane fade show active" id="daily-content">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="stat-box">
+                            <div class="stat-box-title">WhatsApp Leads Contacted</div>
+                            <div class="stat-box-value" id="whatsappCount">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-box">
+                            <div class="stat-box-title">Call Leads Contacted</div>
+                            <div class="stat-box-value" id="callCount">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="dailyTableContent"></div>
+            </div>
+
+            <!-- Uncontacted Leads Tab -->
+            <div class="tab-pane fade" id="uncontacted-content">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-user-slash me-2"></i>Uncontacted Leads</span>
+                        <button class="export-btn" onclick="exportUncontactedLeadsCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="uncontactedSearchInput" placeholder="Search by name, phone, email, or sales rep...">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Lead Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Assigned Sales Rep</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uncontactedTableBody">
+                                    <tr><td colspan="4" class="text-center">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center" id="uncontactedPagination"></ul>
+                        </nav>
+                        <div class="text-center text-muted small" id="uncontactedInfo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads Aging Tab -->
+            <div class="tab-pane fade" id="aging-content">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-hourglass-end me-2"></i>Sales Rep Performance & Lead Aging</span>
+                        <button class="export-btn" onclick="exportLeadsAgingCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="agingChart"></canvas>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Sales Rep</th>
+                                        <th>Total Leads</th>
+                                        <th>Attended</th>
+                                        <th>Unattended</th>
+                                        <th>0-5d</th>
+                                        <th>5-10d</th>
+                                        <th>10-15d</th>
+                                        <th>15-30d</th>
+                                        <th>>30d</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agingTableBody">
+                                    <tr><td colspan="9" class="text-center">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lead Details Modal -->
+    <div class="modal fade" id="leadDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Lead Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="leadDetailsContent">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedLocation = null;
+        let allFetchedContacts = [];
+        let allFetchedConversations = [];
+        let usersMap = {};
+        const ITEMS_PER_PAGE = 20;
+        let currentUncontactedPage = 1;
+        let currentSearchTerm = '';
+        let agingChart = null;
+        let currentDailyRepActivityMap = {};
+        let allUncontactedLeads = [];
+        let allProjects = new Set();
+
+        // Global filter state
+        let filterStartDate = null;
+        let filterEndDate = null;
+        let filterProject = '';
+
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const searchInput = document.getElementById('uncontactedSearchInput');
+        const dateStart = document.getElementById('dateStart');
+        const dateEnd = document.getElementById('dateEnd');
+        const projectFilter = document.getElementById('projectFilter');
+        const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+        searchInput.addEventListener('keyup', (e) => {
+            currentSearchTerm = e.target.value.toLowerCase();
+            currentUncontactedPage = 1;
+            renderUncontactedLeads();
+        });
+
+        function applyFilters() {
+            const startVal = dateStart.value;
+            const endVal = dateEnd.value;
+
+            if (!startVal || !endVal) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            const [sy, sm, sd] = startVal.split('-');
+            const [ey, em, ed] = endVal.split('-');
+            filterStartDate = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+            filterEndDate = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+
+            if (filterStartDate > filterEndDate) {
+                alert('Start date must be before or equal to end date');
+                return;
+            }
+
+            filterProject = projectFilter.value;
+
+            // Re-render all reports
+            renderDailySalesActivityForDateRange();
+            renderUncontactedLeads();
+            renderLeadsAging();
+        }
+
+        function resetFilters() {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${y}-${m}-${d}`;
+
+            dateStart.value = todayStr;
+            dateEnd.value = todayStr;
+            projectFilter.value = '';
+
+            filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
+            filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+            filterProject = '';
+
+            applyFilters();
+        }
+
+        async function initializeApp() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const locationIdFromUrl = urlParams.get('locationId');
+            if (!locationIdFromUrl) {
+                showConfigStatus('Error: No locationId parameter in URL. Add ?locationId=YOUR_ID', 'error');
+                return;
+            }
+            try {
+                const configUrl = `../config.json?t=${Date.now()}`;
+                const configData = await fetch(configUrl).then(r => r.json());
+                selectedLocation = configData.find(loc => loc.defaultLocationId === locationIdFromUrl);
+                if (!selectedLocation) {
+                    showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found in config.json`, 'error');
+                    return;
+                }
+                showConfigStatus(`Connected to location: ${selectedLocation.name}`, 'success');
+                fetchData();
+            } catch (err) {
+                showConfigStatus(`Config error: ${err.message}`, 'error');
+            }
+        }
+
+        async function fetchData() {
+            if (!selectedLocation) return;
+            showLoading();
+            try {
+                usersMap = await fetchUsersMap();
+                allFetchedContacts = await fetchAllContacts();
+                allFetchedConversations = await fetchAllConversations();
+
+                populateProjectFilter();
+
+                // Set default to today
+                const today = new Date();
+                dateStart.valueAsDate = today;
+                dateEnd.valueAsDate = today;
+                resetFilters(); // This triggers all renders
+            } catch (error) {
+                showConfigStatus(`API Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function populateProjectFilter() {
+            allProjects.clear();
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+
+            allFetchedContacts.forEach(contact => {
+                if (projectFieldId && contact.customFields) {
+                    const field = contact.customFields.find(cf => cf.id === projectFieldId);
+                    if (field && field.value) {
+                        const vals = Array.isArray(field.value) ? field.value : [field.value];
+                        vals.forEach(v => v && allProjects.add(String(v)));
+                    }
+                }
+            });
+
+            const sorted = Array.from(allProjects).sort();
+            projectFilter.innerHTML = '<option value="">All Projects</option>';
+            sorted.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                projectFilter.appendChild(opt);
+            });
+        }
+
+        // Helper: Check if contact matches current project filter
+        function contactMatchesProject(contact) {
+            if (!filterProject) return true;
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+            if (!projectFieldId || !contact.customFields) return false;
+            const field = contact.customFields.find(cf => cf.id === projectFieldId);
+            if (!field || !field.value) return false;
+            const values = Array.isArray(field.value) ? field.value : [field.value];
+            return values.some(v => String(v) === filterProject);
+        }
+
+        async function fetchUsersMap() {
+            const usersMap = {};
+            try {
+                const url = `https://services.leadconnectorhq.com/users/?locationId=${selectedLocation.defaultLocationId}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
+                        'Version': '2021-07-28'
+                    }
+                });
+                if (!response.ok) return usersMap;
+                const data = await response.json();
+                (data.users || []).forEach(user => {
+                    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || user.id;
+                    usersMap[user.id] = name;
+                });
+            } catch (err) { console.warn('Users fetch error:', err); }
+            return usersMap;
+        }
+
+        async function fetchAllContacts() {
+            let contacts = [];
+            let searchAfter = null;
+            const limit = 100;
+            while (true) {
+                const body = { locationId: selectedLocation.defaultLocationId, pageLimit: limit };
+                if (searchAfter) body.searchAfter = searchAfter;
+                const response = await fetch('https://services.leadconnectorhq.com/contacts/search', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
+                        'Content-Type': 'application/json',
+                        'Version': selectedLocation.apiVersion || '2021-07-28'
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+                const data = await response.json();
+                const batch = data.contacts || [];
+                if (batch.length === 0) break;
+                contacts = contacts.concat(batch);
+                if (batch.length < limit) break;
+                searchAfter = batch[batch.length - 1].searchAfter;
+                if (!searchAfter) break;
+            }
+            return contacts;
+        }
+
+        async function fetchAllConversations() {
+            const conversations = [];
+            let startAfterDate = null;
+            const limit = 100;
+            const maxFetches = 1000;
+            let fetchCount = 0;
+
+            while (fetchCount < maxFetches) {
+                const params = new URLSearchParams({
+                    locationId: selectedLocation.defaultLocationId,
+                    limit: limit.toString(),
+                    sort: 'desc',
+                    sortBy: 'last_message_date'
+                });
+                if (startAfterDate) params.append('startAfterDate', startAfterDate);
+                const url = `https://services.leadconnectorhq.com/conversations/search?${params}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
+                        'Version': selectedLocation.apiVersion || '2021-07-28'
+                    }
+                });
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(`Conversations API error: ${response.status} – ${err}`);
+                }
+                const data = await response.json();
+                const batch = data.conversations || [];
+                if (batch.length === 0) break;
+                conversations.push(...batch);
+                fetchCount++;
+                if (batch.length < limit) break;
+                const last = batch[batch.length - 1];
+                if (!last?.lastMessageDate) break;
+                startAfterDate = last.lastMessageDate;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return conversations;
+        }
+
+        async function getContactDisplayName(contact) {
+            return [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName || '—';
+        }
+
+        function formatDateWithDay(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function renderDailySalesActivityForDateRange() {
+            const repActivityMap = {};
+            let totalWhatsappCount = 0;
+            let totalCallCount = 0;
+
+            allFetchedConversations.forEach(conv => {
+                const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
+                if (convDate < filterStartDate || convDate > filterEndDate) return;
+
+                const contact = allFetchedContacts.find(c => c.id === conv.contactId);
+                if (!contact || !contactMatchesProject(contact)) return;
+
+                const repId = conv.assignedTo || 'Unassigned';
+                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+                const messageType = conv.lastMessageType || conv.type;
+
+                if (!repActivityMap[repName]) {
+                    repActivityMap[repName] = { whatsappCount: 0, callCount: 0, dailyBreakdown: {} };
+                }
+
+                const dayKey = convDate.toISOString().split('T')[0];
+                if (!repActivityMap[repName].dailyBreakdown[dayKey]) {
+                    repActivityMap[repName].dailyBreakdown[dayKey] = { whatsapp: 0, call: 0 };
+                }
+
+                if (messageType === 'TYPE_WHATSAPP') {
+                    repActivityMap[repName].whatsappCount++;
+                    repActivityMap[repName].dailyBreakdown[dayKey].whatsapp++;
+                    totalWhatsappCount++;
+                } else if (messageType === 'TYPE_PHONE' || messageType === 'TYPE_CALL') {
+                    repActivityMap[repName].callCount++;
+                    repActivityMap[repName].dailyBreakdown[dayKey].call++;
+                    totalCallCount++;
+                }
+            });
+
+            document.getElementById('whatsappCount').textContent = totalWhatsappCount;
+            document.getElementById('callCount').textContent = totalCallCount;
+            currentDailyRepActivityMap = repActivityMap;
+            renderDailySalesActivityTableView();
+        }
+
+        function renderDailySalesActivityTableView() {
+            const container = document.getElementById('dailyTableContent');
+            if (Object.keys(currentDailyRepActivityMap).length === 0) {
+                container.innerHTML = `<div class="card"><div class="card-body"><div class="no-data-container"><i class="fas fa-inbox"></i><p>No activity data for the selected filters</p></div></div></div>`;
+                return;
+            }
+
+            const dateRangeLabel = dateStart.value === dateEnd.value ? dateStart.value : `${dateStart.value} to ${dateEnd.value}`;
+            const projectLabel = filterProject ? ` | Project: ${filterProject}` : '';
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <span>Daily Sales Activity (${dateRangeLabel}${projectLabel})</span>
+                            <small class="d-block text-muted mt-1">Total contacts across all days in range</small>
+                        </div>
+                        <button class="export-btn" onclick="exportDailySalesActivityCSV()">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Sales Rep</th>
+                                        <th>WhatsApp Contacts</th>
+                                        <th>Call Contacts</th>
+                                        <th>Total Contacts</th>
+                                        <th>Daily Breakdown</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+
+            Object.entries(currentDailyRepActivityMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([rep, activity]) => {
+                    const total = activity.whatsappCount + activity.callCount;
+                    html += `
+                        <tr>
+                            <td><strong>${escapeHtml(rep)}</strong></td>
+                            <td><span class="badge bg-primary clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_WHATSAPP')">${activity.whatsappCount}</span></td>
+                            <td><span class="badge bg-success clickable-badge" onclick="showDailyLeadsList('${escapeHtml(rep)}', 'TYPE_CALL')">${activity.callCount}</span></td>
+                            <td><strong>${total}</strong></td>
+                            <td><button class="btn btn-sm btn-outline-secondary" onclick="showDailyBreakdown('${escapeHtml(rep)}')"><i class="fas fa-chart-bar me-1"></i>Details</button></td>
+                        </tr>`;
+                });
+
+            html += `</tbody></table></div></div></div>`;
+            container.innerHTML = html;
+        }
+
+        async function renderUncontactedLeads() {
+            const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
+            let uncontacted = allFetchedContacts
+                .filter(c => !contactedIds.has(c.id) && contactMatchesProject(c));
+
+            if (currentSearchTerm) {
+                uncontacted = uncontacted.filter(contact => {
+                    const name = `${contact.firstName || ''} ${contact.lastName || ''} ${contact.contactName || ''}`.toLowerCase();
+                    const phone = (contact.phone || '').toLowerCase();
+                    const email = (contact.email || '').toLowerCase();
+                    const repName = (usersMap[contact.assignedTo || ''] || '').toLowerCase();
+                    return `${name} ${phone} ${email} ${repName}`.includes(currentSearchTerm);
+                });
+            }
+
+            const tbody = document.getElementById('uncontactedTableBody');
+            const info = document.getElementById('uncontactedInfo');
+            const pag = document.getElementById('uncontactedPagination');
+
+            if (uncontacted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No uncontacted leads found.</td></tr>';
+                info.textContent = ''; pag.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(uncontacted.length / ITEMS_PER_PAGE);
+            const start = (currentUncontactedPage - 1) * ITEMS_PER_PAGE;
+            const end = Math.min(start + ITEMS_PER_PAGE, uncontacted.length);
+            const pageData = uncontacted.slice(start, end);
+
+            tbody.innerHTML = '';
+            for (const contact of pageData) {
+                const name = await getContactDisplayName(contact);
+                const phone = contact.phone || '—';
+                const email = contact.email || '—';
+                const repName = usersMap[contact.assignedTo || ''] || 'Unassigned';
+                tbody.innerHTML += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(phone)}</td><td>${escapeHtml(email)}</td><td>${escapeHtml(repName)}</td></tr>`;
+            }
+
+            info.textContent = `Showing ${start + 1}–${end} of ${uncontacted.length} uncontacted leads`;
+            renderPagination(pag, totalPages, currentUncontactedPage, p => {
+                currentUncontactedPage = p;
+                renderUncontactedLeads();
+            });
+        }
+
+        async function renderLeadsAging() {
+            const repData = {};
+            window.repDataCache = repData;
+
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
+
+                const repId = contact.assignedTo || 'Unassigned';
+                const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
+                
+                // Check if contact has conversations within the date range
+                const convsInRange = allFetchedConversations.filter(c => {
+                    if (c.contactId !== contact.id) return false;
+                    const convDate = new Date(c.lastMessageDate || c.dateAdded);
+                    return convDate >= filterStartDate && convDate <= filterEndDate;
+                });
+                const hasConvInRange = convsInRange.length > 0;
+                const daysOld = Math.floor((Date.now() - new Date(contact.dateAdded)) / 86400000);
+
+                if (!repData[repName]) {
+                    repData[repName] = {
+                        rep: repName,
+                        totalLeads: 0,
+                        attendedLeads: [], unattendedLeads: [],
+                        aging0to5: [], aging5to10: [], aging10to15: [], aging15to30: [], agingOver30: []
+                    };
+                }
+                const d = repData[repName];
+                d.totalLeads++;
+                if (hasConvInRange) {
+                    d.attendedLeads.push(contact);
+                } else {
+                    d.unattendedLeads.push(contact);
+                    if (daysOld <= 5) d.aging0to5.push(contact);
+                    else if (daysOld <= 10) d.aging5to10.push(contact);
+                    else if (daysOld <= 15) d.aging10to15.push(contact);
+                    else if (daysOld <= 30) d.aging15to30.push(contact);
+                    else d.agingOver30.push(contact);
+                }
+            }
+
+            const sortedReps = Object.values(repData).sort((a, b) => a.rep.localeCompare(b.rep));
+            renderAgingChart(sortedReps);
+
+            const tbody = document.getElementById('agingTableBody');
+            tbody.innerHTML = sortedReps.length === 0
+                ? '<tr><td colspan="9" class="text-center">No data for selected filters.</td></tr>'
+                : '';
+
+            sortedReps.forEach(data => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${escapeHtml(data.rep)}</strong></td>
+                        <td><strong>${data.totalLeads}</strong></td>
+                        <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(this, 'Attended')">${data.attendedLeads.length}</span></td>
+                        <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(this, 'Unattended')">${data.unattendedLeads.length}</span></td>
+                        <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(this, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
+                        <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(this, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
+                        <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(this, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
+                        <td><span class="badge badge-aging-30 clickable-badge" onclick="showLeadsList(this, 'Aging 15-30d')">${data.aging15to30.length}</span></td>
+                        <td><span class="badge badge-aging-more clickable-badge" onclick="showLeadsList(this, 'Aging >30d')">${data.agingOver30.length}</span></td>
+                    </tr>`;
+            });
+        }
+
+        function renderAgingChart(sortedReps) {
+            const ctx = document.getElementById('agingChart');
+            if (!ctx) return;
+            if (agingChart) agingChart.destroy();
+
+            const title = filterProject ? `Lead Aging - ${filterProject}` : 'Lead Aging - All Projects';
+
+            agingChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedReps.map(r => r.rep),
+                    datasets: [
+                        { label: '0-5d', data: sortedReps.map(r => r.aging0to5.length), backgroundColor: 'rgba(0, 180, 219, 0.8)' },
+                        { label: '5-10d', data: sortedReps.map(r => r.aging5to10.length), backgroundColor: 'rgba(102, 126, 234, 0.8)' },
+                        { label: '10-15d', data: sortedReps.map(r => r.aging10to15.length), backgroundColor: 'rgba(240, 147, 251, 0.8)' },
+                        { label: '15-30d', data: sortedReps.map(r => r.aging15to30.length), backgroundColor: 'rgba(250, 112, 154, 0.8)' },
+                        { label: '>30d', data: sortedReps.map(r => r.agingOver30.length), backgroundColor: 'rgba(255, 107, 107, 0.8)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' }, title: { display: true, text: title, font: { size: 14, weight: 'bold' } } },
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderPagination(container, totalPages, currentPage, onChange) {
+            container.innerHTML = '';
+            const create = (text, page, disabled = false, active = false) => {
+                const li = document.createElement('li');
+                li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = text;
+                if (!disabled && page >= 1 && page <= totalPages) {
+                    a.addEventListener('click', e => { e.preventDefault(); onChange(page); });
+                }
+                li.appendChild(a);
+                return li;
+            };
+            container.appendChild(create('First', 1, currentPage === 1));
+            container.appendChild(create('Prev', currentPage - 1, currentPage === 1));
+            let startPage = Math.max(1, currentPage - 3);
+            let endPage = Math.min(totalPages, startPage + 6);
+            if (endPage - startPage + 1 < 7) startPage = Math.max(1, endPage - 6);
+            for (let p = startPage; p <= endPage; p++) {
+                container.appendChild(create(p, p, false, p === currentPage));
+            }
+            container.appendChild(create('Next', currentPage + 1, currentPage === totalPages));
+            container.appendChild(create('Last', totalPages, currentPage === totalPages));
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showLoading() { loadingSpinner.style.display = 'block'; }
+        function hideLoading() { loadingSpinner.style.display = 'none'; }
+
+        function showConfigStatus(message, type) {
+            const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+            const html = `<div class="alert ${alertClass} mt-3">${message}</div>`;
+            const container = document.querySelector('.container-fluid');
+            container.querySelector('.alert')?.remove();
+            container.insertAdjacentHTML('afterbegin', html);
+            setTimeout(() => container.querySelector('.alert')?.remove(), 5000);
+        }
+
+        // CSV Exports (unchanged logic, just use current filters)
+        function downloadCSV(filename, content) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function escapeCSV(val) {
+            if (!val) return '';
+            const s = String(val);
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+        }
+
+        async function exportDailySalesActivityCSV() {
+            let csv = 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
+            Object.entries(currentDailyRepActivityMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([rep, act]) => {
+                    const total = act.whatsappCount + act.callCount;
+                    csv += `${escapeCSV(rep)},${act.whatsappCount},${act.callCount},${total}\n`;
+                });
+            const fn = dateStart.value === dateEnd.value
+                ? `Daily_Activity_${dateStart.value}${filterProject ? '_' + filterProject : ''}.csv`
+                : `Daily_Activity_${dateStart.value}_to_${dateEnd.value}${filterProject ? '_' + filterProject : ''}.csv`;
+            downloadCSV(fn, csv);
+        }
+
+        async function exportUncontactedLeadsCSV() {
+            const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
+            const leads = allFetchedContacts.filter(c => !contactedIds.has(c.id) && contactMatchesProject(c));
+            let csv = 'Lead Name,Phone,Email,Assigned Sales Rep\n';
+            for (const c of leads) {
+                const name = await getContactDisplayName(c);
+                const phone = c.phone || '—';
+                const email = c.email || '—';
+                const rep = usersMap[c.assignedTo || ''] || 'Unassigned';
+                csv += `${escapeCSV(name)},${escapeCSV(phone)},${escapeCSV(email)},${escapeCSV(rep)}\n`;
+            }
+            downloadCSV(`Uncontacted_Leads${filterProject ? '_' + filterProject : ''}.csv`, csv);
+        }
+
+        async function exportLeadsAgingCSV() {
+            // Re-use same logic as renderLeadsAging but export
+            const repData = {};
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
+                const repName = contact.assignedTo ? (usersMap[contact.assignedTo] || contact.assignedTo) : 'Unassigned';
+                const hasConv = allFetchedConversations.some(c => c.contactId === contact.id);
+                const days = Math.floor((Date.now() - new Date(contact.dateAdded)) / 86400000);
+                if (!repData[repName]) repData[repName] = { total: 0, attended: 0, unattended: 0, a5: 0, a10: 0, a15: 0, a30: 0, a30p: 0 };
+                repData[repName].total++;
+                if (hasConv) repData[repName].attended++;
+                else {
+                    repData[repName].unattended++;
+                    if (days <= 5) repData[repName].a5++;
+                    else if (days <= 10) repData[repName].a10++;
+                    else if (days <= 15) repData[repName].a15++;
+                    else if (days <= 30) repData[repName].a30++;
+                    else repData[repName].a30p++;
+                }
+            }
+            let csv = 'Sales Rep,Total Leads,Attended,Unattended,0-5d,5-10d,10-15d,15-30d,>30d\n';
+            Object.keys(repData).sort().forEach(r => {
+                const d = repData[r];
+                csv += `${escapeCSV(r)},${d.total},${d.attended},${d.unattended},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
+            });
+            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}.csv`, csv);
+        }
+
+        // Modal functions remain unchanged except they now respect current filters
+        async function showLeadsList(el, category) {
+            const repName = el.closest('tr').querySelector('td').textContent.trim();
+            const data = window.repDataCache[repName];
+            let leads = [];
+            switch (category) {
+                case 'Attended': leads = data.attendedLeads; break;
+                case 'Unattended': leads = data.unattendedLeads; break;
+                case 'Aging 0-5d': leads = data.aging0to5; break;
+                case 'Aging 5-10d': leads = data.aging5to10; break;
+                case 'Aging 10-15d': leads = data.aging10to15; break;
+                case 'Aging 15-30d': leads = data.aging15to30; break;
+                case 'Aging >30d': leads = data.agingOver30; break;
+            }
+            let html = '';
+            for (const c of leads) {
+                const name = await getContactDisplayName(c);
+                const phone = c.phone || '—';
+                const email = c.email || '—';
+                const lastDate = allFetchedConversations.find(conv => conv.contactId === c.id)?.lastMessageDate || c.dateAdded;
+                html += `<div class="lead-item" onclick="showLeadDetail('${c.id}')">
+                    <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
+                    <div class="lead-info">
+                        <div><span class="detail-label">Phone:</span> ${escapeHtml(phone)}</div>
+                        <div><span class="detail-label">Email:</span> ${escapeHtml(email)}</div>
+                        <div><span class="detail-label">Last Activity:</span> ${formatDateWithDay(lastDate)}</div>
+                    </div>
+                </div>`;
+            }
+            document.getElementById('modalTitle').textContent = `${repName} - ${category}`;
+            document.getElementById('leadDetailsContent').innerHTML = html || '<p>No leads in this category.</p>';
+            leadDetailsModal.show();
+        }
+
+        async function showLeadDetail(id) {
+            const contact = allFetchedContacts.find(c => c.id === id);
+            if (!contact) return;
+            const name = await getContactDisplayName(contact);
+            const phone = contact.phone || '—';
+            const email = contact.email || '—';
+            const rep = usersMap[contact.assignedTo || ''] || 'Unassigned';
+            const created = new Date(contact.dateAdded).toLocaleDateString();
+            const convCount = allFetchedConversations.filter(c => c.contactId === id).length;
+            let html = `
+                <div><strong>Name:</strong> ${escapeHtml(name)}</div><hr>
+                <div><strong>Phone:</strong> ${escapeHtml(phone)}</div><hr>
+                <div><strong>Email:</strong> ${escapeHtml(email)}</div><hr>
+                <div><strong>Assigned To:</strong> ${escapeHtml(rep)}</div><hr>
+                <div><strong>Date Added:</strong> ${created}</div><hr>
+                <div><strong>Conversations:</strong> ${convCount}</div>
+            `;
+            if (contact.tags?.length) {
+                html += `<hr><div><strong>Tags:</strong> ${contact.tags.map(t => `<span class="badge bg-info me-1">${escapeHtml(t)}</span>`).join('')}</div>`;
+            }
+            document.getElementById('modalTitle').textContent = name;
+            document.getElementById('leadDetailsContent').innerHTML = html;
+            leadDetailsModal.show();
+        }
+
+        async function showDailyLeadsList(repName, type) {
+            const leads = allFetchedConversations
+                .filter(conv => {
+                    const date = new Date(conv.lastMessageDate || conv.dateAdded);
+                    if (date < filterStartDate || date > filterEndDate) return false;
+                    const contact = allFetchedContacts.find(c => c.id === conv.contactId);
+                    if (!contact || !contactMatchesProject(contact)) return false;
+                    const r = conv.assignedTo ? (usersMap[conv.assignedTo] || conv.assignedTo) : 'Unassigned';
+                    const t = conv.lastMessageType || conv.type;
+                    return r === repName && (type === 'TYPE_WHATSAPP' ? t === 'TYPE_WHATSAPP' : (t === 'TYPE_PHONE' || t === 'TYPE_CALL'));
+                });
+
+            const uniqueIds = new Set(leads.map(l => l.contactId));
+            let html = '';
+            for (const id of uniqueIds) {
+                const contact = allFetchedContacts.find(c => c.id === id);
+                if (!contact) continue;
+                const conv = leads.find(l => l.contactId === id);
+                const name = await getContactDisplayName(contact);
+                const phone = contact.phone || '—';
+                const email = contact.email || '—';
+                const date = conv?.lastMessageDate ? formatDateWithDay(conv.lastMessageDate) : '—';
+                html += `<div class="lead-item" onclick="showLeadDetail('${id}')">
+                    <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
+                    <div class="lead-info">
+                        <div><span class="detail-label">Phone:</span> ${escapeHtml(phone)}</div>
+                        <div><span class="detail-label">Email:</span> ${escapeHtml(email)}</div>
+                        <div><span class="detail-label">Last Message:</span> ${date}</div>
+                    </div>
+                </div>`;
+            }
+            const typeLabel = type === 'TYPE_WHATSAPP' ? 'WhatsApp' : 'Call';
+            document.getElementById('modalTitle').textContent = `${repName} - ${typeLabel} Contacts`;
+            document.getElementById('leadDetailsContent').innerHTML = html || '<p>No contacts found.</p>';
+            leadDetailsModal.show();
+        }
+
+        function showDailyBreakdown(repName) {
+            const data = currentDailyRepActivityMap[repName];
+            if (!data) return;
+            let html = `<div class="mb-3 d-flex justify-content-between"><h6>Daily Activity Breakdown</h6>
+                <button class="btn btn-sm btn-success" onclick="exportDailyBreakdownCSV('${escapeHtml(repName)}')">Export CSV</button></div>
+                <table class="table table-sm"><thead><tr><th>Date</th><th>WhatsApp</th><th>Calls</th><th>Total</th></tr></thead><tbody>`;
+            Object.entries(data.dailyBreakdown)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .forEach(([day, c]) => {
+                    const total = c.whatsapp + c.call;
+                    const formatted = new Date(day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    html += `<tr><td>${formatted}</td><td>${c.whatsapp}</td><td>${c.call}</td><td><strong>${total}</strong></td></tr>`;
+                });
+            html += `</tbody></table>`;
+            document.getElementById('modalTitle').textContent = `${repName} - Daily Breakdown`;
+            document.getElementById('leadDetailsContent').innerHTML = html;
+            leadDetailsModal.show();
+        }
+
+        function exportDailyBreakdownCSV(repName) {
+            const data = currentDailyRepActivityMap[repName];
+            if (!data) return;
+            let csv = 'Date,WhatsApp,Calls,Total\n';
+            Object.entries(data.dailyBreakdown)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .forEach(([day, c]) => {
+                    csv += `${day},${c.whatsapp},${c.call},${c.whatsapp + c.call}\n`;
+                });
+            downloadCSV(`Breakdown_${repName}_${dateStart.value}_to_${dateEnd.value}.csv`, csv);
+        }
+    </script>
+</body>
+</html>
