@@ -437,6 +437,7 @@
                                         <th>Total Leads</th>
                                         <th>Attended</th>
                                         <th>Unattended</th>
+                                        <th>Conversion</th>   <!-- NEW COLUMN -->
                                         <th>0-5d</th>
                                         <th>5-10d</th>
                                         <th>10-15d</th>
@@ -445,7 +446,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="agingTableBody">
-                                    <tr><td colspan="9" class="text-center">Loading…</td></tr>
+                                    <tr><td colspan="10" class="text-center">Loading…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -870,6 +871,9 @@
             });
         }
 
+        /* --------------------------------------------------------------
+           LEADS AGING – now with CONVERSION column
+        -------------------------------------------------------------- */
         async function renderLeadsAging() {
             const repData = {};
             window.repDataCache = repData;
@@ -884,7 +888,6 @@
                 const repId = contact.assignedTo || 'Unassigned';
                 const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
                 
-                // Check if contact has any conversations (not filtered by date)
                 const isAttended = allFetchedConversations.some(c => c.contactId === contact.id);
                 const daysOld = Math.floor((Date.now() - addedDate) / 86400000);
 
@@ -915,16 +918,18 @@
 
             const tbody = document.getElementById('agingTableBody');
             tbody.innerHTML = sortedReps.length === 0
-                ? '<tr><td colspan="9" class="text-center">No data for selected filters.</td></tr>'
+                ? '<tr><td colspan="10" class="text-center">No data for selected filters.</td></tr>'
                 : '';
 
             sortedReps.forEach(data => {
+                const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${escapeHtml(data.rep)}</strong></td>
                         <td><strong>${data.totalLeads}</strong></td>
                         <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(this, 'Attended')">${data.attendedLeads.length}</span></td>
                         <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(this, 'Unattended')">${data.unattendedLeads.length}</span></td>
+                        <td><strong>${conversion}%</strong></td>
                         <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(this, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
                         <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(this, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
                         <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(this, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
@@ -1055,6 +1060,9 @@
             downloadCSV(`Uncontacted_Leads${filterProject ? '_' + filterProject : ''}.csv`, csv);
         }
 
+        /* --------------------------------------------------------------
+           LEADS AGING CSV – now includes Conversion column
+        -------------------------------------------------------------- */
         async function exportLeadsAgingCSV() {
             const repData = {};
             for (const contact of allFetchedContacts) {
@@ -1077,10 +1085,11 @@
                     else repData[repName].a30p++;
                 }
             }
-            let csv = 'Sales Rep,Total Leads,Attended,Unattended,0-5d,5-10d,10-15d,15-30d,>30d\n';
+            let csv = 'Sales Rep,Total Leads,Attended,Unattended,Conversion %,0-5d,5-10d,10-15d,15-30d,>30d\n';
             Object.keys(repData).sort().forEach(r => {
                 const d = repData[r];
-                csv += `${escapeCSV(r)},${d.total},${d.attended},${d.unattended},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
+                const conv = d.total === 0 ? 0 : ((d.attended / d.total) * 100).toFixed(1);
+                csv += `${escapeCSV(r)},${d.total},${d.attended},${d.unattended},${conv},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
             });
             downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}.csv`, csv);
         }
