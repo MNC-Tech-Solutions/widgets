@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Stages Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        :root {
+            --primary: #91AEC4;
+            --primary-dark: #2667cc;
+            --text: #374151;
+            --border: #d1d5db;
+        }
+        body {
+            font-family: 'Cem Seui', Tahoma, sans-serif;
+            background: white;
+            margin: 0;
+            padding: 15px;
+        }
+        .ghl-report-container { max-width: 1300px; margin: 0 auto; position: relative; }
+        
+        .controls {
+            display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; align-items: flex-end;
+            padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid var(--border);
+        }
+        .control-group { display: flex; flex-direction: column; width: 200px; }
+        label { margin-bottom: 6px; font-weight: 600; color: var(--text); font-size: 13px; }
+        .form-select, .form-control { height: 35px; font-size: 13px; }
+
+        .table-container { margin-top: 20px; overflow-x: auto; }
+        .ghl-report-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            background: #fff; border: 1px solid var(--border); border-radius: 8px;
+        }
+        .ghl-report-table th {
+            background: #f8f9fa; color: var(--text); font-weight: 600;
+            font-size: 13px; padding: 10px; border-bottom: 2px solid var(--border);
+        }
+        .ghl-report-table td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
+        .pipeline-row { font-weight: 600; font-size: 16px; color: var(--primary); background: #f8f9fa; }
+        .stage-row:hover { background: #f1f5f9; cursor: pointer; }
+        .stage-row td:first-child { padding-left: 30px; }
+
+        .modal-dialog { max-width: 95%; }
+        .modal-content { border-radius: 12px; border: none; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+        .modal-table td { white-space: nowrap; font-size: 12px; vertical-align: middle; }
+        
+        .pagination-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); display: none;
+            justify-content: center; align-items: center; z-index: 2000;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="ghl-report-container">
+    <h4 class="mb-3">Pipeline Stages Report</h4>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Date Range</label>
+            <select id="dateRange" class="form-select">
+                <option value="">All Dates</option>
+                <option value="thisWeek">This Week</option>
+                <option value="lastWeek">Last Week</option>
+                <option value="last7Days">Last 7 Days</option>
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="thisYear">This Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Source Category</label>
+            <select id="sourceCategory" class="form-select">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Source</label>
+            <select id="source" class="form-select">
+                <option value="">All Sources</option>
+            </select>
+        </div>
+        <div class="d-flex flex-grow-1 justify-content-between gap-2" style="align-self: flex-end;">
+            <button id="clearAllFilters" class="btn btn-outline-secondary btn-sm" style="height: 35px;">Clear</button>
+            <button id="globalExportBtn" class="btn btn-primary btn-sm" style="height: 35px;"><i class="bi bi-download"></i> Download Full Report</button>
+        </div>
+    </div>
+
+    <div id="errorMessage" class="alert alert-danger d-none"></div>
+
+    <div class="table-container">
+        <table id="reportTable" class="ghl-report-table">
+            <thead>
+                <tr>
+                    <th>Pipelines</th>
+                    <th>Stages</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="dateSelectionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Custom Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="modalDateRange" class="form-control" placeholder="Select dates">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary btn-sm w-100" id="applyDateFilter">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="opportunitiesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Records</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="m-0 fw-bold">Opportunities</h6>
+                    <button id="exportBtn" class="btn btn-outline-primary btn-sm"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+                </div>
+                <div class="table-container">
+                    <table class="table modal-table table-hover border">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Opportunity ID</th>
+                                <th>Opportunity Name</th>
+                                <th>Source</th>
+                                <th>Assigned User</th>
+                                <th>Status</th>
+                                <th>Phone Number</th>
+                                <th>Lead Value</th>
+                                <th>Project</th>
+                                <th>Opportunity Created</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-section">
+                    <span class="pagination-info" id="paginationInfo">Showing 0 to 0 of 0</span>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary btn-sm" id="prevPageBtn">Previous</button>
+                        <button class="btn btn-outline-primary btn-sm" id="nextPageBtn">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script type="module">
+    import { 
+        loadConfig, fetchPipelinesV2, fetchAllOpportunities, fetchAllUsers, 
+        formatDateTimeWithOffset, applyFilters 
+    } from '../ghlDataV2.js?v=1.0.1';
+
+    let CONFIG, locationId;
+    let pipelines = [];
+    let allOpportunities = [];
+    let filteredOpportunities = [];
+    let usersMap = new Map();
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+
+    let currentModalOps = [];
+    let currentModalPage = 1;
+    const itemsPerPage = 10;
+
+    const overlay = document.getElementById('loadingOverlay');
+
+    function getDateRange(range) {
+        const today = new Date();
+        let start, end;
+        switch (range) {
+            case 'thisWeek':
+                start = new Date(today); start.setDate(today.getDate() - today.getDay());
+                end = new Date(start); end.setDate(start.getDate() + 6);
+                break;
+            case 'lastWeek':
+                start = new Date(today); start.setDate(today.getDate() - today.getDay() - 7);
+                end = new Date(start); end.setDate(start.getDate() + 6);
+                break;
+            case 'last7Days':
+                start = new Date(today); start.setDate(today.getDate() - 7);
+                end = new Date(today);
+                break;
+            case 'thisMonth':
+                start = new Date(today.getFullYear(), today.getMonth(), 1);
+                end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'lastMonth':
+                start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                end = new Date(today.getFullYear(), today.getMonth(), 0);
+                break;
+            case 'thisYear':
+                start = new Date(today.getFullYear(), 0, 1);
+                end = new Date(today.getFullYear(), 11, 31);
+                break;
+            default: start = null; end = null;
+        }
+        return { start, end };
+    }
+
+    async function init() {
+        overlay.style.display = 'flex';
+        try {
+            const res = await loadConfig();
+            CONFIG = res.config;
+            locationId = res.locationId;
+
+            const users = await fetchAllUsers(CONFIG, locationId);
+            usersMap = new Map(users.map(u => [u.id, u.name]));
+
+            pipelines = await fetchPipelinesV2(CONFIG, locationId);
+            
+            const opPromises = pipelines.map(p => fetchAllOpportunities(CONFIG, locationId, p.id));
+            const results = await Promise.all(opPromises);
+            allOpportunities = results.flat();
+
+            populateDropdowns();
+            initPickers();
+            renderReport();
+        } catch (err) {
+            console.error(err);
+        }
+        overlay.style.display = 'none';
+    }
+
+    function populateDropdowns() {
+        const sources = [...new Set(allOpportunities.map(o => o.source).filter(Boolean))].sort();
+        const categories = [...new Set(allOpportunities.map(o => o.sourceCategory).filter(Boolean))].sort();
+
+        const sSelect = document.getElementById('source');
+        sources.forEach(s => sSelect.add(new Option(s, s)));
+
+        const cSelect = document.getElementById('sourceCategory');
+        categories.forEach(c => cSelect.add(new Option(c, c)));
+    }
+
+    function initPickers() {
+        dateRangePicker = flatpickr('#modalDateRange', {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            onClose: (dates) => {
+                if (dates.length === 2) {
+                    selectedStartDate = dates[0];
+                    selectedEndDate = dates[1];
+                    renderReport();
+                    bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+                }
+            }
+        });
+    }
+
+    function renderReport() {
+        const range = document.getElementById('dateRange').value;
+        const source = document.getElementById('source').value;
+        const category = document.getElementById('sourceCategory').value;
+
+        let startStr = null, endStr = null;
+        if (range === 'custom' && selectedStartDate) {
+            startStr = selectedStartDate.toISOString().split('T')[0];
+            endStr = selectedEndDate.toISOString().split('T')[0];
+        } else if (range) {
+            const dates = getDateRange(range);
+            startStr = dates.start.toISOString().split('T')[0];
+            endStr = dates.end.toISOString().split('T')[0];
+        }
+
+        filteredOpportunities = applyFilters(allOpportunities, null, startStr, endStr, new Set(), {
+            sourceCategory: category,
+            channels: source ? [source] : []
+        });
+
+        const tbody = document.getElementById('reportTableBody');
+        tbody.innerHTML = '';
+
+        pipelines.forEach(pipe => {
+            const pipeRow = document.createElement('tr');
+            pipeRow.className = 'pipeline-row';
+            pipeRow.innerHTML = `<td colspan="3">${pipe.name}</td>`;
+            tbody.appendChild(pipeRow);
+
+            pipe.stages.forEach(stage => {
+                const count = filteredOpportunities.filter(o => o.pipelineStageId === stage.id).length;
+                const tr = document.createElement('tr');
+                tr.className = 'stage-row';
+                tr.innerHTML = `<td class="ps-4"></td><td>${stage.name}</td><td><strong>${count}</strong></td>`;
+                tr.onclick = () => openModal(stage.id, stage.name);
+                tbody.appendChild(tr);
+            });
+        });
+    }
+
+    function openModal(stageId, stageName) {
+        currentModalOps = filteredOpportunities
+            .filter(o => o.pipelineStageId === stageId)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        currentModalPage = 1;
+        document.getElementById('modalTitle').textContent = `Records: ${stageName}`;
+        renderModalPage();
+
+        document.getElementById('exportBtn').onclick = () => exportCSV(currentModalOps, stageName, false);
+        new bootstrap.Modal(document.getElementById('opportunitiesModal')).show();
+    }
+
+    function renderModalPage() {
+        const tbody = document.getElementById('modalTableBody');
+        tbody.innerHTML = '';
+
+        const start = (currentModalPage - 1) * itemsPerPage;
+        const end = Math.min(start + itemsPerPage, currentModalOps.length);
+        const pageItems = currentModalOps.slice(start, end);
+
+        tbody.innerHTML = pageItems.map(op => `
+            <tr>
+                <td class="text-muted">${op.id}</td>
+                <td>${op.name}</td>
+                <td>${op.source || 'N/A'}</td>
+                <td>${usersMap.get(op.assignedTo) || 'Unassigned'}</td>
+                <td>${op.status || 'N/A'}</td>
+                <td>${op.contact?.phone || 'N/A'}</td>
+                <td>${op.monetaryValue || 0}</td>
+                <td>${op.project || 'N/A'}</td>
+                <td>${formatDateTimeWithOffset(op.createdAt)}</td>
+                <td>${op.status || 'N/A'}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('paginationInfo').textContent = 
+            `Showing ${currentModalOps.length > 0 ? start + 1 : 0} to ${end} of ${currentModalOps.length}`;
+        
+        document.getElementById('prevPageBtn').disabled = currentModalPage === 1;
+        document.getElementById('nextPageBtn').disabled = end >= currentModalOps.length;
+    }
+
+    // UPDATED EXPORT FUNCTION: Added isGlobal parameter
+    function exportCSV(ops, fileNameSuffix, isGlobal = false) {
+        let headers = ["Opportunity ID", "Opportunity Name", "Source", "Assigned User", "Status", "Phone Number", "Lead Value", "Project", "Contact Created", "Status"];
+        
+        // Add Pipeline and Stage headers to the START if it's the full report
+        if (isGlobal) {
+            headers = ["Pipeline", "Stage", ...headers];
+        }
+
+        const rows = ops.map(o => {
+            const rowData = [
+                o.id,
+                o.name,
+                o.source || '',
+                usersMap.get(o.assignedTo) || 'Unassigned',
+                o.status || '',
+                o.contact?.phone || '',
+                o.monetaryValue || 0,
+                o.project || '',
+                formatDateTimeWithOffset(o.createdAt),
+                o.status || ''
+            ];
+
+            if (isGlobal) {
+                const pipe = pipelines.find(p => p.id === o.pipelineId);
+                const stage = pipe ? pipe.stages.find(s => s.id === o.pipelineStageId) : null;
+                return [pipe ? pipe.name : 'Unknown', stage ? stage.name : 'Unknown', ...rowData];
+            }
+            return rowData;
+        });
+
+        let csv = headers.join(",") + "\n" + rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Report_${fileNameSuffix}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    document.getElementById('prevPageBtn').onclick = () => {
+        if (currentModalPage > 1) {
+            currentModalPage--;
+            renderModalPage();
+        }
+    };
+
+    document.getElementById('nextPageBtn').onclick = () => {
+        if (currentModalPage * itemsPerPage < currentModalOps.length) {
+            currentModalPage++;
+            renderModalPage();
+        }
+    };
+
+    document.getElementById('dateRange').addEventListener('change', function() {
+        if (this.value === 'custom') {
+            new bootstrap.Modal(document.getElementById('dateSelectionModal')).show();
+        } else {
+            selectedStartDate = null;
+            renderReport();
+        }
+    });
+
+    document.getElementById('source').onchange = renderReport;
+    document.getElementById('sourceCategory').onchange = renderReport;
+    document.getElementById('clearAllFilters').onclick = () => {
+        document.getElementById('dateRange').value = '';
+        document.getElementById('source').value = '';
+        document.getElementById('sourceCategory').value = '';
+        selectedStartDate = null;
+        renderReport();
+    };
+
+    // Global Export Logic: Pass true for isGlobal
+    document.getElementById('globalExportBtn').onclick = () => {
+        if (filteredOpportunities.length === 0) {
+            alert("No data available to export.");
+            return;
+        }
+        exportCSV(filteredOpportunities, "Full_Report", true);
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

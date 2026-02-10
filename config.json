@@ -128,5 +128,14 @@
             "sourceCategory": "N/A",
             "project": "N/A"
         }
+    },
+    {
+        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImRlTzlkNTVnY0EySU5NSGhLMlJDIiwidmVyc2lvbiI6MSwiaWF0IjoxNzU1NzYzNTIyNTA2LCJzdWIiOiJCZlc1YlA1Q1RmYmFhR3pVRU45NiJ9.Loyae_34ZTgEUwpTbErX9DzRQ8G5vsKjttocII_52uk",
+        "accessToken": "pit-24960780-620d-48c3-9359-945d1471552c",
+        "defaultLocationId": "UGB2AOTkcprwX9HHzDh9",
+        "name": "Suez Cap",
+        "customFieldIds": {
+            "sourceCategory": "5gORiLuYjewfkK6BGVR9"
+        }
     }
 ]
