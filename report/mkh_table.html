@@ -646,8 +646,61 @@
     const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
     const stageColors = ['#91aec4', '#b7d0e1', '#cadeed', '#dbecf4', '#e5e7eb'];
 
+    // Add these for conversations
+    let conversationsCache = [];
+    let conversationsByContactId = new Map();
+
     // Add these variables at the top with your other declarations
     let lastRefreshCheck = localStorage.getItem('ghl_last_refresh') || '0';
+
+    // Add these function
+    async function fetchAllConversations(config, locationId) {
+      const conversations = [];
+      let startAfterDate = null;
+      const limit = 100;
+      const maxFetches = 1000;
+      let fetchCount = 0;
+
+      while (fetchCount < maxFetches) {
+        const params = new URLSearchParams({
+          locationId: locationId,
+          limit: limit.toString(),
+          sort: 'desc',
+          sortBy: 'last_message_date'
+        });
+        if (startAfterDate) params.append('startAfterDate', startAfterDate.toString());
+        const url = `https://services.leadconnectorhq.com/conversations/search?${params}`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${config.accessToken}`,
+            'Version': config.apiVersion || '2021-07-28'
+          }
+        });
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error(`Conversations API error: ${response.status} – ${err}`);
+        }
+        const data = await response.json();
+        const batch = data.conversations || [];
+        if (batch.length === 0) break;
+        conversations.push(...batch);
+        fetchCount++;
+        if (batch.length < limit) break;
+        const last = batch[batch.length - 1];
+        if (!last?.lastMessageDate) break;
+        startAfterDate = last.lastMessageDate;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      console.log(`Fetched ${conversations.length} conversations.`);
+      return conversations;
+    }
+
+    function formatMessageType(type) {
+      if (!type) return 'Uncontacted';
+      return type.replace('TYPE_', '').replace(/_/g, ' ');
+    }
 
     // Add this function after your backgroundRefresh function
     async function checkForExternalRefresh() {
@@ -998,6 +1051,10 @@
       const users = await fetchAllUsers(CONFIG, locationId);
       usersMap = new Map(users.map(user => [user.id, user.name]));
 
+      // Add fetching conversations here
+      conversationsCache = await fetchAllConversations(CONFIG, locationId);
+      conversationsByContactId = new Map(conversationsCache.map(conv => [conv.contactId, conv]));
+
       updatePipelines();
       await updateChannels(pipelineSelect.value || pipelines[0]?.id);
       updateAgents();
@@ -1315,6 +1372,7 @@
           <th>Project</th>
           <th>Contact Created</th>
           <th>Team</th>
+          <th>Last Message Type</th> <!-- Added new column -->
         </tr>
       `;
       table.appendChild(thead);
@@ -1329,6 +1387,8 @@
         const op = currentOpportunities[i];
         const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
         const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        const conv = conversationsByContactId.get(op.contactId);
+        const lastMessageType = conv?.lastMessageType ? formatMessageType(conv.lastMessageType) : 'Uncontacted';
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${op.id || 'N/A'}</td>
@@ -1342,6 +1402,7 @@
           <td>${op.project || 'N/A'}</td>
           <td>${createdAtFormatted}</td>
           <td>${op.team || 'N/A'}</td>
+          <td>${lastMessageType}</td> <!-- Added new cell -->
         `;
         tbody.appendChild(row);
       }
@@ -1369,31 +1430,33 @@
         'Primary Contact Name',
         'Source',
         'Assigned User',
-        'Pipeline Name',
         'Status',
         'Phone Number',
         'Lead Value',
         'Project',
         'Contact Created',
-        'Team'
+        'Team',
+        'Last Message Type' // Added to CSV
       ];
 
       const rows = opportunities.map(op => {
         const assignedUserName = usersMap.get(op.assignedTo) || 'Unassigned';
         const createdAtFormatted = formatDateTimeWithOffset(op.createdAt);
+        const conv = conversationsByContactId.get(op.contactId);
+        const lastMessageType = conv?.lastMessageType ? formatMessageType(conv.lastMessageType) : 'Uncontacted';
         return [
           op.id || 'N/A',
           op.name || 'N/A',
           op.contact?.name || 'N/A',
           op.source || 'N/A',
           assignedUserName,
-          pipelines.find(p => p.id === op.pipelineId)?.name || 'N/A',
           op.status || 'N/A',
           op.contact?.phone || 'N/A',
           op.monetaryValue || 0,
           op.project || 'N/A',
           createdAtFormatted,
-          op.team || 'N/A'
+          op.team || 'N/A',
+          lastMessageType // Added to rows
         ].map(field => `"${field.toString().replace(/"/g, '""')}"`);
       });
 

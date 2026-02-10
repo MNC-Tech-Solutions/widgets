@@ -460,7 +460,7 @@
         const projectUserCounts = {};
         opportunities.forEach(op => {
           const project = op.project || 'N/A';
-          const user = usersMap.get(op.assignedTo) || `Unknown (${op.assignedTo})`;
+          const user = usersMap.get(op.assignedTo) || `Unassigned`;
           if (!projectUserCounts[project]) projectUserCounts[project] = {};
           projectUserCounts[project][user] = (projectUserCounts[project][user] || 0) + 1;
         });
