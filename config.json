@@ -137,5 +137,15 @@
         "customFieldIds": {
             "sourceCategory": "5gORiLuYjewfkK6BGVR9"
         }
+    },
+    {
+        "apiKey": "N/A",
+        "accessToken": "pit-0b2273d9-9676-436e-b6ae-dc75a4ea5cc7",
+        "defaultLocationId": "vyVrSY24jVqqDVno3tHp",
+        "name": "Mitraland",
+        "customFieldIds": {
+            "sourceCategory": "fObLQcPow4nXmvJtAtxc",
+            "project": "GdrMzJwKBzyNqKnfGc27"
+        }
     }
 ]
