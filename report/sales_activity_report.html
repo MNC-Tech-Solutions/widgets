@@ -315,18 +315,24 @@
         <!-- GLOBAL FILTERS -->
         <div class="global-filters">
             <div class="row align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
                     <input type="date" id="dateStart" class="form-control">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
                     <input type="date" id="dateEnd" class="form-control">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="projectFilter"><i class="fas fa-project-diagram me-2"></i>Interested Project</label>
                     <select class="form-control" id="projectFilter">
                         <option value="">All Projects</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="sourceFilter"><i class="fas fa-filter me-2"></i>Source</label>
+                    <select class="form-control" id="sourceFilter">
+                        <option value="">All Sources</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -437,7 +443,7 @@
                                         <th>Total Leads</th>
                                         <th>Attended</th>
                                         <th>Unattended</th>
-                                        <th>Conversion</th>   <!-- NEW COLUMN -->
+                                        <th>Conversion</th>
                                         <th>0-5d</th>
                                         <th>5-10d</th>
                                         <th>10-15d</th>
@@ -487,12 +493,14 @@
         let filterStartDate = null;
         let filterEndDate = null;
         let filterProject = '';
+        let filterSource = '';
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const searchInput = document.getElementById('uncontactedSearchInput');
         const dateStart = document.getElementById('dateStart');
         const dateEnd = document.getElementById('dateEnd');
         const projectFilter = document.getElementById('projectFilter');
+        const sourceFilter = document.getElementById('sourceFilter');
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
 
         document.addEventListener('DOMContentLoaded', initializeApp);
@@ -522,6 +530,7 @@
             }
 
             filterProject = projectFilter.value;
+            filterSource = sourceFilter.value;
 
             // Re-render all reports
             renderDailySalesActivityForDateRange();
@@ -539,10 +548,12 @@
             dateStart.value = todayStr;
             dateEnd.value = todayStr;
             projectFilter.value = '';
+            sourceFilter.value = '';
 
             filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
             filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
             filterProject = '';
+            filterSource = '';
 
             applyFilters();
         }
@@ -578,6 +589,7 @@
                 allFetchedConversations = await fetchAllConversations();
 
                 populateProjectFilter();
+                populateSourceFilter();
 
                 // Set default to today
                 const today = new Date();
@@ -616,6 +628,21 @@
             });
         }
 
+        function populateSourceFilter() {
+            const sources = new Set();
+            allFetchedContacts.forEach(contact => {
+                if (contact.source) sources.add(contact.source);
+            });
+            const sorted = Array.from(sources).sort();
+            sourceFilter.innerHTML = '<option value="">All Sources</option>';
+            sorted.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                sourceFilter.appendChild(opt);
+            });
+        }
+
         // Helper: Check if contact matches current project filter
         function contactMatchesProject(contact) {
             if (!filterProject) return true;
@@ -625,6 +652,12 @@
             if (!field || !field.value) return false;
             const values = Array.isArray(field.value) ? field.value : [field.value];
             return values.some(v => String(v) === filterProject);
+        }
+
+        // Helper: Check if contact matches current source filter
+        function contactMatchesSource(contact) {
+            if (!filterSource) return true;
+            return contact.source === filterSource;
         }
 
         async function fetchUsersMap() {
@@ -736,7 +769,7 @@
                 if (convDate < filterStartDate || convDate > filterEndDate) return;
 
                 const contact = allFetchedContacts.find(c => c.id === conv.contactId);
-                if (!contact || !contactMatchesProject(contact)) return;
+                if (!contact || !contactMatchesProject(contact) || !contactMatchesSource(contact)) return;
 
                 const repId = conv.assignedTo || 'Unassigned';
                 const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
@@ -777,11 +810,12 @@
 
             const dateRangeLabel = dateStart.value === dateEnd.value ? dateStart.value : `${dateStart.value} to ${dateEnd.value}`;
             const projectLabel = filterProject ? ` | Project: ${filterProject}` : '';
+            const sourceLabel = filterSource ? ` | Source: ${filterSource}` : '';
             let html = `
                 <div class="card">
                     <div class="card-header">
                         <div>
-                            <span>Daily Sales Activity (${dateRangeLabel}${projectLabel})</span>
+                            <span>Daily Sales Activity (${dateRangeLabel}${projectLabel}${sourceLabel})</span>
                             <small class="d-block text-muted mt-1">Total contacts across all days in range</small>
                         </div>
                         <button class="export-btn" onclick="exportDailySalesActivityCSV()">
@@ -825,7 +859,7 @@
             const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
             let uncontacted = allFetchedContacts.filter(contact => {
                 const addedDate = new Date(contact.dateAdded);
-                return !contactedIds.has(contact.id) && contactMatchesProject(contact) &&
+                return !contactedIds.has(contact.id) && contactMatchesProject(contact) && contactMatchesSource(contact) &&
                     (!filterStartDate || addedDate >= filterStartDate) &&
                     (!filterEndDate || addedDate <= filterEndDate);
             });
@@ -871,15 +905,13 @@
             });
         }
 
-        /* --------------------------------------------------------------
-           LEADS AGING – now with CONVERSION column
-        -------------------------------------------------------------- */
         async function renderLeadsAging() {
             const repData = {};
             window.repDataCache = repData;
 
             for (const contact of allFetchedContacts) {
                 if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSource(contact)) continue;
 
                 const addedDate = new Date(contact.dateAdded);
                 if (filterStartDate && addedDate < filterStartDate) continue;
@@ -1027,8 +1059,21 @@
             return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
         }
 
+        function getFilterHeader() {
+            const dateRange = dateStart.value === dateEnd.value
+                ? dateStart.value
+                : `${dateStart.value} to ${dateEnd.value}`;
+            let header = `Date Range,${escapeCSV(dateRange)}\n`;
+            header += `Project,${escapeCSV(filterProject || 'All Projects')}\n`;
+            header += `Source,${escapeCSV(filterSource || 'All Sources')}\n`;
+            header += `Exported At,${escapeCSV(new Date().toLocaleString())}\n`;
+            header += '\n';
+            return header;
+        }
+
         async function exportDailySalesActivityCSV() {
-            let csv = 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
+            let csv = getFilterHeader();
+            csv += 'Sales Rep,WhatsApp Contacts,Call Contacts,Total Contacts\n';
             Object.entries(currentDailyRepActivityMap)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .forEach(([rep, act]) => {
@@ -1036,8 +1081,8 @@
                     csv += `${escapeCSV(rep)},${act.whatsappCount},${act.callCount},${total}\n`;
                 });
             const fn = dateStart.value === dateEnd.value
-                ? `Daily_Activity_${dateStart.value}${filterProject ? '_' + filterProject : ''}.csv`
-                : `Daily_Activity_${dateStart.value}_to_${dateEnd.value}${filterProject ? '_' + filterProject : ''}.csv`;
+                ? `Daily_Activity_${dateStart.value}${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}.csv`
+                : `Daily_Activity_${dateStart.value}_to_${dateEnd.value}${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}.csv`;
             downloadCSV(fn, csv);
         }
 
@@ -1045,11 +1090,12 @@
             const contactedIds = new Set(allFetchedConversations.map(c => c.contactId));
             const leads = allFetchedContacts.filter(contact => {
                 const addedDate = new Date(contact.dateAdded);
-                return !contactedIds.has(contact.id) && contactMatchesProject(contact) &&
+                return !contactedIds.has(contact.id) && contactMatchesProject(contact) && contactMatchesSource(contact) &&
                     (!filterStartDate || addedDate >= filterStartDate) &&
                     (!filterEndDate || addedDate <= filterEndDate);
             });
-            let csv = 'Lead Name,Phone,Email,Assigned Sales Rep\n';
+            let csv = getFilterHeader();
+            csv += 'Lead Name,Phone,Email,Assigned Sales Rep\n';
             for (const c of leads) {
                 const name = await getContactDisplayName(c);
                 const phone = c.phone || '—';
@@ -1057,16 +1103,14 @@
                 const rep = usersMap[c.assignedTo || ''] || 'Unassigned';
                 csv += `${escapeCSV(name)},${escapeCSV(phone)},${escapeCSV(email)},${escapeCSV(rep)}\n`;
             }
-            downloadCSV(`Uncontacted_Leads${filterProject ? '_' + filterProject : ''}.csv`, csv);
+            downloadCSV(`Uncontacted_Leads${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}.csv`, csv);
         }
 
-        /* --------------------------------------------------------------
-           LEADS AGING CSV – now includes Conversion column
-        -------------------------------------------------------------- */
         async function exportLeadsAgingCSV() {
             const repData = {};
             for (const contact of allFetchedContacts) {
                 if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSource(contact)) continue;
                 const addedDate = new Date(contact.dateAdded);
                 if (filterStartDate && addedDate < filterStartDate) continue;
                 if (filterEndDate && addedDate > filterEndDate) continue;
@@ -1085,13 +1129,14 @@
                     else repData[repName].a30p++;
                 }
             }
-            let csv = 'Sales Rep,Total Leads,Attended,Unattended,Conversion %,0-5d,5-10d,10-15d,15-30d,>30d\n';
+            let csv = getFilterHeader();
+            csv += 'Sales Rep,Total Leads,Attended,Unattended,Conversion %,0-5d,5-10d,10-15d,15-30d,>30d\n';
             Object.keys(repData).sort().forEach(r => {
                 const d = repData[r];
                 const conv = d.total === 0 ? 0 : ((d.attended / d.total) * 100).toFixed(1);
                 csv += `${escapeCSV(r)},${d.total},${d.attended},${d.unattended},${conv},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
             });
-            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}.csv`, csv);
+            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}.csv`, csv);
         }
 
         // Modal functions
@@ -1225,7 +1270,7 @@
                     const date = new Date(conv.lastMessageDate || conv.dateAdded);
                     if (date < filterStartDate || date > filterEndDate) return false;
                     const contact = allFetchedContacts.find(c => c.id === conv.contactId);
-                    if (!contact || !contactMatchesProject(contact)) return false;
+                    if (!contact || !contactMatchesProject(contact) || !contactMatchesSource(contact)) return false;
                     const r = conv.assignedTo ? (usersMap[conv.assignedTo] || conv.assignedTo) : 'Unassigned';
                     const t = conv.lastMessageType || conv.type;
                     return r === repName && (type === 'TYPE_WHATSAPP' ? t === 'TYPE_WHATSAPP' : (t === 'TYPE_PHONE' || t === 'TYPE_CALL'));
@@ -1278,7 +1323,8 @@
         function exportDailyBreakdownCSV(repName) {
             const data = currentDailyRepActivityMap[repName];
             if (!data) return;
-            let csv = 'Date,WhatsApp,Calls,Total\n';
+            let csv = getFilterHeader();
+            csv += 'Date,WhatsApp,Calls,Total\n';
             Object.entries(data.dailyBreakdown)
                 .sort(([a], [b]) => b.localeCompare(a))
                 .forEach(([day, c]) => {
