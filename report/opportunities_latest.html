@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opportunity Report · redesigned</title>
+    <!-- Bootstrap 5 + icons + flatpickr + Inter font (kept) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        /* ----- refined variables & modern neutrals ----- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2563eb;          /* vivid but softer than before */
+            --primary-light: #dbeafe;
+            --primary-soft: #eff6ff;
+            --text: #0a0a0a;
+            --text-muted: #5e6f88;
+            --border: #e2e7f0;
+            --bg-page: #f5f7fc;
+            --card-white: #ffffff;
+            --shadow-card: 0 6px 18px rgba(0, 27, 55, 0.06), 0 2px 6px rgba(0, 20, 40, 0.04);
+            --green: #0b7e3d;
+            --green-bg: #e3f9ed;
+            --red: #b81c1c;
+            --red-bg: #fee9e9;
+            --blue: #1e4fd9;
+            --blue-bg: #e5edff;
+            --purple: #7c3aed;
+            --purple-bg: #f1ebff;
+            --orange: #c2491c;
+            --orange-bg: #ffead2;
+            --teal: #1b7b73;
+            --teal-bg: #ddf9f4;
+            --gray-bg: #f1f4f9;
+            --gray-text: #4b587c;
+            --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-page);
+            color: var(--text);
+            padding: 24px 24px 32px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-wrapper {
+            max-width: 1760px;
+            margin: 0 auto;
+        }
+
+        /* ----- top bar with more breathing & subtle gradient ----- */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .report-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .report-title {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: #111e2e;
+            line-height: 1.2;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .stat-count {
+            font-size: 42px;
+            font-weight: 800;
+            color: #0a1a2b;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .trend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 40px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+        }
+        .trend-up {
+            color: var(--green);
+            background: var(--green-bg);
+            border-color: #c1f0d5;
+        }
+        .trend-down {
+            color: var(--red);
+            background: var(--red-bg);
+            border-color: #f9cfcf;
+        }
+        .period-label {
+            font-size: 13px;
+            font-weight: 450;
+            color: #546a7a;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .btn-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: var(--card-white);
+            border: 1px solid var(--border);
+            color: #4a5a72;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.18s ease;
+            text-decoration: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .btn-icon:hover {
+            background: var(--primary-soft);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.03);
+        }
+
+        /* ----- main card (softer border, nicer radius) ----- */
+        .report-card {
+            background: var(--card-white);
+            border-radius: 24px;
+            border: 1px solid rgba(226, 231, 240, 0.7);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: box-shadow 0.2s;
+        }
+
+        /* ----- filters: cleaner, better spacing ----- */
+        .filters-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            align-items: flex-end;
+            padding: 20px 24px;
+            background: #fafcff;
+            border-bottom: 1px solid var(--border);
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 150px;
+        }
+        .filter-group label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #4f617c;
+            margin-left: 2px;
+        }
+        .form-select, .form-control {
+            height: 40px;
+            font-size: 13.5px;
+            border: 1px solid #dce2ec;
+            border-radius: 12px;
+            padding: 0 14px;
+            background: white;
+            color: #131f2e;
+            font-weight: 450;
+            transition: 0.15s;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .form-select:focus, .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            outline: none;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .btn-clear {
+            height: 40px;
+            padding: 0 22px;
+            font-size: 13px;
+            font-weight: 550;
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            background: white;
+            color: #4b5a74;
+            transition: all 0.15s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .btn-clear:hover {
+            background: #f1f5f9;
+            border-color: #b9c3d4;
+            color: #0f1a2c;
+        }
+        .btn-export {
+            height: 40px;
+            padding: 0 22px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            border-radius: 40px;
+            background: var(--primary);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px rgba(37,99,235,0.2);
+        }
+        .btn-export:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 14px rgba(37,99,235,0.25);
+        }
+
+        /* ----- table: more refined typography, sticky header softer ----- */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 0;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+        .table-wrap::-webkit-scrollbar { height: 8px; }
+        .table-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+        .table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 12px; }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13.5px;
+            min-width: 1400px;   /* ensures all columns readable, tags never cut */
+        }
+
+        thead tr {
+            background: #f8fafd;
+        }
+        thead th {
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.45px;
+            color: #496073;
+            padding: 16px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            background: #f8fafd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-align: left;
+        }
+        thead th:first-child { padding-left: 24px; }
+        thead th:last-child { padding-right: 24px; }
+
+        tbody tr {
+            transition: background 0.15s;
+        }
+        tbody tr:hover {
+            background: #f5f9ff;
+        }
+        tbody td {
+            padding: 16px 16px;
+            border-bottom: 1px solid #edf2f7;
+            color: #1a283e;
+            line-height: 1.5;
+            vertical-align: middle;
+        }
+        tbody td:first-child { padding-left: 24px; }
+        tbody td:last-child { padding-right: 24px; }
+
+        /* column specific widths — all text fully visible */
+        .col-name      { min-width: 190px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+        .col-status    { min-width: 110px; }
+        .col-phone     { min-width: 150px; font-variant-numeric: tabular-nums; }
+        .col-stage     { min-width: 150px; }
+        .col-email     { min-width: 210px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .col-action    { min-width: 280px; }  /* plenty of room for tags */
+        .col-notes     { min-width: 260px; max-width: 360px; white-space: normal; word-break: break-word; }
+        .col-reachable { min-width: 140px; }
+
+        /* ----- badges refined (softer, modern) ----- */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 40px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            line-height: 1.2;
+            border: 1px solid transparent;
+            transition: all 0.1s;
+        }
+        .badge-green  { background: var(--green-bg); color: #0b6d3a; border-color: #c0ecd2; }
+        .badge-blue   { background: var(--blue-bg); color: #1c4bcb; border-color: #c7d9ff; }
+        .badge-purple { background: var(--purple-bg); color: #6938c9; border-color: #d9ccf9; }
+        .badge-orange { background: var(--orange-bg); color: #b34a1c; border-color: #ffdbb5; }
+        .badge-teal   { background: var(--teal-bg); color: #1d6c64; border-color: #b0ece2; }
+        .badge-red    { background: var(--red-bg); color: #aa2424; border-color: #fbc8c8; }
+        .badge-gray   { background: #f0f3f9; color: #3d506c; border-color: #d8e0ec; }
+
+        .action-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px 7px;
+        }
+
+        /* status dot inside badge */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+        /* empty cell / loading */
+        .empty-cell { text-align: center; padding: 80px 20px !important; }
+        .empty-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #74869c; }
+        .empty-inner i { font-size: 44px; opacity: 0.45; }
+
+        /* ----- pagination with modern style ----- */
+        .pagination-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 24px;
+            background: #fafcff;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .page-info {
+            font-size: 13px;
+            font-weight: 500;
+            color: #3f556b;
+        }
+        .page-btns {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-page {
+            height: 38px;
+            padding: 0 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            background: white;
+            color: #1f2b3f;
+            transition: 0.15s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .btn-page:hover:not(:disabled) {
+            background: var(--primary-soft);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .btn-page:disabled { opacity: 0.45; background: #f1f5f9; border-color: #dce2ec; }
+
+        /* loading overlay clean */
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(3px);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+            flex-direction: column; gap: 18px;
+        }
+        .spinner {
+            width: 46px; height: 46px; border: 3px solid #e0e7ff;
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        .spinner-label { font-size: 14px; font-weight: 500; color: #2f405b; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* date modal small polish */
+        .modal-content { border-radius: 28px; border: none; box-shadow: 0 16px 50px rgba(0,25,60,0.18); padding: 4px; }
+        .modal-header { border-bottom: 1px solid #eef2f6; }
+        .modal-footer { border-top: 1px solid #eef2f6; }
+
+        /* email links */
+        a { color: var(--primary); font-weight: 500; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- top bar refined -->
+    <div class="top-bar">
+        <div class="report-meta">
+            <div class="report-title">Opportunity report</div>
+            <div class="stat-row">
+                <span class="stat-count" id="totalCount">0</span>
+                <span class="trend-badge trend-up" id="trendBadge"><i class="bi bi-arrow-up"></i> 0%</span>
+                <span class="period-label">vs previous period</span>
+            </div>
+        </div>
+        <div class="top-actions">
+            <div class="btn-icon" id="refreshBtn" title="Refresh data"><i class="bi bi-arrow-repeat"></i></div>
+        </div>
+    </div>
+
+    <!-- main card -->
+    <div class="report-card">
+
+        <!-- filters area -->
+        <div class="filters-wrap">
+            <div class="filter-group">
+                <label>Date range</label>
+                <select id="dateRange" class="form-select">
+                    <option value="">All dates</option>
+                    <option value="last7Days">Last 7 days</option>
+                    <option value="thisMonth">This month</option>
+                    <option value="lastMonth">Last month</option>
+                    <option value="last31Days" selected>Last 31 days</option>
+                    <option value="thisYear">This year</option>
+                    <option value="custom">Custom range</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Pipeline</label>
+                <select id="pipelineFilter" class="form-select"><option value="">All pipelines</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Stage</label>
+                <select id="stageFilter" class="form-select"><option value="">All stages</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="statusFilter" class="form-select">
+                    <option value="">All statuses</option>
+                    <option value="open">Open</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
+                    <option value="abandoned">Abandoned</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-clear" id="clearBtn">Clear</button>
+                <button class="btn-export" id="exportBtn"><i class="bi bi-download"></i> Export CSV</button>
+            </div>
+        </div>
+
+        <!-- table (all columns & tags fully visible) -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Opportunity name</th>
+                        <th>Status</th>
+                        <th>Phone number</th>
+                        <th>Stage</th>
+                        <th>Email</th>
+                        <th>(Opportunity) action type</th>
+                        <th>(Opportunity) notes</th>
+                        <th>(Opportunity) reachable lead</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="8" class="empty-cell">
+                        <div class="empty-inner"><i class="bi bi-hourglass-split"></i><p>Loading opportunities…</p></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- pagination -->
+        <div class="pagination-wrap">
+            <span class="page-info" id="paginationInfo">Showing 0 to 0 of 0</span>
+            <div class="page-btns">
+                <button class="btn-page" id="prevBtn" disabled>← Prev</button>
+                <button class="btn-page" id="nextBtn" disabled>Next →</button>
+            </div>
+        </div>
+
+    </div> <!-- end card -->
+</div> <!-- end wrapper -->
+
+<!-- custom date modal -->
+<div class="modal fade" id="dateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:380px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-semibold" style="font-size:15px">Custom date range</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="customDatePicker" class="form-control" placeholder="Select start – end" style="height:44px; border-radius:14px;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-export w-100" id="applyCustomDate" style="justify-content:center; height:44px;">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="spinner-label">Loading opportunities…</div>
+</div>
+
+<!-- scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script type="module">
+    import { loadConfig, fetchPipelinesV2, fetchAllOpportunities, formatDateTimeWithOffset } from '../ghlDataV2.js?v=1.0.1';
+
+    let CONFIG, locationId;
+    let allOpportunities = [];
+    let pipelines = [];
+    let pipelineMap = {};
+    let stageMap = {};
+    let filteredOps = [];
+    let customStart = null, customEnd = null;
+    let page = 1;
+    const PER_PAGE = 25;
+
+    const overlay  = document.getElementById('loadingOverlay');
+    const tbody    = document.getElementById('tableBody');
+    const totalEl  = document.getElementById('totalCount');
+    const trendEl  = document.getElementById('trendBadge');
+    const pageInfo = document.getElementById('paginationInfo');
+    const prevBtn  = document.getElementById('prevBtn');
+    const nextBtn  = document.getElementById('nextBtn');
+
+    async function init() {
+        overlay.style.display = 'flex';
+        try {
+            const res  = await loadConfig();
+            CONFIG     = res.config;
+            locationId = res.locationId;
+
+            pipelines = await fetchPipelinesV2(CONFIG, locationId);
+            pipelines.forEach(p => {
+                pipelineMap[p.id] = p;
+                p.stages.forEach(s => { stageMap[s.id] = { ...s, pipelineName: p.name }; });
+            });
+
+            const opResults = await Promise.all(pipelines.map(p => fetchAllOpportunities(CONFIG, locationId, p.id)));
+            allOpportunities = opResults.flat();
+
+            buildPipelineFilter();
+            applyFilters();
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="8" class="empty-cell"><div class="empty-inner"><i class="bi bi-exclamation-circle"></i><p>Failed to load data. Check console.</p></div></td></tr>`;
+        }
+        overlay.style.display = 'none';
+    }
+
+    function buildPipelineFilter() {
+        const sel = document.getElementById('pipelineFilter');
+        pipelines.forEach(p => sel.add(new Option(p.name, p.id)));
+    }
+
+    document.getElementById('pipelineFilter').addEventListener('change', function () {
+        const stageSel = document.getElementById('stageFilter');
+        stageSel.innerHTML = '<option value="">All stages</option>';
+        const pid = this.value;
+        if (pid && pipelineMap[pid]) {
+            pipelineMap[pid].stages.forEach(s => stageSel.add(new Option(s.name, s.id)));
+        } else {
+            pipelines.forEach(p => p.stages.forEach(s => stageSel.add(new Option(`${p.name} › ${s.name}`, s.id))));
+        }
+        applyFilters();
+    });
+
+    function getDateBounds(range) {
+        const now = new Date();
+        switch (range) {
+            case 'last7Days':  return { s: daysAgo(7),  e: now };
+            case 'last31Days': return { s: daysAgo(31), e: now };
+            case 'thisMonth':  return { s: new Date(now.getFullYear(), now.getMonth(), 1), e: now };
+            case 'lastMonth':  return { s: new Date(now.getFullYear(), now.getMonth()-1, 1), e: new Date(now.getFullYear(), now.getMonth(), 0) };
+            case 'thisYear':   return { s: new Date(now.getFullYear(), 0, 1), e: now };
+            case 'custom':     return { s: customStart, e: customEnd };
+            default:           return { s: null, e: null };
+        }
+    }
+    function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(0,0,0,0); return d; }
+
+    function computeTrend(current, start) {
+        if (!start) return null;
+        const span      = Date.now() - start.getTime();
+        const prevStart = new Date(start.getTime() - span);
+        const prev = allOpportunities.filter(o => { const d = new Date(o.createdAt); return d >= prevStart && d < start; }).length;
+        if (prev === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - prev) / prev) * 100);
+    }
+
+    function applyFilters() {
+        const range  = document.getElementById('dateRange').value;
+        const pid    = document.getElementById('pipelineFilter').value;
+        const sid    = document.getElementById('stageFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const { s, e } = getDateBounds(range);
+
+        filteredOps = allOpportunities.filter(o => {
+            const created = new Date(o.createdAt);
+            if (s && created < s) return false;
+            if (e && created > e) return false;
+            if (pid && o.pipelineId !== pid) return false;
+            if (sid && o.pipelineStageId !== sid) return false;
+            if (status && o.status !== status) return false;
+            return true;
+        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        totalEl.textContent = filteredOps.length;
+
+        const trend = computeTrend(filteredOps.length, s);
+        if (trend !== null) {
+            const up = trend >= 0;
+            trendEl.className = `trend-badge ${up ? 'trend-up' : 'trend-down'}`;
+            trendEl.innerHTML = `<i class="bi bi-arrow-${up ? 'up' : 'down'}"></i> ${Math.abs(trend)}%`;
+        } else {
+            trendEl.className = 'trend-badge';
+            trendEl.innerHTML = `<i class="bi bi-dash"></i> —`;
+        }
+
+        page = 1;
+        renderPage();
+    }
+
+    function renderPage() {
+        const start = (page - 1) * PER_PAGE;
+        const end   = Math.min(start + PER_PAGE, filteredOps.length);
+        const slice = filteredOps.slice(start, end);
+
+        if (!slice.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="empty-cell"><div class="empty-inner"><i class="bi bi-inbox"></i><p>No opportunities found.</p></div></td></tr>`;
+            pageInfo.textContent = 'Showing 0 to 0 of 0';
+            prevBtn.disabled = true; nextBtn.disabled = true;
+            return;
+        }
+
+        tbody.innerHTML = slice.map(op => {
+            const stageName = stageMap[op.pipelineStageId]?.name || '—';
+            const phone     = op.contact?.phone || '';
+            const email     = op.contact?.email || '';
+            const actions   = Array.isArray(op.actionType) ? op.actionType : [];
+            const notes     = op.notes || '';
+            const reachable = op.consideredAsReachableLead || '';
+
+            return `<tr>
+                <td class="col-name" title="${esc(op.name)}">${esc(op.name) || dash()}</td>
+                <td class="col-status">${statusBadge(op.status)}</td>
+                <td class="col-phone">${phone ? `<span style="font-family:monospace;font-size:12.5px">${esc(phone)}</span>` : dash()}</td>
+                <td class="col-stage">${esc(stageName) || dash()}</td>
+                <td class="col-email" title="${esc(email)}">${email ? `<a href="mailto:${esc(email)}" style="color:var(--primary);">${esc(email)}</a>` : dash()}</td>
+                <td class="col-action">${renderActionTags(actions)}</td>
+                <td class="col-notes">${notes ? esc(notes) : dash()}</td>
+                <td class="col-reachable">${reachableBadge(reachable)}</td>
+            </tr>`;
+        }).join('');
+
+        pageInfo.textContent = `Showing ${filteredOps.length > 0 ? start+1 : 0}–${end} of ${filteredOps.length}`;
+        prevBtn.disabled = page === 1;
+        nextBtn.disabled = end >= filteredOps.length;
+    }
+
+    function esc(v) {
+        if (!v) return '';
+        return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function dash() { return `<span style="color:#b7c3d2">—</span>`; }
+
+    function statusBadge(s) {
+        const map = {
+            open:      ['badge-green',  'bi-circle-fill', 'Open'],
+            won:       ['badge-blue',   'bi-trophy-fill', 'Won'],
+            lost:      ['badge-red',    'bi-x-circle-fill','Lost'],
+            abandoned: ['badge-gray',   'bi-dash-circle', 'Abandoned'],
+        };
+        const [cls, icon, label] = map[s] || ['badge-gray','bi-circle','Unknown'];
+        return `<span class="badge ${cls}"><i class="bi ${icon}" style="font-size:8px"></i>${label}</span>`;
+    }
+
+    function reachableBadge(v) {
+        if (!v) return dash();
+        if (/yes/i.test(v)) return `<span class="badge badge-green"><i class="bi bi-check2"></i>Yes</span>`;
+        if (/no/i.test(v))  return `<span class="badge badge-red"><i class="bi bi-x"></i>No</span>`;
+        return `<span class="badge badge-gray">${esc(v)}</span>`;
+    }
+
+    const ACTION_MAP = {
+        'outgoing call': 'badge-blue',
+        'incoming call': 'badge-purple',
+        'meetup':        'badge-orange',
+        'other':         'badge-teal',
+        'email':         'badge-green',
+        'sms':           'badge-gray',
+        'whatsapp':      'badge-teal',
+    };
+
+    function renderActionTags(actions) {
+        if (!actions.length) return dash();
+        // all tags visible, no truncation
+        return `<div class="action-tags">${actions.map(a => {
+            const key = Object.keys(ACTION_MAP).find(k => a.toLowerCase().includes(k));
+            const cls = key ? ACTION_MAP[key] : 'badge-gray';
+            return `<span class="badge ${cls}">${esc(a)}</span>`;
+        }).join('')}</div>`;
+    }
+
+    prevBtn.onclick = () => { if (page > 1) { page--; renderPage(); } };
+    nextBtn.onclick = () => { if (page * PER_PAGE < filteredOps.length) { page++; renderPage(); } };
+
+    document.getElementById('dateRange').addEventListener('change', function () {
+        if (this.value === 'custom') new bootstrap.Modal(document.getElementById('dateModal')).show();
+        else { customStart = null; customEnd = null; applyFilters(); }
+    });
+    document.getElementById('stageFilter').onchange  = applyFilters;
+    document.getElementById('statusFilter').onchange = applyFilters;
+
+    document.getElementById('clearBtn').onclick = () => {
+        ['dateRange','pipelineFilter','stageFilter','statusFilter'].forEach(id => document.getElementById(id).value = '');
+        const stageSel = document.getElementById('stageFilter');
+        stageSel.innerHTML = '<option value="">All stages</option>';
+        pipelines.forEach(p => p.stages.forEach(s => stageSel.add(new Option(`${p.name} › ${s.name}`, s.id))));
+        customStart = null; customEnd = null;
+        applyFilters();
+    };
+
+    document.getElementById('refreshBtn').onclick = () => { allOpportunities = []; init(); };
+
+    let datePicker;
+    document.getElementById('dateModal').addEventListener('shown.bs.modal', () => {
+        if (!datePicker) datePicker = flatpickr('#customDatePicker', { mode: 'range', dateFormat: 'Y-m-d' });
+    });
+    document.getElementById('applyCustomDate').onclick = () => {
+        if (datePicker && datePicker.selectedDates.length === 2) {
+            customStart = datePicker.selectedDates[0];
+            customEnd   = datePicker.selectedDates[1];
+            bootstrap.Modal.getInstance(document.getElementById('dateModal')).hide();
+            applyFilters();
+        }
+    };
+
+    document.getElementById('exportBtn').onclick = () => {
+        const headers = ['Opportunity Name','Status','Phone Number','Stage','Email',
+            '(Opportunity) Action Type','(Opportunity) Notes',
+            '(Opportunity) Considered as Reachable Lead','Pipeline','Created At'];
+        const rows = filteredOps.map(op => [
+            op.name || '',
+            op.status || '',
+            op.contact?.phone || '',
+            stageMap[op.pipelineStageId]?.name || '',
+            op.contact?.email || '',
+            (op.actionType || []).join('; '),
+            op.notes || '',
+            op.consideredAsReachableLead || '',
+            pipelineMap[op.pipelineId]?.name || '',
+            formatDateTimeWithOffset(op.createdAt)
+        ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const a = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
+            download: `opportunity_report_${new Date().toISOString().slice(0,10)}.csv`
+        });
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

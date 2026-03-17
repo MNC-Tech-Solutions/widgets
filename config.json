@@ -147,5 +147,17 @@
             "sourceCategory": "fObLQcPow4nXmvJtAtxc",
             "project": "GdrMzJwKBzyNqKnfGc27"
         }
+    },
+    {
+        "apiKey": "N/A",
+        "accessToken": "pit-6914d442-cf95-4ac4-bfe2-6a6e3349bba0",
+        "defaultLocationId": "8zS9r1svUvCx4JFejB9G",
+        "name": "KHK",
+        "customFieldIds": {
+            "(Contact) Action Type": "nG5LtihqFpxcQ0OXyjQG",
+            "(Opportunity) Action Type": "hlwoaXD7EQeNdjA9IwNi",
+            "(Opportunity) Notes": "6NZMePC41H9kAudinlwi",
+            "(Opportunity) Considered as Reachable Lead": "VgnRXLZ0ACmWJsZo2X0Y"
+        }
     }
 ]
