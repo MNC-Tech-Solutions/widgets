@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 # ============================================================================
 GHL_TOKEN = "pit-a0089695-3fb5-4dcd-8659-f41c038f6611"
 LOCATION_ID = "e9bA8duUxZTuI4HbWSaY"
-CSV_FILE = "prospect_1.csv"
+CSV_FILE = "prospect_missing.csv"
 
 # NexCRM API credentials
 NEXCRM_CLIENT_ID = "bda337e5a7519be61e3a1b127688fd1f"
@@ -261,7 +261,7 @@ def fetch_messages(prospect_token):
     payload = json.dumps({
         "limit": "100",
         "page": "1",
-        "start_date": "2025-01-01",
+        "start_date": "2022-01-01",
         "end_date": "2026-12-31",
         "prospect_token": prospect_token
     })
