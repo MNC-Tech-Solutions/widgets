@@ -1,3 +1,22 @@
+/**
+ * WIDGET: Call Status Report (Enhanced Version)
+ * * PURPOSE: 
+ * This widget provides a comprehensive analysis of telephony data, featuring 
+ * interactive charts and a detailed data table for auditing call logs.
+ * * LOGIC:
+ * 1. Dynamic Configuration: Loads client-specific details (ID, Name, Date range) 
+ * from an external `call_config.json` based on the URL `locationId`.
+ * 2. Visual Analytics: Uses Chart.js to provide two views:
+ * - Stacked Bar Chart: Visualizes call status volume grouped by month.
+ * - Pie Chart: Shows the total percentage distribution of call outcomes.
+ * 3. Interactive UI: Includes a "Zoom and Pan" feature on the bar chart and 
+ * a paginated data table for exploring raw records.
+ * 4. Advanced Filtering: Supports multi-criteria filtering by Date Range, 
+ * specific Call Status, and Answer Name (the agent who picked up).
+ * 5. Data Integrity: Enforces a minimum selectable date based on the client's 
+ * onboarding date (`date_from`) to prevent empty queries.
+ */
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
