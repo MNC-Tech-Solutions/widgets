@@ -1,0 +1,37 @@
+{
+    "projects": {
+        "ETP @ KIIP JENJAROM 2": "9799c8af-73c3-42fe-a288-5bcf23507c0b",
+        "ETP @ KIIP JENJAROM": "dbaf3d1e-8b67-4bdf-a8f4-023234c10dfe",
+        "ETP @ KIIP KAPAR": "a866f6f7-4407-4156-94fc-c7305258d6f1",
+        "ETP @ KOTA AMBANGAN": "a17abe92-6187-495f-8f4e-f7f405e22ad6",
+        "K COMMERCIAL @ KAPAR": "153ccf0c-87e5-4d0d-973b-d4780877b3d8",
+        "K COMMERCIAL @ KOTA AMBANGAN": "01fc9264-4f3d-483b-99b6-83dbbcd78beb",
+        "K COMMERCIAL 2 @ KAPAR": "52b0ebca-bca9-4761-abde-2d88f9567f1d",
+        "K COMMERCIAL CAMELLIA @ BUKIT BERUNTUNG": "de339739-2dc8-49b2-a7c7-1ba26387a7d4",
+        "K GARDEN @ KAPAR": "88826a4d-71a6-49f1-aef9-217c7e515019",
+        "K GARDEN @ KOTA AMBANGAN": "5aa3caa1-70a0-40b1-9cef-46cc5435f24b",
+        "K GARDEN @ LANGKAP": "d18c9886-a820-4126-bffb-7be0e03012c5",
+        "K GARDEN @ SUNGAI RUAN": "8d129a9a-1b96-4db4-973b-bd049b372bee",
+        "K GARDEN 2 @ KAPAR": "9b2a563f-f09e-44be-850f-6db97db0f2ae",
+        "K GARDEN 2 @ SUNGAI RUAN": "a13f8c70-3910-400f-b6d6-a8ae8c3c24eb",
+        "K GARDEN 3 @ KAPAR": "09b0148f-c0c1-41f8-ac9f-b8b71a2cd48b",
+        "K JAYA @ TAMAN LANGAT UTAMA 3": "44f3abe0-4159-43d3-b58d-7edec908016c",
+        "KIIP @ JENJAROM 2": "c4db9467-441e-48fd-a501-b7196b5bdd1d",
+        "KIIP @ KAPAR 2": "93d4f183-8887-4961-b23a-687f8e156d19",
+        "KIIP @ KOTA AMBANGAN": "406ecffc-a0c2-4281-85b8-8dd33c3bdd4e"
+    },
+    "sales_persons": {
+        "Quinn": "c454f1d8-71d1-11f0-8c66-f36af8a2bdbe",
+        "Dee CW": "27aea530-6868-11f0-8c66-a7c5f9808021",
+        "Nazirah": "4f5c3dcc-71d2-11f0-8c66-3b13bc3fff36",
+        "Fong Cheng Jun": "67c000fc-71d1-11f0-8c66-f36dbb094e8f",
+        "Thomas": "ea2b641c-50c2-11f0-8c66-c7c89ee8666a"
+    },
+    "account_settings": {
+        "default_account_id": "62c5b7fe-0ba6-11f0-888c-077315ac046e"
+    },
+    "lead_source": {
+        "call-in": "19f6e68b-1752-4db6-8900-68de341d848c",
+        "ai": "3ed6265f-626a-46f9-935c-26334ecd811c"
+    }
+}

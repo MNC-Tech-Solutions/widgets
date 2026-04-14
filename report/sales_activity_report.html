@@ -566,11 +566,11 @@
                 return;
             }
             try {
-                const configUrl = `../config.json?t=${Date.now()}`;
+                const configUrl = `../SAR_config.json?t=${Date.now()}`;
                 const configData = await fetch(configUrl).then(r => r.json());
                 selectedLocation = configData.find(loc => loc.defaultLocationId === locationIdFromUrl);
                 if (!selectedLocation) {
-                    showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found in config.json`, 'error');
+                    showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found in SAR_config.json`, 'error');
                     return;
                 }
                 showConfigStatus(`Connected to location: ${selectedLocation.name}`, 'success');

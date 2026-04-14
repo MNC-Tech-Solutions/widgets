@@ -1,0 +1,500 @@
+[
+    {
+        "_comment": "Sales Activity Report (SAR) Configuration",
+        "last_updated": "2026-04-01",
+        "author": "KY"
+    },
+    {
+        "accessToken": "pit-c786ac2d-f098-471b-948b-d7c5bbc51084",
+        "defaultLocationId": "E0H7r1mN6ry0kv4uGZ6L",
+        "name": "Radium",
+        "customFieldIds": {
+            "sourceCategory": "tRTzc3k0B904QBMlHNVo",
+            "project": "TXNPq7nmtJxaScXOyBK1"
+        }
+    },
+    {
+        "accessToken": "pit-ae751118-8629-42d9-ba46-4b222acf3354",
+        "defaultLocationId": "tCDIsdPF3Em8dZW3fc0B",
+        "name": "MKH",
+        "customFieldIds": {
+            "sourceCategory": "YNl8YYxyQpMtRomE3K4Q",
+            "project": "4zf9Lq7ZHPRRZvskX8mU",
+            "contactProject": "coBJfjDI32SOcNxWSrvn"
+        }
+    },
+    {
+        "accessToken": "pit-3ce8f180-32ce-436a-88c0-741e951d2492",
+        "defaultLocationId": "ZGtHSLAGOT83yj6W1pDG",
+        "name": "BangsarHill",
+        "customFieldIds": {
+            "sourceCategory": "Uik89UMx8Dn0ZaAmdp2i"
+        }
+    },
+    {
+        "accessToken": "pit-650ca6e2-d959-43e0-82fe-b580f23c1351",
+        "defaultLocationId": "UTlkUPljhIcaHUW95wIW",
+        "name": "SunsuriaCity",
+        "customFieldIds": {
+            "sourceCategory": "rjaqRRH7vYy0dMlFMxIg"
+        }
+    },
+    {
+        "accessToken": "pit-fc92bde6-a965-4a14-bb11-d6cd1400489a",
+        "defaultLocationId": "yNJna0ZdyTI6naLhJu4R",
+        "name": "SunsuriaForum",
+        "customFieldIds": {
+            "sourceCategory": "PtZoQMfn1RuYXFZS4x0q"
+        }
+    },
+    {
+        "accessToken": "pit-62d713e2-9a4d-40ee-95e1-7a81e26e54a3",
+        "defaultLocationId": "deO9d55gcA2INMHhK2RC",
+        "name": "Orando",
+        "customFieldIds": {
+            "sourceCategory": "XXBTH0R0GakEX7TpD29v"
+        }
+    },
+    {
+        "accessToken": "pit-6e3c08d6-4966-4414-8426-e0d2345c79f3",
+        "defaultLocationId": "jhK98wkjheNkRJlKPQPt",
+        "name": "LSH",
+        "customFieldIds": {
+            "sourceCategory": "XXBTH0R0GakEX7TpD29v",
+            "project": "nLywaXgttHm3o7r6vpiX"
+        }
+    },
+    {
+        "accessToken": "pit-44e35f5e-b3e4-4ec8-9a11-03e24d32fde9",
+        "defaultLocationId": "s1rI9bcBWbC4o2FSNkbm",
+        "name": "GamudaCove",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-d58bbdce-edc1-45c1-b90b-9b5097b93b2b",
+        "defaultLocationId": "rtYVCVKq2G8uI1Q38qda",
+        "name": "AGB",
+        "customFieldIds": {
+            "sourceCategory": "xUVnZ9s6GovfkJrLF0Io",
+            "project": "vHbOjgUlUvvhX34cJ3Qb"
+        }
+    },
+    {
+        "accessToken": "pit-40554248-5634-43d5-8885-b063298dd7ef",
+        "defaultLocationId": "VfZvkCL9M13RPHNpCGPi",
+        "name": "Alpha Galaxy",
+        "customFieldIds": {
+            "sourceCategory": "aMVQUfwAnMmirnH6upin",
+            "project": "IhXRlssZF6wQluqkZdM9"
+        }
+    },
+    {
+        "accessToken": "pit-754e2b69-380b-4242-9483-509b1f804446",
+        "defaultLocationId": "2C3UlYBDUsJBoOUUFbXR",
+        "name": "Asian Pac",
+        "customFieldIds": {
+            "sourceCategory": "fprOteAvpYkzhOympZ1z",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-92c3928e-6156-4638-bac3-201b46944193",
+        "defaultLocationId": "rYA8TWCmZb2oVi43THLD",
+        "name": "Avaland Aetas",
+        "customFieldIds": {
+            "sourceCategory": "Q4OuH02D18JvTw9l7MUU",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-a038e042-1a58-49b6-a8bb-76a2888ce693",
+        "defaultLocationId": "e8ukt2Vjph0jJKF1fkTR",
+        "name": "Avaland Avenue 25",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-a5c0ce34-eed7-4512-a795-6f61731a53f8",
+        "defaultLocationId": "CIb5fUoJovgTVNSUXu2X",
+        "name": "Berjaya Hills Berhad",
+        "customFieldIds": {
+            "sourceCategory": "l7wk0ywumuXUY6ecAald",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-8be5e76e-325d-42f6-ac98-a38c80a6351d",
+        "defaultLocationId": "7HA4kO4FmWsnXFEELNwh",
+        "name": "Concord College International School Malaysia",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-d032aaba-826b-4107-b574-ff4637cc1eec",
+        "defaultLocationId": "gQhm6B7KpqH2X1A08ILo",
+        "name": "Forest Heights",
+        "customFieldIds": {
+            "sourceCategory": "nTfel4BaioSKDImyClxL",
+            "project": "7hokEhq1pzgo9qInVDu8"
+        }
+    },
+    {
+        "accessToken": "pit-48ad7e5c-8303-42bc-8fde-1a053ea94481",
+        "defaultLocationId": "e9bA8duUxZTuI4HbWSaY",
+        "name": "GL Play",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-14bbf1fc-142c-4bd6-a3d6-9fcb7280c59c",
+        "defaultLocationId": "UH6LDXjqUpp906LIRgXJ",
+        "name": "Honda Butterworth (FV)",
+        "customFieldIds": {
+            "sourceCategory": "6PoMoPLpNt9dNeJ3Da4T",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-494ab40f-6acf-4929-8017-3233e5616bfb",
+        "defaultLocationId": "PLkPR5yXNNLJgANJ6px0",
+        "name": "Hong Huat (Toyota Kluang)",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-0a074ac1-a7a1-498b-8e1e-8de9fc853eb3",
+        "defaultLocationId": "um39aTH6U9mTq8NrMngA",
+        "name": "Jastamax Sdn. Bhd.",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-c85d843f-eb48-493a-ada3-337cc1d0501e",
+        "defaultLocationId": "UVXqh4BBLuSMkNwQZ7LT",
+        "name": "Jayamas Property",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-e8e1971e-9885-43da-be60-bc3813c87d38",
+        "defaultLocationId": "yislM4BFwd5JtlwXtKZM",
+        "name": "JM Motor Venture",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "0X7z000dBYj1ytY43KJr"
+        }
+    },
+    {
+        "accessToken": "pit-d8b9c4f0-3cf6-40b6-9e23-983606a380e0",
+        "defaultLocationId": "8zS9r1svUvCx4JFejB9G",
+        "name": "KHK Land",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-15ad0ffb-dda5-4f21-836d-6b837b5b16dd",
+        "defaultLocationId": "8WzCwP7EvRN6p1thIeSy",
+        "name": "Klang Group Development",
+        "customFieldIds": {
+            "sourceCategory": "U1zFELruKwtR7tlKraYi",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-18186384-2f4c-4d15-a035-bc3b8bd7f28b",
+        "defaultLocationId": "6yb9bM39yW1SNATojkpl",
+        "name": "Like Me Coffee",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-2abed3d6-101f-4418-8262-a7e4eb5d98c9",
+        "defaultLocationId": "GlUjhJZT1TKeePM74VEQ",
+        "name": "M Aria",
+        "customFieldIds": {
+            "sourceCategory": "9DJMTQHvAQKxHPuj0Qx8",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-4f33b5c4-b443-4ad1-9537-36f6bc297a28",
+        "defaultLocationId": "rAwOTvyeBKiAiTH7Ww8O",
+        "name": "Matrix Concepts",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-41c765ef-4adc-4cf0-b852-da9e2f8970c1",
+        "defaultLocationId": "dYrG2XX61CAVpFwLL6gn",
+        "name": "MG Dealership",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-c152fd92-dc8d-4e8b-a702-0c61476ae678",
+        "defaultLocationId": "YA0noBYdWjclbS2jJ2XN",
+        "name": "MK Land",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-ff684f20-3a05-420c-a518-434b2367bbc8",
+        "defaultLocationId": "MfDp0AqaeLg78p4R0k3Y",
+        "name": "MKH Berhad Feedback",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-ca2f93a6-aa7b-47d5-b91b-516215095bdd",
+        "defaultLocationId": "jH41Z47TXtote3u6rh92",
+        "name": "OCR",
+        "customFieldIds": {
+            "sourceCategory": "xPTwa3iyidQaiQDUFkJX",
+            "project": "pWGkg3EE0eqs5XDlP3QZ"
+        }
+    },
+    {
+        "accessToken": "pit-05c00924-b3d9-4ec3-8be3-d999d777a3b4",
+        "defaultLocationId": "FL2IoB3tiulN2lptu70w",
+        "name": "Pakar Angsana (Berjaya)",
+        "customFieldIds": {
+            "sourceCategory": "4UhTI4lRPjxLb4Q54mh6",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-e937be8b-6d55-476b-968b-e9648bfaf1b9",
+        "defaultLocationId": "mtqCbx7VtVjxdrA55Fkh",
+        "name": "Pangsapuri Azalea (Berjaya)",
+        "customFieldIds": {
+            "sourceCategory": "i9a3q6uSlV0FdNU8Qs1W",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-d34a08a4-5dfe-404b-a528-4d53cd9b50ce",
+        "defaultLocationId": "86bOfNajxUfWalfoc9vc",
+        "name": "Penang Silicon Island",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-1db7f682-3f72-4dfd-86e8-5d0c18aa92ad",
+        "defaultLocationId": "rsdW1sEFWbzzULIapmdQ",
+        "name": "PV",
+        "customFieldIds": {
+            "sourceCategory": "2aUerZaTlURFSxBB385j",
+            "project": "4UQyXtQqkfxIj5za7p2Y"
+        }
+    },
+    {
+        "accessToken": "pit-7748ea5b-c7b8-4873-a782-dfe161dd177c",
+        "defaultLocationId": "v0bQdJt25pzjnfVTezNF",
+        "name": "PV Heroes",
+        "customFieldIds": {
+            "sourceCategory": "DZrZYcWSlTybQk8OwTI0",
+            "project": "qjpMBBWsaT1eR23zjyBK"
+        }
+    },
+    {
+        "accessToken": "pit-1ca23365-5ece-4282-ace8-155eb2222a0c",
+        "defaultLocationId": "42HQDkveD3deH1fmBU4m",
+        "name": "Proton JM Automas",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "zk5qgZKt50Trvsme3Jw5"
+        }
+    },
+    {
+        "accessToken": "pit-f0273a41-a598-4a1e-9b7b-3b0175b79078",
+        "defaultLocationId": "30xxAQiQyzXe3s8NN622",
+        "name": "Salt Agritech",
+        "customFieldIds": {
+            "sourceCategory": "Gio2km8cSl54ovcs8Wwa",
+            "project": "srngjSetcaMuLRTQd4LH"
+        }
+    },
+    {
+        "accessToken": "pit-459568c9-4a99-4ae1-9653-c7ab1aff0f78",
+        "defaultLocationId": "DhkTaVM5cuuhgDcggXfT",
+        "name": "Seputeh Heights (Berjaya)",
+        "customFieldIds": {
+            "sourceCategory": "whMp2akVqvVGU1xFVeKg",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-a25d99f4-cd96-447c-9cee-a2350f5ab9f9",
+        "defaultLocationId": "ttFuVlVGROUUDf4wpn0k",
+        "name": "SIBS",
+        "customFieldIds": {
+            "sourceCategory": "4gWqSDsd5XkIuYZRypWo",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-0bb6cc87-02d3-442a-be3a-c323cd23498b",
+        "defaultLocationId": "BXuCudh2EKUEmv1gC4ai",
+        "name": "SJ360",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-6ebf9dd9-13d5-4ef1-967d-51eab29208cb",
+        "defaultLocationId": "kKD2Gu47TFFaPb48aVfs",
+        "name": "Southville City",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-a75d55b1-2fe2-4754-874c-27993be76b17",
+        "defaultLocationId": "synS8MyVQXNIlfWJSPT8",
+        "name": "Straits & Oriental Museum",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "A53PP16Kx8amwKoJcDPE"
+        }
+    },
+    {
+        "accessToken": "pit-f7a8a13b-929a-40c9-bf0c-a3b397abfbc1",
+        "defaultLocationId": "UGB2AOTkcprwX9HHzDh9",
+        "name": "Suez Capital",
+        "customFieldIds": {
+            "sourceCategory": "xHukI01D01Y5cGOvz2nB",
+            "project": "w4P6fM5FrXlEcRgTv1H5"
+        }
+    },
+    {
+        "accessToken": "pit-b1ed1e1f-894a-4ea2-a531-5ce54411dde7",
+        "defaultLocationId": "05h0PSv7qslciXXdmieo",
+        "name": "Sunsuria Berhad (HQ)",
+        "customFieldIds": {
+            "sourceCategory": "MFwVWGE0y9r2uK3HXlqB",
+            "project": "7VXCHxrLNEGA2jElxF0V"
+        }
+    },
+    {
+        "accessToken": "pit-189b7e71-6f32-481b-bc7b-bdd6fd744d01",
+        "defaultLocationId": "A3k6CQJPTZBR3jvZ0Fp9",
+        "name": "Supreme Springs",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-38b6ada7-baf3-4a2e-b852-a69c2e8dee02",
+        "defaultLocationId": "5I717xjLUCF6Y3blk3jw",
+        "name": "Teladan Group",
+        "customFieldIds": {
+            "sourceCategory": "5oeEKuvaRwGe6cLOIgDY",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-c48e2d26-e98f-4ab0-80eb-a4d87dde4fef",
+        "defaultLocationId": "l8JxIWQXP77FSfMVG4VA",
+        "name": "The Peak (Berjaya)",
+        "customFieldIds": {
+            "sourceCategory": "3qhwNSklJT7rvYd6CGHL",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-4f842156-768f-4927-a1e8-345b31ec5ce0",
+        "defaultLocationId": "83cg5swg1HNsQAWITxCh",
+        "name": "Trinity Group",
+        "customFieldIds": {
+            "sourceCategory": "gDIeqkGS4H396r0dikZA",
+            "project": "HUQYn7GJrcMXBNbggwI7"
+        }
+    },
+    {
+        "accessToken": "pit-0f24cfb3-0d15-46d4-b1a3-d9d2863d043c",
+        "defaultLocationId": "aIzvZ3CF67w8uUjkPchx",
+        "name": "Triple Three Properties ",
+        "customFieldIds": {
+            "sourceCategory": "LIL6QRALl9Vf2Kj1p89k",
+            "project": "d83vfejLuD9axiSsqWac"
+        }
+    },
+    {
+        "accessToken": "pit-92a1ee36-8b83-4b5d-ade5-1bd9ec3c7e0c",
+        "defaultLocationId": "U3iDCYXlOjeWWHiXe4Nz",
+        "name": "Tropicana Corporation",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "3AMDfjp7ftBs9jKEiJO1"
+        }
+    },
+    {
+        "accessToken": "pit-ab6a7951-5ac5-43bf-bb39-f3709404f035",
+        "defaultLocationId": "QParOlkQHaAFTpaDdrfb",
+        "name": "UDA Land (Central)",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-1b2101e9-cb80-4375-bb0f-0020ed53c110",
+        "defaultLocationId": "Xh0pynLlsRcHl0CN1wvS",
+        "name": "UDA Land (South)",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "47UOBEPOCYfSztob4lBm"
+        }
+    },
+    {
+        "accessToken": "pit-de4483af-e5c5-4ffb-a76e-453baf00f172",
+        "defaultLocationId": "oKE7Qxc3qc8CEtmzNqKb",
+        "name": "Uptrend Housing Development",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    },
+    {
+        "accessToken": "pit-bb3708c1-e423-43c5-a782-36602f2b1390",
+        "defaultLocationId": "rWzYBOAE8l21QlHO2IKw",
+        "name": "Victory InIT",
+        "customFieldIds": {
+            "sourceCategory": "N/A",
+            "project": "N/A"
+        }
+    }
+]
+

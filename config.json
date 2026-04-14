@@ -7,7 +7,8 @@
         "customFieldIds": {
             "sourceCategory": "2aUerZaTlURFSxBB385j",
             "project": "G0k8pyBCMTcVUguP1rf4",
-            "team": "u3Cn62TmeAwIWthSOW2z"
+            "team": "u3Cn62TmeAwIWthSOW2z",
+            "contactProject": "4UQyXtQqkfxIj5za7p2Y"
         }
     },
     {
@@ -49,7 +50,8 @@
         "name": "MKH",
         "customFieldIds": {
             "sourceCategory": "YNl8YYxyQpMtRomE3K4Q",
-            "project": "4zf9Lq7ZHPRRZvskX8mU"
+            "project": "4zf9Lq7ZHPRRZvskX8mU",
+            "contactProject": "coBJfjDI32SOcNxWSrvn"
         }
     },
     {
@@ -58,8 +60,7 @@
         "defaultLocationId": "ZGtHSLAGOT83yj6W1pDG",
         "name": "BangsarHill",
         "customFieldIds": {
-            "sourceCategory": "Uik89UMx8Dn0ZaAmdp2i",
-            "project": "4zf9Lq7ZHPRRZvskX8mU"
+            "sourceCategory": "Uik89UMx8Dn0ZaAmdp2i"
         }
     },
     {
@@ -100,7 +101,7 @@
         }
     },
     {
-        "apiKey": "N/A",
+        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImRlTzlkNTVnY0EySU5NSGhLMlJDIiwidmVyc2lvbiI6MSwiaWF0IjoxNzU1NzYzNTIyNTA2LCJzdWIiOiJCZlc1YlA1Q1RmYmFhR3pVRU45NiJ9.Loyae_34ZTgEUwpTbErX9DzRQ8G5vsKjttocII_52uk",
         "accessToken": "pit-6e3c08d6-4966-4414-8426-e0d2345c79f3",
         "defaultLocationId": "jhK98wkjheNkRJlKPQPt",
         "name": "LSH",
@@ -110,7 +111,7 @@
         }
     },
     {
-        "apiKey": "N/A",
+        "apiKey": "pit-21bb5da8-7f62-47d6-bf7b-498839021248",
         "accessToken": "pit-21bb5da8-7f62-47d6-bf7b-498839021248",
         "defaultLocationId": "rtYVCVKq2G8uI1Q38qda",
         "name": "AGB",
@@ -131,6 +132,26 @@
     },
     {
         "apiKey": "N/A",
+        "accessToken": "pit-b13230c9-4412-432b-959f-03967fe9854d",
+        "defaultLocationId": "2C3UlYBDUsJBoOUUFbXR",
+        "name": "AsianPac",
+        "customFieldIds": {
+            "sourceCategory": "fprOteAvpYkzhOympZ1z",
+            "project": "N/A"
+        }
+    },
+    {
+        "apiKey": "N/A",
+        "accessToken": "pit-0a365112-8cd7-4f23-acfa-cc4d62300765",
+        "defaultLocationId": "rYA8TWCmZb2oVi43THLD",
+        "name": "AvalandAetas",
+        "customFieldIds": {
+            "sourceCategory": "Q4OuH02D18JvTw9l7MUU",
+            "project": "N/A"
+        }
+    },
+    {
+        "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImRlTzlkNTVnY0EySU5NSGhLMlJDIiwidmVyc2lvbiI6MSwiaWF0IjoxNzU1NzYzNTIyNTA2LCJzdWIiOiJCZlc1YlA1Q1RmYmFhR3pVRU45NiJ9.Loyae_34ZTgEUwpTbErX9DzRQ8G5vsKjttocII_52uk",
         "accessToken": "pit-24960780-620d-48c3-9359-945d1471552c",
         "defaultLocationId": "UGB2AOTkcprwX9HHzDh9",
         "name": "Suez Cap",
@@ -146,6 +167,18 @@
         "customFieldIds": {
             "sourceCategory": "fObLQcPow4nXmvJtAtxc",
             "project": "GdrMzJwKBzyNqKnfGc27"
+        }
+    },
+    {
+        "apiKey": "N/A",
+        "accessToken": "pit-6914d442-cf95-4ac4-bfe2-6a6e3349bba0",
+        "defaultLocationId": "8zS9r1svUvCx4JFejB9G",
+        "name": "KHK",
+        "customFieldIds": {
+            "(Contact) Action Type": "nG5LtihqFpxcQ0OXyjQG",
+            "(Opportunity) Action Type": "hlwoaXD7EQeNdjA9IwNi",
+            "(Opportunity) Notes": "6NZMePC41H9kAudinlwi",
+            "(Opportunity) Considered as Reachable Lead": "VgnRXLZ0ACmWJsZo2X0Y"
         }
     }
 ]
