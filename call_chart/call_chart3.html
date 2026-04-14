@@ -1,3 +1,21 @@
+/**
+ * WIDGET: Call Status Report (Multi-Account Consolidation)
+ * * PURPOSE: 
+ * This widget consolidates and visualizes telephony data across multiple sub-accounts
+ * belonging to a single client entity.
+ * * LOGIC:
+ * 1. Data Consolidation: Instead of fetching from one source, it iterates through 
+ * an array of `accounts` (clientid + date_from) defined in `call_config1.json`.
+ * 2. Parallel Processing: Uses `Promise.all` to fetch data from all linked 
+ * accounts simultaneously, then flattens the results into a single dataset.
+ * 3. Dynamic Date Alignment: Automatically calculates the "minDate" for the 
+ * calendar picker by finding the earliest onboarding date among all linked accounts.
+ * 4. Visualization: Powered by Plotly.js, offering a "Stacked Bar" view for 
+ * temporal trends and a "Pie" view for overall success-rate distribution.
+ * 5. Drill-Down: Features an interactive modal that provides detailed, 
+ * paginated logs of every call recorded across the entire account group.
+ */
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

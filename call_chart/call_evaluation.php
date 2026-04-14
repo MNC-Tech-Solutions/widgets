@@ -1,3 +1,23 @@
+/**
+ * WIDGET: Evaluation Performance Cards
+ * * PURPOSE: 
+ * This widget analyzes call quality by aggregating "Yes/No" responses to specific 
+ * evaluation questions linked to Call Detail Records (CDR).
+ * * LOGIC:
+ * 1. Double-Data Fetch: First, it fetches the definitions of all questions from 
+ * the 'evaluationDetails' action. Second, it fetches the actual call records 
+ * from 'getCDR' with evaluations enabled.
+ * 2. ID Mapping: It dynamically extracts evaluation data from the CDR payload by 
+ * identifying keys starting with 'eval_' and matching the suffix to the question ID.
+ * 3. Sentiment Calculation: It calculates the percentage of "Yes" vs "No" 
+ * responses per question to provide a "Positive Performance" score.
+ * 4. Visualization: Renders results as a grid of interactive cards, each 
+ * featuring a progress bar representing the professional compliance or success 
+ * rate for that specific metric.
+ * 5. Data Handling: Automatically handles cases where questions exist but 
+ * have not yet received any responses (empty states).
+ */
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

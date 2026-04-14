@@ -1,4 +1,20 @@
 <!-- original -->
+/**
+ * WIDGET: Call Status Report
+ * * PURPOSE: 
+ * This widget visualizes telephony performance by tracking Call Detail Records (CDR) 
+ * fetched from an external proxy API.
+ * * LOGIC:
+ * 1. Data Source: Fetches call logs (caller numbers, duration, status) from a 
+ * proxy endpoint based on a specific `locationId` and `clientId`.
+ * 2. Visualization: Provides a "Stacked Bar" view to see call outcomes (Answered, 
+ * Busy, No Answer) month-over-month, or a "Pie" view for overall distribution.
+ * 3. Scope: It tracks actual communication attempts rather than CRM opportunities.
+ * 4. Interaction: Clicking on a chart segment opens a paginated modal listing 
+ * the specific call logs for that status/period.
+ * 5. Refresh Logic: Includes an automated background refresh every 5 minutes 
+ * to keep the call stats updated without a page reload.
+ */
 
 <!DOCTYPE html>
 <html lang="en">

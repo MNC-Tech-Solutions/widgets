@@ -405,11 +405,16 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
       return [];
     }
 
+    // ── ONLY CHANGE IN THIS FILE: extract the 3 opportunity custom fields ──
     const processedOpportunities = allOpportunities.map(op => {
       const customFields = op.customFields || [];
       const sourceCategory = customFields.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A';
       const project = customFields.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A';
       const team = customFields.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A';
+      const actionTypeCf = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Action Type']);
+      const actionType = actionTypeCf?.fieldValueArray || (actionTypeCf?.fieldValueString ? [actionTypeCf.fieldValueString] : []);
+      const notes = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Notes'])?.fieldValueString || '';
+      const consideredAsReachableLead = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Considered as Reachable Lead'])?.fieldValueString || '';
       console.log(`Processing opportunity ${op.id}: sourceCategory=${sourceCategory}, project=${project}, team=${team}`);
       return {
         id: op.id,
@@ -424,9 +429,13 @@ async function fetchAllOpportunities(config, locationId, pipelineId, forceRefres
         project,
         team,
         contact: op.contact || { name: 'N/A', phone: 'N/A' },
-        monetaryValue: op.monetaryValue || 0
+        monetaryValue: op.monetaryValue || 0,
+        actionType,
+        notes,
+        consideredAsReachableLead
       };
     });
+    // ── END OF CHANGE ──
 
     if (showProgress) {
       progressManager.setProgress(85, 'Saving to cache...');
@@ -527,11 +536,16 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
 
     console.log(`Background refresh: Processing ${newOpportunities.length} new opportunities`);
 
-    const processedOpportunities = newOpportunities.map(op => {
+      const processedOpportunities = newOpportunities.map(op => {
       const customFields = op.customFields || [];
       const sourceCategory = customFields.find(cf => cf.id === config.customFieldIds?.sourceCategory)?.fieldValueString || 'N/A';
       const project = customFields.find(cf => cf.id === config.customFieldIds?.project)?.fieldValueString || 'N/A';
       const team = customFields.find(cf => cf.id === config.customFieldIds?.team)?.fieldValueString || 'N/A';
+      const actionTypeCf = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Action Type']);
+      const actionType = actionTypeCf?.fieldValueArray || (actionTypeCf?.fieldValueString ? [actionTypeCf.fieldValueString] : []);
+      const notes = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Notes'])?.fieldValueString || '';
+      const consideredAsReachableLead = customFields.find(cf => cf.id === config.customFieldIds?.['(Opportunity) Considered as Reachable Lead'])?.fieldValueString || '';
+      console.log(`Processing opportunity ${op.id}: sourceCategory=${sourceCategory}, project=${project}, team=${team}`);
       return {
         id: op.id,
         pipelineId: op.pipelineId,
@@ -545,7 +559,10 @@ async function fetchNewOpportunities(config, locationId, pipelineId) {
         project,
         team,
         contact: op.contact || { name: 'N/A', phone: 'N/A' },
-        monetaryValue: op.monetaryValue || 0
+        monetaryValue: op.monetaryValue || 0,
+        actionType,
+        notes,
+        consideredAsReachableLead
       };
     });
 

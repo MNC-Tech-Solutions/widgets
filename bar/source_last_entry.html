@@ -1,3 +1,21 @@
+/**
+ * WIDGET: Source Analytics Dashboard
+ * * PURPOSE: 
+ * This widget analyzes the "Source" field of opportunities to identify which 
+ * marketing channels are driving the most leads.
+ * * LOGIC:
+ * 1. Aggregation: It groups all opportunities by their "source" string (e.g., 
+ * 'Facebook', 'Website', 'Referral').
+ * 2. Recency: It identifies the "Last Lead Entry" for each source to show 
+ * which channels are currently active.
+ * 3. Visualization: Uses dynamic horizontal bars to compare the relative 
+ * volume of leads from each source.
+ * 4. Interaction: Clicking a source bar opens a detailed modal list of all 
+ * opportunities associated with that specific channel.
+ * 5. Multi-Level Filtering: Allows you to switch between different Pipelines 
+ * and filter by "Source Category" for deeper analysis.
+ */
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
