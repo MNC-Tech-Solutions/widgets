@@ -1,0 +1,572 @@
+{
+    "gender": [
+        {
+            "id": "0",
+            "description": "",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "F",
+            "description": "Female",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "M",
+            "description": "Male",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "U",
+            "description": "Not known",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        }
+    ],
+    "title": [
+        {
+            "id": "00",
+            "description": " ",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "01",
+            "description": "Mr",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "02",
+            "description": "Mrs",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "03",
+            "description": "Ms",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "04",
+            "description": "Miss",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "05",
+            "description": "Datuk",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "06",
+            "description": "Dr",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "07",
+            "description": "Prof",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "08",
+            "description": "Datin",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        }
+    ],
+    "language": [
+        {
+            "id": "000",
+            "description": " ",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "9s4N",
+            "description": "Bahasa, Mandarin, English",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "ARB",
+            "description": "Arabian",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "ENG",
+            "description": "English",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "FRA",
+            "description": "French",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "JPN",
+            "description": "Japanese",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "SCjK",
+            "description": "Mandarin",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "SPA",
+            "description": "Spanish",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "tChv",
+            "description": "Korean",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "uoAD",
+            "description": "English, Mandarin",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        }
+    ],
+    "relationship": [
+        {
+            "id": "000",
+            "description": " ",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "001",
+            "description": "AUNT",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "002",
+            "description": "GRANDMOTHER",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "003",
+            "description": "GUARDIAN",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "004",
+            "description": "SISTER",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Car",
+            "description": "Carer",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Doc",
+            "description": "Doctor",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Fam",
+            "description": "Other Family Member",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Fos",
+            "description": "Foster Parent",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Oth",
+            "description": "Other Contact",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Paf",
+            "description": "Father",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Pam",
+            "description": "Mother",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "PARE",
+            "description": "Parents",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Rel",
+            "description": "Other Relative",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Rlg",
+            "description": "Religious/Spiritual Contact",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Stp",
+            "description": "Step Parent",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Swr",
+            "description": "Social Worker",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        }
+    ],
+    "profession": [
+        {
+            "id": "000",
+            "description": " ",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "0CFo",
+            "description": "CFO - Sunsuria Bhd",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "276Q",
+            "description": "Lecturer",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "a0t1",
+            "description": "Businessman",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Bus",
+            "description": "Business",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Con",
+            "description": "Consultant",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "E6VI",
+            "description": "Housewife",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "ECxd",
+            "description": "Agent",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "FCjA",
+            "description": "Personal Business",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "fQFi",
+            "description": "CEO",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "g3wJ",
+            "description": "Business Owner",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "gobX",
+            "description": "Director of Presidents Office",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "I1Qi",
+            "description": "Company Worker",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "IvNz",
+            "description": "Technician",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "J4c7",
+            "description": "Admin",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "k1YV",
+            "description": "Professor",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "kWNI",
+            "description": "Freelancer",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "LsWn",
+            "description": "Pilot",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "mb3G",
+            "description": "Construction Industry",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Phs",
+            "description": "Pharmacist",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "RGBS",
+            "description": "Company Director",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "stS1",
+            "description": "Director",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Tec",
+            "description": "Teacher",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "tn2D",
+            "description": "None",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "wePc",
+            "description": "Prof in Xiamen University Malaysia",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "XIyo",
+            "description": "Florist",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "yIiZ",
+            "description": "Chairman",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "Zlqz",
+            "description": "Manager",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "zP1t",
+            "description": "Public Servant",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        },
+        {
+            "id": "zqoV",
+            "description": "QC Team Member",
+            "displayOrder": 0,
+            "additionalInfo": "",
+            "additionalInfo2": "",
+            "additionalCode": ""
+        }
+    ]
+}
