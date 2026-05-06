@@ -1,0 +1,222 @@
+2026-05-06 14:40:28,838 - INFO - Starting export. Mode: APPEND. Target: ghl_messages_export.csv
+2026-05-06 14:40:32,143 - INFO - Batch 1 saved (500 rows). Total so far: 500
+2026-05-06 14:40:32,144 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:35,076 - INFO - Batch 2 saved (500 rows). Total so far: 1000
+2026-05-06 14:40:35,076 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:37,785 - INFO - Batch 3 saved (500 rows). Total so far: 1500
+2026-05-06 14:40:37,786 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:41,525 - INFO - Batch 4 saved (500 rows). Total so far: 2000
+2026-05-06 14:40:41,525 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:43,932 - INFO - Batch 5 saved (500 rows). Total so far: 2500
+2026-05-06 14:40:43,932 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:46,211 - INFO - Batch 6 saved (500 rows). Total so far: 3000
+2026-05-06 14:40:46,211 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:48,509 - INFO - Batch 7 saved (500 rows). Total so far: 3500
+2026-05-06 14:40:48,509 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:52,177 - INFO - Batch 8 saved (500 rows). Total so far: 4000
+2026-05-06 14:40:52,177 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:55,346 - INFO - Batch 9 saved (500 rows). Total so far: 4500
+2026-05-06 14:40:55,347 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:40:57,912 - INFO - Batch 10 saved (500 rows). Total so far: 5000
+2026-05-06 14:40:57,913 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:00,590 - INFO - Batch 11 saved (500 rows). Total so far: 5500
+2026-05-06 14:41:00,591 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:03,365 - INFO - Batch 12 saved (500 rows). Total so far: 6000
+2026-05-06 14:41:03,365 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:06,135 - INFO - Batch 13 saved (500 rows). Total so far: 6500
+2026-05-06 14:41:06,135 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:08,527 - INFO - Batch 14 saved (500 rows). Total so far: 7000
+2026-05-06 14:41:08,527 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:11,549 - INFO - Batch 15 saved (500 rows). Total so far: 7500
+2026-05-06 14:41:11,549 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:14,324 - INFO - Batch 16 saved (500 rows). Total so far: 8000
+2026-05-06 14:41:14,325 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:16,934 - INFO - Batch 17 saved (500 rows). Total so far: 8500
+2026-05-06 14:41:16,934 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:20,228 - INFO - Batch 18 saved (500 rows). Total so far: 9000
+2026-05-06 14:41:20,229 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:23,041 - INFO - Batch 19 saved (500 rows). Total so far: 9500
+2026-05-06 14:41:23,041 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:26,170 - INFO - Batch 20 saved (500 rows). Total so far: 10000
+2026-05-06 14:41:26,170 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:30,059 - INFO - Batch 21 saved (500 rows). Total so far: 10500
+2026-05-06 14:41:30,060 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:32,110 - INFO - Batch 22 saved (500 rows). Total so far: 11000
+2026-05-06 14:41:32,110 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:34,174 - INFO - Batch 23 saved (500 rows). Total so far: 11500
+2026-05-06 14:41:34,174 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:36,928 - INFO - Batch 24 saved (500 rows). Total so far: 12000
+2026-05-06 14:41:36,929 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:40,502 - INFO - Batch 25 saved (500 rows). Total so far: 12500
+2026-05-06 14:41:40,502 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:42,601 - INFO - Batch 26 saved (500 rows). Total so far: 13000
+2026-05-06 14:41:42,601 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:44,817 - INFO - Batch 27 saved (500 rows). Total so far: 13500
+2026-05-06 14:41:44,817 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:47,275 - INFO - Batch 28 saved (500 rows). Total so far: 14000
+2026-05-06 14:41:47,275 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:50,532 - INFO - Batch 29 saved (500 rows). Total so far: 14500
+2026-05-06 14:41:50,532 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:53,606 - INFO - Batch 30 saved (500 rows). Total so far: 15000
+2026-05-06 14:41:53,606 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:56,096 - INFO - Batch 31 saved (500 rows). Total so far: 15500
+2026-05-06 14:41:56,097 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:41:59,003 - INFO - Batch 32 saved (500 rows). Total so far: 16000
+2026-05-06 14:41:59,003 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:01,490 - INFO - Batch 33 saved (500 rows). Total so far: 16500
+2026-05-06 14:42:01,490 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:04,031 - INFO - Batch 34 saved (500 rows). Total so far: 17000
+2026-05-06 14:42:04,031 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:06,568 - INFO - Batch 35 saved (500 rows). Total so far: 17500
+2026-05-06 14:42:06,569 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:08,816 - INFO - Batch 36 saved (500 rows). Total so far: 18000
+2026-05-06 14:42:08,817 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:11,453 - INFO - Batch 37 saved (500 rows). Total so far: 18500
+2026-05-06 14:42:11,454 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:13,871 - INFO - Batch 38 saved (500 rows). Total so far: 19000
+2026-05-06 14:42:13,871 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:17,058 - INFO - Batch 39 saved (500 rows). Total so far: 19500
+2026-05-06 14:42:17,058 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:19,629 - INFO - Batch 40 saved (500 rows). Total so far: 20000
+2026-05-06 14:42:19,629 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:23,198 - INFO - Batch 41 saved (500 rows). Total so far: 20500
+2026-05-06 14:42:23,199 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:25,795 - INFO - Batch 42 saved (500 rows). Total so far: 21000
+2026-05-06 14:42:25,795 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:28,261 - INFO - Batch 43 saved (500 rows). Total so far: 21500
+2026-05-06 14:42:28,261 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:30,874 - INFO - Batch 44 saved (500 rows). Total so far: 22000
+2026-05-06 14:42:30,874 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:33,414 - INFO - Batch 45 saved (500 rows). Total so far: 22500
+2026-05-06 14:42:33,414 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:36,121 - INFO - Batch 46 saved (500 rows). Total so far: 23000
+2026-05-06 14:42:36,121 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:38,421 - INFO - Batch 47 saved (500 rows). Total so far: 23500
+2026-05-06 14:42:38,422 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:41,420 - INFO - Batch 48 saved (500 rows). Total so far: 24000
+2026-05-06 14:42:41,420 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:43,663 - INFO - Batch 49 saved (500 rows). Total so far: 24500
+2026-05-06 14:42:43,663 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:45,972 - INFO - Batch 50 saved (500 rows). Total so far: 25000
+2026-05-06 14:42:45,972 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:48,225 - INFO - Batch 51 saved (500 rows). Total so far: 25500
+2026-05-06 14:42:48,225 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:50,439 - INFO - Batch 52 saved (500 rows). Total so far: 26000
+2026-05-06 14:42:50,440 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:52,967 - INFO - Batch 53 saved (500 rows). Total so far: 26500
+2026-05-06 14:42:52,967 - INFO - Next Cursor: 5305edc3-4f00-4864-b9b0-25335b35cb57
+2026-05-06 14:42:55,240 - INFO - Batch 54 saved (407 rows). Total so far: 26907
+2026-05-06 14:42:55,241 - INFO - Next Cursor: None
+2026-05-06 14:42:55,241 - INFO - Export complete. No more cursors.
+2026-05-06 14:42:55,241 - INFO - Done. Total rows written to ghl_messages_export.csv: 26907
+2026-05-06 14:53:11,093 - INFO - Starting export. Output: ghl_messages_export.csv
+2026-05-06 14:53:15,110 - INFO - Batch 1 | Rows written: 500 | Total: 500
+2026-05-06 14:53:15,110 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:17,614 - INFO - Batch 2 | Rows written: 500 | Total: 1000
+2026-05-06 14:53:17,615 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:19,866 - INFO - Batch 3 | Rows written: 500 | Total: 1500
+2026-05-06 14:53:19,867 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:21,812 - INFO - Batch 4 | Rows written: 500 | Total: 2000
+2026-05-06 14:53:21,812 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:24,095 - INFO - Batch 5 | Rows written: 500 | Total: 2500
+2026-05-06 14:53:24,096 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:26,575 - INFO - Batch 6 | Rows written: 500 | Total: 3000
+2026-05-06 14:53:26,575 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:30,070 - INFO - Batch 7 | Rows written: 500 | Total: 3500
+2026-05-06 14:53:30,071 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:32,615 - INFO - Batch 8 | Rows written: 500 | Total: 4000
+2026-05-06 14:53:32,616 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:34,873 - INFO - Batch 9 | Rows written: 500 | Total: 4500
+2026-05-06 14:53:34,873 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:37,029 - INFO - Batch 10 | Rows written: 500 | Total: 5000
+2026-05-06 14:53:37,029 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:39,654 - INFO - Batch 11 | Rows written: 500 | Total: 5500
+2026-05-06 14:53:39,655 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:42,118 - INFO - Batch 12 | Rows written: 500 | Total: 6000
+2026-05-06 14:53:42,119 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:44,244 - INFO - Batch 13 | Rows written: 500 | Total: 6500
+2026-05-06 14:53:44,245 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:46,352 - INFO - Batch 14 | Rows written: 500 | Total: 7000
+2026-05-06 14:53:46,352 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:48,287 - INFO - Batch 15 | Rows written: 500 | Total: 7500
+2026-05-06 14:53:48,287 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:50,431 - INFO - Batch 16 | Rows written: 500 | Total: 8000
+2026-05-06 14:53:50,431 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:52,584 - INFO - Batch 17 | Rows written: 500 | Total: 8500
+2026-05-06 14:53:52,584 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:54,812 - INFO - Batch 18 | Rows written: 500 | Total: 9000
+2026-05-06 14:53:54,812 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:57,395 - INFO - Batch 19 | Rows written: 500 | Total: 9500
+2026-05-06 14:53:57,395 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:53:59,575 - INFO - Batch 20 | Rows written: 500 | Total: 10000
+2026-05-06 14:53:59,576 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:01,749 - INFO - Batch 21 | Rows written: 500 | Total: 10500
+2026-05-06 14:54:01,749 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:03,807 - INFO - Batch 22 | Rows written: 500 | Total: 11000
+2026-05-06 14:54:03,808 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:06,311 - INFO - Batch 23 | Rows written: 500 | Total: 11500
+2026-05-06 14:54:06,312 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:09,042 - INFO - Batch 24 | Rows written: 500 | Total: 12000
+2026-05-06 14:54:09,042 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:11,300 - INFO - Batch 25 | Rows written: 500 | Total: 12500
+2026-05-06 14:54:11,300 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:13,884 - INFO - Batch 26 | Rows written: 500 | Total: 13000
+2026-05-06 14:54:13,885 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:17,224 - INFO - Batch 27 | Rows written: 500 | Total: 13500
+2026-05-06 14:54:17,224 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:22,176 - INFO - Batch 28 | Rows written: 500 | Total: 14000
+2026-05-06 14:54:22,177 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:24,776 - INFO - Batch 29 | Rows written: 500 | Total: 14500
+2026-05-06 14:54:24,777 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:28,116 - INFO - Batch 30 | Rows written: 500 | Total: 15000
+2026-05-06 14:54:28,117 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:30,853 - INFO - Batch 31 | Rows written: 500 | Total: 15500
+2026-05-06 14:54:30,854 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:33,157 - INFO - Batch 32 | Rows written: 500 | Total: 16000
+2026-05-06 14:54:33,158 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:36,132 - INFO - Batch 33 | Rows written: 500 | Total: 16500
+2026-05-06 14:54:36,132 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:38,691 - INFO - Batch 34 | Rows written: 500 | Total: 17000
+2026-05-06 14:54:38,691 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:41,200 - INFO - Batch 35 | Rows written: 500 | Total: 17500
+2026-05-06 14:54:41,200 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:43,948 - INFO - Batch 36 | Rows written: 500 | Total: 18000
+2026-05-06 14:54:43,949 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:46,488 - INFO - Batch 37 | Rows written: 500 | Total: 18500
+2026-05-06 14:54:46,489 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:49,279 - INFO - Batch 38 | Rows written: 500 | Total: 19000
+2026-05-06 14:54:49,280 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:51,727 - INFO - Batch 39 | Rows written: 500 | Total: 19500
+2026-05-06 14:54:51,728 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:54,216 - INFO - Batch 40 | Rows written: 500 | Total: 20000
+2026-05-06 14:54:54,216 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:56,769 - INFO - Batch 41 | Rows written: 500 | Total: 20500
+2026-05-06 14:54:56,769 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:54:59,493 - INFO - Batch 42 | Rows written: 500 | Total: 21000
+2026-05-06 14:54:59,493 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:02,005 - INFO - Batch 43 | Rows written: 500 | Total: 21500
+2026-05-06 14:55:02,005 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:04,867 - INFO - Batch 44 | Rows written: 500 | Total: 22000
+2026-05-06 14:55:04,867 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:07,519 - INFO - Batch 45 | Rows written: 500 | Total: 22500
+2026-05-06 14:55:07,519 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:10,301 - INFO - Batch 46 | Rows written: 500 | Total: 23000
+2026-05-06 14:55:10,301 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:13,589 - INFO - Batch 47 | Rows written: 500 | Total: 23500
+2026-05-06 14:55:13,590 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:16,198 - INFO - Batch 48 | Rows written: 500 | Total: 24000
+2026-05-06 14:55:16,198 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:23,202 - INFO - Batch 49 | Rows written: 500 | Total: 24500
+2026-05-06 14:55:23,202 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:25,483 - INFO - Batch 50 | Rows written: 500 | Total: 25000
+2026-05-06 14:55:25,484 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:28,168 - INFO - Batch 51 | Rows written: 500 | Total: 25500
+2026-05-06 14:55:28,169 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:31,003 - INFO - Batch 52 | Rows written: 500 | Total: 26000
+2026-05-06 14:55:31,003 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:34,389 - INFO - Batch 53 | Rows written: 500 | Total: 26500
+2026-05-06 14:55:34,390 - INFO - Next cursor: 07050bc3-1654-418e-bd38-a4a8c25d400b
+2026-05-06 14:55:37,328 - INFO - Batch 54 | Rows written: 407 | Total: 26907
+2026-05-06 14:55:37,328 - INFO - Next cursor: None
+2026-05-06 14:55:37,328 - INFO - All pages fetched. Export complete.
+2026-05-06 14:55:37,328 - INFO - Export ended. Total rows in ghl_messages_export.csv: 26907
