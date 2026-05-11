@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GHL Multi-Location Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">G</span>
+          <div>
+            <p class="section-label">GoHighLevel</p>
+            <strong>Analytics</strong>
+          </div>
+        </div>
+
+        <nav class="tabs" aria-label="Dashboard tabs">
+          <button class="tab is-active" type="button" data-tab="appointments">
+            Appointments &amp; Bookings
+          </button>
+          <button class="tab" type="button" data-tab="marketing">
+            Marketing Tools
+          </button>
+          <button class="tab" type="button" data-tab="social">
+            Social Media
+          </button>
+          <button class="tab" type="button" data-tab="pipeline">
+            Pipeline
+          </button>
+        </nav>
+
+        <label class="location-field" for="locationSelect">
+          <span class="section-label">Subaccount</span>
+          <select id="locationSelect" disabled>
+            <option>Loading...</option>
+          </select>
+        </label>
+      </aside>
+
+      <main class="main">
+        <header class="page-header">
+          <div>
+            <p class="section-label" id="pageEyebrow">Dashboard</p>
+            <h1 id="pageTitle">Appointments &amp; Bookings</h1>
+          </div>
+          <button class="refresh-button" id="refreshButton" type="button" aria-label="Refresh current tab">
+            Refresh
+          </button>
+        </header>
+
+        <section class="status" id="status" aria-live="polite"></section>
+        <section class="content" id="content"></section>
+      </main>
+    </div>
+
+    <script src="assets/app.js"></script>
+  </body>
+</html>

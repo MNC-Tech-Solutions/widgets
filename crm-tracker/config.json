@@ -1,0 +1,24 @@
+{
+  "locations": [
+    {
+      "id": "WphrMU0x3Ocd2pEpBJcH",
+      "name": "Demo",
+      "accessToken": "pit-43dd0be6-ab49-42f6-aace-d7c0746adc19"
+    },
+    {
+      "id": "rtYVCVKq2G8uI1Q38qda",
+      "name": "AGB",
+      "accessToken": "pit-d58bbdce-edc1-45c1-b90b-9b5097b93b2b"
+    }
+  ],
+  "cache": {
+    "dir": "cache",
+    "ttls": {
+      "users": 1800,
+      "appointments": 300,
+      "marketing": 1800,
+      "social": 1800
+    }
+  }
+}
+

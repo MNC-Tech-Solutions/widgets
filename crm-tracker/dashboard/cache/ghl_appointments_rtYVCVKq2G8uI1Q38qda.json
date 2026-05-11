@@ -1,0 +1,116 @@
+1778484815
+{
+    "id": "rtYVCVKq2G8uI1Q38qda",
+    "name": "AGB",
+    "appointments": {
+        "total": 6,
+        "byUser": [
+            {
+                "id": "uizyQF39JaUBY2WlV3Ky",
+                "name": "Jayden Ng",
+                "total": 3
+            },
+            {
+                "id": "Tc9IstllGNv7wylMtR7e",
+                "name": "Lee Long Foong",
+                "total": 3
+            },
+            {
+                "id": "BfW5bP5CTfbaaGzUEN96",
+                "name": "Chloe Ooi",
+                "total": 0
+            },
+            {
+                "id": "J7fvdyufQFkMOHStZBJd",
+                "name": "Chong KK",
+                "total": 0
+            },
+            {
+                "id": "c1xfI6h1Jmmcwj7PiHfr",
+                "name": "Kai Ying",
+                "total": 0
+            },
+            {
+                "id": "urF8l5F1ABV0joh6b5uG",
+                "name": "Kang  HL",
+                "total": 0
+            },
+            {
+                "id": "12qMXjO8gbOhWAzLL7Il",
+                "name": "Kelvin Jude",
+                "total": 0
+            },
+            {
+                "id": "VzAttN6iIVy6ZkRHeSOa",
+                "name": "Kelvin Pon",
+                "total": 0
+            },
+            {
+                "id": "jK33Ba0Nfd0COR0DC8iw",
+                "name": "Low Siok Ying",
+                "total": 0
+            },
+            {
+                "id": "Pf0ODhY0tIbdcsFVvWDP",
+                "name": "Nichol Teh",
+                "total": 0
+            }
+        ]
+    },
+    "bookings": {
+        "total": 2,
+        "byUser": [
+            {
+                "id": "Tc9IstllGNv7wylMtR7e",
+                "name": "Lee Long Foong",
+                "total": 2
+            },
+            {
+                "id": "BfW5bP5CTfbaaGzUEN96",
+                "name": "Chloe Ooi",
+                "total": 0
+            },
+            {
+                "id": "J7fvdyufQFkMOHStZBJd",
+                "name": "Chong KK",
+                "total": 0
+            },
+            {
+                "id": "uizyQF39JaUBY2WlV3Ky",
+                "name": "Jayden Ng",
+                "total": 0
+            },
+            {
+                "id": "c1xfI6h1Jmmcwj7PiHfr",
+                "name": "Kai Ying",
+                "total": 0
+            },
+            {
+                "id": "urF8l5F1ABV0joh6b5uG",
+                "name": "Kang  HL",
+                "total": 0
+            },
+            {
+                "id": "12qMXjO8gbOhWAzLL7Il",
+                "name": "Kelvin Jude",
+                "total": 0
+            },
+            {
+                "id": "VzAttN6iIVy6ZkRHeSOa",
+                "name": "Kelvin Pon",
+                "total": 0
+            },
+            {
+                "id": "jK33Ba0Nfd0COR0DC8iw",
+                "name": "Low Siok Ying",
+                "total": 0
+            },
+            {
+                "id": "Pf0ODhY0tIbdcsFVvWDP",
+                "name": "Nichol Teh",
+                "total": 0
+            }
+        ],
+        "stageFound": true
+    }
+}

@@ -1,0 +1,156 @@
+1778482614
+{
+    "id": "VfZvkCL9M13RPHNpCGPi",
+    "name": "Alpha Galaxy",
+    "appointments": {
+        "total": 2,
+        "byUser": [
+            {
+                "id": "3gVAQqPvx68ckfZqViSh",
+                "name": "Penny -",
+                "total": 2
+            },
+            {
+                "id": "hYDRIg4OBcIoDBxUa7Qm",
+                "name": "Andy Low",
+                "total": 0
+            },
+            {
+                "id": "ekftg9KWjvkHcHuBlpC6",
+                "name": "BrewSpark Co",
+                "total": 0
+            },
+            {
+                "id": "oZKzwMXN24jhiVqu6BaZ",
+                "name": "Daaniyah",
+                "total": 0
+            },
+            {
+                "id": "12qMXjO8gbOhWAzLL7Il",
+                "name": "Kelvin Jude",
+                "total": 0
+            },
+            {
+                "id": "q0bCykgT5uK9c8e1bRUc",
+                "name": "Ken Hau",
+                "total": 0
+            },
+            {
+                "id": "TUnPnGVpr0yCYjhpGPTr",
+                "name": "Ken Hong",
+                "total": 0
+            },
+            {
+                "id": "MIWEiGG8KYN6Q9jadIzR",
+                "name": "Michael Lee",
+                "total": 0
+            },
+            {
+                "id": "wKqG578SlT7MlJB0Verk",
+                "name": "Quinn Wong",
+                "total": 0
+            },
+            {
+                "id": "s30z7BifxecArOSNIYEi",
+                "name": "Scarlett Thee",
+                "total": 0
+            },
+            {
+                "id": "2d8PDzeVk5BPmbyBky3i",
+                "name": "Shamudisvary Chandrakathan",
+                "total": 0
+            },
+            {
+                "id": "6H5ilpCjKPF4dUaJXZqY",
+                "name": "Vincent Eyu",
+                "total": 0
+            },
+            {
+                "id": "U3IxSYtf29OJyb59mSiT",
+                "name": "Vivian Koo",
+                "total": 0
+            },
+            {
+                "id": "PYHHZD0OZlWOIjCKf9Vk",
+                "name": "Wadood",
+                "total": 0
+            }
+        ]
+    },
+    "bookings": {
+        "total": 5,
+        "byUser": [
+            {
+                "id": "q0bCykgT5uK9c8e1bRUc",
+                "name": "Ken Hau",
+                "total": 3
+            },
+            {
+                "id": "3gVAQqPvx68ckfZqViSh",
+                "name": "Penny -",
+                "total": 2
+            },
+            {
+                "id": "hYDRIg4OBcIoDBxUa7Qm",
+                "name": "Andy Low",
+                "total": 0
+            },
+            {
+                "id": "ekftg9KWjvkHcHuBlpC6",
+                "name": "BrewSpark Co",
+                "total": 0
+            },
+            {
+                "id": "oZKzwMXN24jhiVqu6BaZ",
+                "name": "Daaniyah",
+                "total": 0
+            },
+            {
+                "id": "12qMXjO8gbOhWAzLL7Il",
+                "name": "Kelvin Jude",
+                "total": 0
+            },
+            {
+                "id": "TUnPnGVpr0yCYjhpGPTr",
+                "name": "Ken Hong",
+                "total": 0
+            },
+            {
+                "id": "MIWEiGG8KYN6Q9jadIzR",
+                "name": "Michael Lee",
+                "total": 0
+            },
+            {
+                "id": "wKqG578SlT7MlJB0Verk",
+                "name": "Quinn Wong",
+                "total": 0
+            },
+            {
+                "id": "s30z7BifxecArOSNIYEi",
+                "name": "Scarlett Thee",
+                "total": 0
+            },
+            {
+                "id": "2d8PDzeVk5BPmbyBky3i",
+                "name": "Shamudisvary Chandrakathan",
+                "total": 0
+            },
+            {
+                "id": "6H5ilpCjKPF4dUaJXZqY",
+                "name": "Vincent Eyu",
+                "total": 0
+            },
+            {
+                "id": "U3IxSYtf29OJyb59mSiT",
+                "name": "Vivian Koo",
+                "total": 0
+            },
+            {
+                "id": "PYHHZD0OZlWOIjCKf9Vk",
+                "name": "Wadood",
+                "total": 0
+            }
+        ],
+        "stageFound": true
+    }
+}
