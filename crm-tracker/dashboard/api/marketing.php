@@ -12,10 +12,8 @@ function normalizeItems(array $items): array
             continue;
         }
 
-        $id = (string) ($item['id'] ?? $item['_id'] ?? '');
         $name = trim((string) ($item['name'] ?? $item['title'] ?? 'Untitled'));
         $normalized[] = [
-            'id' => $id,
             'name' => $name !== '' ? $name : 'Untitled',
         ];
     }

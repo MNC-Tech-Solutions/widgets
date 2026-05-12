@@ -1,0 +1,56 @@
+1778489670
+{
+    "id": "U3iDCYXlOjeWWHiXe4Nz",
+    "name": "Tropicana Corporation",
+    "appointments": {
+        "total": 0,
+        "byUser": [
+            {
+                "id": "xUUzFTrS3Lm7wKFrfSCN",
+                "name": "Carrie Leong",
+                "total": 0
+            },
+            {
+                "id": "VqggXWEuUhaaOWHzp2Gp",
+                "name": "Chan Mun Fei",
+                "total": 0
+            },
+            {
+                "id": "D28PLNf9Aedh8KSVDcsJ",
+                "name": "Niegel Alwis",
+                "total": 0
+            },
+            {
+                "id": "15n9XTQ4VAUmHXItzmfo",
+                "name": "Vinod Nurlhaq",
+                "total": 0
+            }
+        ]
+    },
+    "bookings": {
+        "total": 0,
+        "byUser": [
+            {
+                "id": "xUUzFTrS3Lm7wKFrfSCN",
+                "name": "Carrie Leong",
+                "total": 0
+            },
+            {
+                "id": "VqggXWEuUhaaOWHzp2Gp",
+                "name": "Chan Mun Fei",
+                "total": 0
+            },
+            {
+                "id": "D28PLNf9Aedh8KSVDcsJ",
+                "name": "Niegel Alwis",
+                "total": 0
+            },
+            {
+                "id": "15n9XTQ4VAUmHXItzmfo",
+                "name": "Vinod Nurlhaq",
+                "total": 0
+            }
+        ],
+        "stageFound": false
+    }
+}
