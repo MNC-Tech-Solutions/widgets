@@ -1,0 +1,190 @@
+1778645546
+{
+    "id": "WphrMU0x3Ocd2pEpBJcH",
+    "name": "Demo",
+    "accounts": [
+        {
+            "profileId": "66f384f2e1d4aa67b0b763b5",
+            "platform": "facebook",
+            "name": "Demo by SJ360"
+        }
+    ],
+    "dateRange": {
+        "startDate": "2020-01-01",
+        "endDate": "2026-05-13"
+    },
+    "results": {
+        "dayRange": [
+            "2020",
+            "2021",
+            "2022",
+            "2023",
+            "2024",
+            "2025",
+            "2026"
+        ],
+        "grouping": "yearly",
+        "totals": {
+            "posts": 4,
+            "likes": 0,
+            "followers": 0,
+            "impressions": 178,
+            "comments": 2
+        },
+        "postPerformance": {
+            "posts": {
+                "facebook": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    2,
+                    1
+                ]
+            },
+            "impressions": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                152,
+                26
+            ],
+            "likes": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "comments": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                2,
+                0
+            ]
+        },
+        "breakdowns": {
+            "posts": {
+                "total": 4,
+                "totalChange": 0,
+                "platforms": {
+                    "facebook": {
+                        "value": 4,
+                        "change": 0
+                    }
+                }
+            },
+            "impressions": {
+                "total": 178,
+                "totalChange": 0,
+                "platforms": {
+                    "facebook": {
+                        "value": 178,
+                        "change": 0
+                    }
+                }
+            },
+            "reach": {
+                "total": 39,
+                "totalChange": 0,
+                "platforms": {
+                    "facebook": {
+                        "value": 39,
+                        "change": 0
+                    }
+                }
+            },
+            "engagement": {
+                "facebook": {
+                    "likes": 0,
+                    "comments": 2,
+                    "shares": 0,
+                    "change": 0
+                }
+            }
+        },
+        "platformTotals": {
+            "impressions": {
+                "facebook": {
+                    "total": 178,
+                    "series": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        152,
+                        26
+                    ]
+                }
+            },
+            "followers": {
+                "facebook": {
+                    "total": 0,
+                    "series": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            },
+            "likes": {
+                "facebook": {
+                    "total": 0,
+                    "series": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "demographics": {
+            "gender": {
+                "totals": {
+                    "male": {
+                        "total": 0,
+                        "percentage": 0
+                    },
+                    "female": {
+                        "total": 0,
+                        "percentage": 0
+                    },
+                    "unknown": {
+                        "total": 0,
+                        "percentage": 0
+                    }
+                }
+            },
+            "age": {
+                "totals": {
+                    "13-17": 0,
+                    "18-24": 0,
+                    "25-34": 0,
+                    "35-44": 0,
+                    "45-54": 0,
+                    "55-64": 0,
+                    "65+": 0
+                }
+            }
+        }
+    },
+    "message": "Analytics Built Successfully",
+    "traceId": "4d84e66c-36e3-4d2d-823c-5f21f7ca42f3"
+}
