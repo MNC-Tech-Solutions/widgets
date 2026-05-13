@@ -18,6 +18,11 @@ const tabs = {
     label: 'Pipeline',
     render: renderPipeline,
   },
+  avanser: {
+    endpoint: 'api/avanser.php',
+    label: 'AVANSER & Numbers',
+    render: renderAvanser,
+  },
 };
 
 let activeTab = 'appointments';
@@ -334,7 +339,7 @@ function renderSocial(locationsPayload) {
     return `
       <section class="social-layout">
         <div>
-          <p class="section-label">Overview</p>
+          <p class="section-label" style="padding-bottom: 15px">Overview</p>
           <div class="kpi-grid">
             ${metric('Total posts', totals.posts || 0)}
           </div>
@@ -449,6 +454,105 @@ function bindSocialControls() {
   syncLimits();
 }
 
+function renderAvanser(locationsPayload) {
+  function fmtDate(d) {
+    if (!d) return '';
+    try {
+      return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return '';
+    }
+  }
+
+  return locationsPayload.map((location) => {
+    const workflows = Array.isArray(location.workflows) ? location.workflows : [];
+    const numbers   = location.numbers || {};
+    const numItems  = Array.isArray(numbers.items) ? numbers.items : [];
+    const accountStatus = numbers.accountStatus || '';
+
+    const workflowCards = workflows.length === 0
+      ? `<div class="avanser-empty"><span class="avanser-empty-icon">⚙️</span><p>No AVANSER workflows found for this location.</p></div>`
+      : workflows.map((w) => {
+          const statusCls = w.status === 'published' ? 'badge-green' : w.status === 'draft' ? 'badge-amber' : 'badge-red';
+          return `
+            <div class="avanser-card">
+              <div class="avanser-card-name">${escapeHtml(w.name)}</div>
+              <div class="avanser-card-meta">
+                <span class="badge ${statusCls}">${escapeHtml(w.status)}</span>
+                <span class="avanser-meta-text">v${escapeHtml(String(w.version))}</span>
+                ${w.updatedAt ? `<span class="avanser-meta-text">Updated ${escapeHtml(fmtDate(w.updatedAt))}</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+    const numberCards = numItems.length === 0
+      ? `<div class="avanser-empty"><span class="avanser-empty-icon">📞</span><p>No phone numbers found for this location.</p></div>`
+      : numItems.map((n) => {
+          const typeCls = n.type === 'local' ? 'badge-blue'
+                        : n.type === 'toll_free' ? 'badge-purple'
+                        : n.type === 'mobile' ? 'badge-teal'
+                        : 'badge-neutral';
+          const capMap = [['voice', '📞 Voice'], ['sms', '💬 SMS'], ['mms', '🖼 MMS'], ['fax', '📠 Fax']];
+          const caps = capMap
+            .filter(([k]) => n.capabilities && n.capabilities[k])
+            .map(([, label]) => `<span class="cap-pill">${label}</span>`)
+            .join('');
+          const flagText = countryFlag(n.countryCode);
+          return `
+            <div class="avanser-card">
+              <div class="avanser-card-row">
+                <span class="avanser-card-name">${escapeHtml(n.friendlyName)}</span>
+                ${n.isDefaultNumber ? '<span class="badge badge-amber">★ Default</span>' : ''}
+              </div>
+              ${caps ? `<div class="avanser-caps">${caps}</div>` : ''}
+              ${n.inboundCallService && n.inboundCallService.type ? `<p class="avanser-meta-text">Inbound: ${escapeHtml(n.inboundCallService.type)}</p>` : ''}
+              ${n.dateAdded ? `<p class="avanser-meta-text">Added ${escapeHtml(fmtDate(n.dateAdded))}</p>` : ''}
+            </div>
+          `;
+        }).join('');
+
+    const countLabel = `${numItems.length} number${numItems.length === 1 ? '' : 's'}`;
+    const numSubtitle = accountStatus ? `${countLabel} · Account: ${escapeHtml(accountStatus)}` : countLabel;
+
+    return `
+      <div class="avanser-split">
+        <aside class="avanser-panel">
+          <div class="avanser-panel-header">
+            <h2 class="avanser-panel-title">AVANSER Workflows</h2>
+            <p class="avanser-panel-sub">Workflows containing AVANSER</p>
+          </div>
+          <div class="avanser-card-list">${workflowCards}</div>
+        </aside>
+        <section class="avanser-panel">
+          <div class="avanser-panel-header">
+            <h2 class="avanser-panel-title">Connected Numbers</h2>
+            <p class="avanser-panel-sub">${numSubtitle}</p>
+          </div>
+          <div class="avanser-card-list">${numberCards}</div>
+        </section>
+      </div>
+    `;
+  }).join('');
+}
+
+function bindAvanserControls() {
+  document.querySelectorAll('.phone-copy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const num = btn.dataset.number;
+      navigator.clipboard.writeText(num).then(() => {
+        const prev = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('is-copied');
+        setTimeout(() => {
+          btn.textContent = prev;
+          btn.classList.remove('is-copied');
+        }, 1500);
+      }).catch(() => {});
+    });
+  });
+}
+
 function renderPipeline(locationId) {
   if (!locationId) {
     return '<section class="tab-panel--pipeline"><p class="pipeline-empty">No location selected.</p></section>';
@@ -504,6 +608,9 @@ function setStatus(message, isError = false) {
   if (activeTab === 'social') {
     requestAnimationFrame(bindSocialControls);
   }
+  if (activeTab === 'avanser') {
+    requestAnimationFrame(bindAvanserControls);
+  }
 }
 
 function formatNumber(value) {
@@ -534,6 +641,14 @@ function platformGlyph(platform) {
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function countryFlag(code) {
+  if (!code) return '';
+  const upper = code.toUpperCase().slice(0, 2);
+  if (!/^[A-Z]{2}$/.test(upper)) return upper;
+  const flag = [...upper].map((c) => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+  return `${flag} ${upper}`;
 }
 
 function escapeHtml(value) {
