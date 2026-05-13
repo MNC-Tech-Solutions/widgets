@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads Enquiry Stats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    :root {
+      --bg:        #f0f2f7;
+      --surface:   #ffffff;
+      --surface2:  #f5f7fc;
+      --border:    rgba(0,0,0,0.07);
+      --border2:   rgba(0,0,0,0.11);
+      --teal:      #0d9b82;
+      --teal-dim:  rgba(13,155,130,0.10);
+      --teal-glow: rgba(13,155,130,0.25);
+      --pink:      #e8438a;
+      --blue:      #3b82f6;
+      --violet:    #7c3aed;
+      --amber:     #d97706;
+      --text:      #1a202c;
+      --muted:     #64748b;
+      --font-ui:   'Cabinet Grotesk', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 20px;
+      background-image:
+        linear-gradient(rgba(13,155,130,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(13,155,130,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1340px;
+      margin: 0 auto 24px;
+      animation: fadeDown 0.5s ease both;
+    }
+    .dash-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+    .dash-title span { color: var(--teal); }
+    .dash-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--teal);
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-glow);
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .widget {
+      max-width: 1340px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+      animation: fadeUp 0.5s ease 0.1s both;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+    .control-group label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .form-select, .form-control {
+      height: 38px; font-size: 13px; font-family: var(--font-ui);
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); border-radius: 8px; padding: 0 32px 0 12px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    .form-select:focus, .form-control:focus {
+      border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim);
+    }
+
+    .btn-refresh {
+      height: 38px; padding: 0 20px; font-family: var(--font-ui);
+      font-size: 13px; font-weight: 700; background: var(--teal);
+      color: #fff; border: none; border-radius: 8px; cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s; white-space: nowrap;
+    }
+    .btn-refresh:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-clear {
+      height: 38px; padding: 0 20px; font-family: var(--font-ui);
+      font-size: 13px; font-weight: 700; background: transparent;
+      color: var(--muted); border: 1px solid var(--border2);
+      border-radius: 8px; cursor: pointer;
+      transition: color 0.2s, border-color 0.2s; white-space: nowrap;
+    }
+    .btn-clear:hover { color: var(--text); border-color: rgba(0,0,0,0.25); }
+
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .stats-bar { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-pill {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 10px 18px;
+      animation: fadeUp 0.4s ease 0.2s both;
+    }
+    .stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .stat-dot.teal   { background: var(--teal); box-shadow: 0 0 8px var(--teal-glow); }
+    .stat-dot.pink   { background: var(--pink); box-shadow: 0 0 8px rgba(232,67,138,0.3); }
+    .stat-dot.blue   { background: var(--blue); box-shadow: 0 0 8px rgba(59,130,246,0.3); }
+    .stat-dot.amber  { background: var(--amber); box-shadow: 0 0 8px rgba(217,119,6,0.3); }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .stat-value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; margin-left: 6px; color: var(--text); }
+
+    .chart-wrap {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 8px 8px;
+      min-height: 460px; position: relative; overflow: hidden;
+      cursor: pointer;
+    }
+    .chart-wrap::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 60px; height: 2px; background: var(--teal);
+    }
+    /* Click hint */
+    .chart-hint {
+      position: absolute; top: 18px; right: 18px;
+      font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border2);
+      padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px;
+      pointer-events: none; opacity: 0.8;
+    }
+
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(240,242,247,0.85);
+      backdrop-filter: blur(4px); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 9999; gap: 16px;
+    }
+    .spinner-ring {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(13,155,130,0.15);
+      border-top-color: var(--teal); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .spinner-label { font-family: var(--font-mono); font-size: 11px; color: var(--teal); letter-spacing: 1.5px; animation: pulse 1.5s ease infinite; }
+
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    @keyframes slideIn  { from { opacity:0; transform:translateY(16px) scale(0.98); } to { opacity:1; transform:none; } }
+
+    /* ── Date modal ── */
+    .modal-content {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 14px; color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    }
+    .modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-body { padding: 20px 24px; }
+    .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-close { filter: none; opacity: 0.5; }
+    .modal .form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: block; }
+    .flatpickr-input { background: var(--surface2) !important; border: 1px solid var(--border2) !important; color: var(--text) !important; border-radius: 8px !important; height: 38px !important; padding: 0 12px !important; font-family: var(--font-ui) !important; font-size: 13px !important; width: 100% !important; outline: none !important; }
+
+    .btn-mp { height: 36px; padding: 0 20px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer; transition: opacity 0.2s; }
+    .btn-mp.primary { background: var(--teal); color: #fff; border: none; }
+    .btn-mp.primary:hover { opacity: 0.85; }
+    .btn-mp.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+    .btn-mp.secondary:hover { color: var(--text); border-color: rgba(0,0,0,0.25); }
+
+    /* ── Drill-down modal ── */
+    .modal-wide       { max-width: 520px; width: 90%; margin: 1.75rem auto; }
+    .modal-leads-wide { max-width: 1060px; width: 94%; margin: 1.75rem auto; }
+
+    /* Drill-down header bar */
+    .drill-header {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+      padding: 14px 18px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 10px;
+      animation: slideIn 0.3s ease both;
+    }
+    .drill-kpi {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 0 16px; border-right: 1px solid var(--border);
+    }
+    .drill-kpi:last-child { border-right: none; }
+    .drill-kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--muted); }
+    .drill-kpi-value { font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--text); }
+    .drill-kpi-value.teal  { color: var(--teal); }
+    .drill-kpi-value.pink  { color: var(--pink); }
+    .drill-kpi-value.amber { color: var(--amber); }
+
+    /* Source breakdown chips */
+    .source-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .src-chip {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .src-chip-count {
+      background: var(--teal); color: #fff;
+      border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700;
+    }
+
+    /* Table */
+    .table-container {
+      max-height: 380px; overflow: auto; border-radius: 10px;
+      border: 1px solid var(--border2);
+    }
+    .table-container::-webkit-scrollbar { width: 5px; height: 5px; }
+    .table-container::-webkit-scrollbar-track { background: var(--surface2); }
+    .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    .leads-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .leads-table thead th {
+      background: var(--surface2); color: var(--muted); font-size: 11px;
+      font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+      padding: 10px 14px; border-bottom: 1px solid var(--border2);
+      position: sticky; top: 0; z-index: 1; white-space: nowrap;
+      cursor: pointer; user-select: none;
+    }
+    .leads-table thead th:hover { color: var(--teal); }
+    .leads-table thead th .sort-arrow { opacity: 0.4; margin-left: 4px; font-size: 10px; }
+    .leads-table thead th.sort-asc .sort-arrow::after  { content: '▲'; opacity: 1; color: var(--teal); }
+    .leads-table thead th.sort-desc .sort-arrow::after { content: '▼'; opacity: 1; color: var(--teal); }
+    .leads-table thead th:not(.sort-asc):not(.sort-desc) .sort-arrow::after { content: '⇅'; }
+
+    .leads-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .leads-table tbody tr:last-child { border-bottom: none; }
+    .leads-table tbody tr:hover { background: rgba(13,155,130,0.04); }
+    .leads-table tbody td { padding: 10px 14px; color: var(--text); white-space: nowrap; }
+    .leads-table tbody td:first-child { font-weight: 600; }
+
+    /* Row expand */
+    .expand-row { background: var(--surface2) !important; }
+    .expand-row td { padding: 14px 20px !important; }
+    .expand-detail { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .expand-field { display: flex; flex-direction: column; gap: 3px; }
+    .expand-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+    .expand-field-value { font-size: 13px; color: var(--text); font-family: var(--font-mono); }
+
+    .pagination-section {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 14px; padding: 10px 14px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    .pagination-info { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+    .pagination-buttons { display: flex; gap: 8px; }
+    .btn-page {
+      font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+      padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border2);
+      background: transparent; color: var(--teal); cursor: pointer; transition: background 0.2s;
+    }
+    .btn-page:hover:not(:disabled) { background: var(--teal-dim); }
+    .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* search inside modal */
+    .modal-search {
+      height: 34px; font-size: 12px; font-family: var(--font-mono);
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); border-radius: 8px; padding: 0 12px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      width: 220px;
+    }
+    .modal-search:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
+    .modal-search::placeholder { color: var(--muted); }
+
+    .src-badge {
+      background: rgba(13,155,130,0.10); color: var(--teal);
+      border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700;
+    }
+    .src-badge.none { background: var(--surface2); color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <div style="max-width:1340px;margin:0 auto;">
+    <div class="dash-header">
+      <div class="dash-title">Lead <span>Enquiry</span> Stats</div>
+    </div>
+  </div>
+
+  <div class="widget">
+    <div class="controls">
+      <div class="control-group">
+        <label for="pipeline">Pipeline</label>
+        <select id="pipeline" class="form-select"><option value="">All Pipelines</option></select>
+      </div>
+      <div class="control-group">
+        <label for="dateRange">Date Range</label>
+        <select id="dateRange" class="form-select">
+          <option value="today">Today</option>
+          <option value="thisWeek">This Week</option>
+          <option value="lastWeek">Last Week</option>
+          <option value="last7Days">Last 7 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="thisYear">This Year</option>
+          <option value="">All Dates</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      <div class="control-group" style="min-width:auto;">
+        <label>&nbsp;</label>
+        <button id="forceRefresh" class="btn-refresh">↺ Refresh</button>
+      </div>
+      <div class="control-group" style="min-width:auto;">
+        <label>&nbsp;</label>
+        <button id="clearAllFilters" class="btn-clear">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="stats-bar" id="statsBar"></div>
+
+    <div class="chart-wrap" style="position:relative;">
+      <div class="chart-hint">Click a bar to drill down</div>
+      <div id="barChart"></div>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+    <div class="spinner-ring"></div>
+    <div class="spinner-label">LOADING DATA...</div>
+  </div>
+
+  <!-- Date modal -->
+  <div class="modal fade" id="dateSelectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-wide">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Custom Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Select range</label>
+          <input type="text" id="modalDateRange" class="form-control" placeholder="Pick dates…">
+        </div>
+        <div class="modal-footer">
+          <button class="btn-mp secondary" id="clearDateFilter">Clear</button>
+          <button class="btn-mp primary" id="applyDateFilter">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leads drill-down modal -->
+  <div class="modal fade" id="leadsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-leads-wide">
+      <div class="modal-content">
+        <div class="modal-header" style="gap:12px;">
+          <h5 class="modal-title" id="leadsModalLabel">Leads</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" style="margin-left:auto;"></button>
+        </div>
+        <div class="modal-body">
+
+          <!-- KPI summary row -->
+          <div class="drill-header" id="drillHeader"></div>
+
+          <!-- Source chips -->
+          <div class="source-chips" id="sourceChips"></div>
+
+          <!-- Search + table actions -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <input type="text" class="modal-search" id="modalSearch" placeholder="Search name / email / phone…">
+            <span id="searchCount" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:4px;"></span>
+          </div>
+
+          <div class="table-container">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th data-col="contactName">Contact Name<span class="sort-arrow"></span></th>
+                  <th data-col="phone">Phone<span class="sort-arrow"></span></th>
+                  <th data-col="email">Email<span class="sort-arrow"></span></th>
+                  <th data-col="source">Source<span class="sort-arrow"></span></th>
+                  <th data-col="dateAdded">Date Added<span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody id="leadsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination-section">
+            <span class="pagination-info" id="paginationInfo">Showing 0–0 of 0</span>
+            <div class="pagination-buttons">
+              <button class="btn-page" id="prevPageBtn" disabled>← Prev</button>
+              <button class="btn-page" id="nextPageBtn" disabled>Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
+  <script type="module">
+    import { loadConfig, fetchPipelinesV2, clearIndexedDB, progressManager, openDB } from '../ghlDataV2.js?v=1.0.0';
+
+    let CONFIG = {}, locationId = '', pipelines = [];
+    let selectedStartDate = null, selectedEndDate = null, dateRangePicker;
+    let allContacts = [], currentPage = 1;
+    const leadsPerPage = 10;
+    const BG_REFRESH = 10 * 60 * 1000;
+    const CACHE_TTL  = 10 * 60 * 1000;
+
+    // ── Modal state ───────────────────────────────────────────────────────────
+    let modalLeads = [];        // full set for this bar click
+    let filteredLeads = [];     // after search filter
+    let sortCol = 'dateAdded', sortDir = 'desc';
+    let expandedRow = null;     // tr element currently expanded
+
+    // ── IndexedDB ─────────────────────────────────────────────────────────────
+    async function openContactsDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('ghl_contacts_db', 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+        req.onupgradeneeded = e => {
+          if (!e.target.result.objectStoreNames.contains('contacts_cache'))
+            e.target.result.createObjectStore('contacts_cache', { keyPath: 'locationId' });
+        };
+      });
+    }
+    async function getContactsFromCache() {
+      try {
+        const db = await openContactsDB();
+        return new Promise((res, rej) => {
+          const r = db.transaction('contacts_cache','readonly').objectStore('contacts_cache').get(locationId);
+          r.onsuccess = () => res(r.result||null); r.onerror = () => rej(r.error);
+        });
+      } catch { return null; }
+    }
+    async function saveContactsToCache(contacts) {
+      try {
+        const db = await openContactsDB();
+        return new Promise((res,rej) => {
+          const tx = db.transaction('contacts_cache','readwrite');
+          tx.objectStore('contacts_cache').put({ locationId, fetchedAt: Date.now(), data: contacts });
+          tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+        });
+      } catch(e) { console.warn('IDB save failed:', e); }
+    }
+    async function clearContactsCache() {
+      try {
+        const db = await openContactsDB();
+        return new Promise(res => {
+          const tx = db.transaction('contacts_cache','readwrite');
+          tx.objectStore('contacts_cache').delete(locationId);
+          tx.oncomplete = res;
+        });
+      } catch {}
+    }
+
+    // ── API ───────────────────────────────────────────────────────────────────
+    async function fetchAllContacts(forceRefresh = false) {
+      if (!forceRefresh) {
+        const c = await getContactsFromCache();
+        if (c && (Date.now()-c.fetchedAt) < CACHE_TTL) { console.log(`Cache: ${c.data.length}`); return c.data; }
+      }
+      const contacts = []; const limit = 100;
+      let hasMore = true, searchAfter = null;
+      while (hasMore) {
+        try {
+          const payload = { locationId, pageLimit: limit, filters: [], sort: [{ field:'dateAdded', direction:'desc' }] };
+          if (searchAfter) payload.searchAfter = searchAfter;
+          const res = await fetch('https://services.leadconnectorhq.com/contacts/search', {
+            method:'POST', headers:{ 'Authorization':`Bearer ${CONFIG.accessToken}`, 'Content-Type':'application/json', 'Version':'2021-07-28' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) { console.error(`${res.status}:`, await res.text()); break; }
+          const data = await res.json();
+          const batch = data.contacts || [];
+          contacts.push(...batch);
+          if (batch.length === limit) { const last = batch[batch.length-1]; searchAfter = last?.searchAfter||null; if (!searchAfter) hasMore=false; }
+          else hasMore = false;
+        } catch(e) { console.error(e); break; }
+      }
+      await saveContactsToCache(contacts);
+      return contacts;
+    }
+
+    // ── Date utils ────────────────────────────────────────────────────────────
+    const fmt = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : null;
+    const fmtDT = u => { if(!u)return'—'; const d=new Date(u); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+
+    function getDateRange(range) {
+      const t = new Date(); let s, e;
+      switch(range) {
+        case 'today':     s=new Date(t.getFullYear(),t.getMonth(),t.getDate()); e=new Date(s); break;
+        case 'thisWeek':  s=new Date(t); s.setDate(t.getDate()-t.getDay()); e=new Date(s); e.setDate(s.getDate()+6); break;
+        case 'lastWeek':  s=new Date(t); s.setDate(t.getDate()-t.getDay()-7); e=new Date(s); e.setDate(s.getDate()+6); break;
+        case 'last7Days': s=new Date(t); s.setDate(t.getDate()-7); e=new Date(t); break;
+        case 'thisMonth': s=new Date(t.getFullYear(),t.getMonth(),1); e=new Date(t.getFullYear(),t.getMonth()+1,0); break;
+        case 'lastMonth': s=new Date(t.getFullYear(),t.getMonth()-1,1); e=new Date(t.getFullYear(),t.getMonth(),0); break;
+        case 'thisYear':  s=new Date(t.getFullYear(),0,1); e=new Date(t.getFullYear(),11,31); break;
+        default: s=null; e=null;
+      }
+      return {start:s, end:e};
+    }
+    function getActiveDateRange() {
+      const v = document.getElementById('dateRange').value;
+      if (v && v !== 'custom') { const {start,end} = getDateRange(v); return {startDate:fmt(start), endDate:fmt(end)}; }
+      if (v === 'custom' && selectedStartDate && selectedEndDate) return {startDate:fmt(selectedStartDate), endDate:fmt(selectedEndDate)};
+      return {startDate:null, endDate:null};
+    }
+    function filterByDate(contacts) {
+      const {startDate, endDate} = getActiveDateRange();
+      if (!startDate && !endDate) return contacts;
+      return contacts.filter(c => {
+        const d = fmt(new Date(c.dateAdded));
+        return (!startDate || d >= startDate) && (!endDate || d <= endDate);
+      });
+    }
+
+    // ── Spinner ───────────────────────────────────────────────────────────────
+    const showSpinner = () => document.getElementById('loadingOverlay').style.display = 'flex';
+    const hideSpinner = () => document.getElementById('loadingOverlay').style.display = 'none';
+
+    // ── Stats pills ───────────────────────────────────────────────────────────
+    function buildPill(dotClass, label, value) {
+      return `<div class="stat-pill"><div class="stat-dot ${dotClass}"></div><span class="stat-label">${label}</span><span class="stat-value">${value}</span></div>`;
+    }
+    function updateStats(contacts) {
+      const bar = document.getElementById('statsBar');
+      const total = contacts.length;
+      const wd = contacts.filter(c => { const d = new Date(c.dateAdded).getDay(); return d !== 0 && d !== 6; }).length;
+      const we = total - wd;
+      const hourCounts = Array(24).fill(0);
+      contacts.forEach(c => hourCounts[new Date(c.dateAdded).getHours()]++);
+      const peakHr = hourCounts.indexOf(Math.max(...hourCounts));
+      const peakLabel = total > 0 ? `${peakHr % 12 || 12}${peakHr < 12 ? 'am' : 'pm'}` : '—';
+      bar.innerHTML =
+        buildPill('teal',  'Total',   total.toLocaleString()) +
+        buildPill('pink',  'Weekday', wd.toLocaleString()) +
+        buildPill('blue',  'Weekend', we.toLocaleString()) +
+        buildPill('amber', 'Peak Hr', peakLabel);
+    }
+
+    // ── Plotly ────────────────────────────────────────────────────────────────
+    const LAYOUT_BASE = {
+      paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+      font:{ family:"'IBM Plex Mono',monospace", color:'#64748b', size:12 },
+      xaxis:{ gridcolor:'rgba(0,0,0,0.06)', linecolor:'rgba(0,0,0,0.08)', tickcolor:'transparent', tickfont:{color:'#94a3b8',size:11} },
+      yaxis:{ gridcolor:'rgba(0,0,0,0.06)', linecolor:'rgba(0,0,0,0.08)', tickcolor:'transparent', tickfont:{color:'#94a3b8',size:11}, title:{text:'Leads',font:{color:'#94a3b8',size:11}} },
+      barmode:'stack', height:440,
+      margin:{t:24,b:64,l:52,r:16},
+      showlegend:true,
+      legend:{ orientation:'h', x:0, y:-0.2, font:{color:'#64748b',size:12}, bgcolor:'transparent' },
+      hoverlabel:{ bgcolor:'#ffffff', bordercolor:'rgba(13,155,130,0.4)', font:{family:"'IBM Plex Mono',monospace",color:'#1a202c',size:12} }
+    };
+    const PLOTLY_CFG = { displayModeBar:false, responsive:true };
+
+    // ── KEY FIX: customdata is per-point, so we store the leads array at each index ──
+    function mkTrace(x, y, name, color, leadsPerSlot) {
+      return {
+        x, y, name, type:'bar',
+        marker:{ color, opacity:0.88, line:{width:0} },
+        text: y.map(v => v > 0 ? v : ''), textposition:'auto',
+        textfont:{ family:"'IBM Plex Mono',monospace", size:11, color:'#fff' },
+        // customdata: array of arrays — one entry per x-point, containing the leads for that slot
+        customdata: leadsPerSlot,
+        hovertemplate:`<b>${name}</b><br>%{x}<br><b>%{y} leads</b><extra></extra>`
+      };
+    }
+
+    function renderByHour(contacts) {
+      const slots = Array(24).fill(null).map(() => ({wd:0, we:0, wdL:[], weL:[]}));
+      const xlabels = Array.from({length:24}, (_,i) => `${i%12||12}${i<12?'am':'pm'}`);
+      contacts.forEach(c => {
+        const d = new Date(c.dateAdded), hr = d.getHours();
+        const isWe = d.getDay() === 0 || d.getDay() === 6;
+        if (isWe) { slots[hr].we++; slots[hr].weL.push(c); }
+        else       { slots[hr].wd++; slots[hr].wdL.push(c); }
+      });
+
+      const traces = [
+        mkTrace(xlabels, slots.map(s=>s.wd), 'Weekday', '#0d9b82', slots.map(s=>s.wdL)),
+        mkTrace(xlabels, slots.map(s=>s.we), 'Weekend', '#e8438a', slots.map(s=>s.weL))
+      ];
+      const layout = { ...LAYOUT_BASE, xaxis:{ ...LAYOUT_BASE.xaxis, title:{text:'Hour (MYT)',font:{color:'#94a3b8',size:11}} } };
+
+      Plotly.purge('barChart');
+      Plotly.newPlot('barChart', traces, layout, PLOTLY_CFG).then(() => {
+        document.getElementById('barChart').on('plotly_click', e => {
+          if (!e.points.length) return;
+          const pt = e.points[0];
+          // pt.customdata is the leads array for this specific bar segment + point index
+          const leads = pt.customdata;  // ← direct array, NOT indexed again
+          const hour  = pt.x;
+          const type  = pt.data.name;
+          displayLeadsInModal(leads, `${hour} — ${type}`);
+        });
+      });
+    }
+
+    async function renderChart() {
+      showSpinner();
+      try {
+        if (!allContacts.length) allContacts = await fetchAllContacts();
+        const filtered = filterByDate(allContacts);
+        updateStats(filtered);
+        renderByHour(filtered);
+      } catch(err) {
+        console.error(err);
+        document.getElementById('barChart').innerHTML = '<p style="color:var(--muted);padding:40px;text-align:center;">Error loading data.</p>';
+      } finally { hideSpinner(); }
+    }
+
+    // ── Drill-down modal ──────────────────────────────────────────────────────
+    function sourceCounts(leads) {
+      const map = {};
+      leads.forEach(c => {
+        const s = c.source || '(none)';
+        map[s] = (map[s] || 0) + 1;
+      });
+      return Object.entries(map).sort((a,b) => b[1]-a[1]);
+    }
+
+    function buildDrillHeader(leads, label) {
+      const total = leads.length;
+      const withPhone = leads.filter(c => c.phone).length;
+      const withEmail = leads.filter(c => c.email).length;
+      const srcs = sourceCounts(leads);
+      document.getElementById('drillHeader').innerHTML = `
+        <div class="drill-kpi"><div class="drill-kpi-label">Total Leads</div><div class="drill-kpi-value teal">${total}</div></div>
+        <div class="drill-kpi"><div class="drill-kpi-label">Has Phone</div><div class="drill-kpi-value">${withPhone}</div></div>
+        <div class="drill-kpi"><div class="drill-kpi-label">Has Email</div><div class="drill-kpi-value">${withEmail}</div></div>
+        <div class="drill-kpi"><div class="drill-kpi-label">Sources</div><div class="drill-kpi-value">${srcs.length}</div></div>
+      `;
+      document.getElementById('sourceChips').innerHTML = srcs.map(([s,n]) =>
+        `<div class="src-chip"><span>${s}</span><span class="src-chip-count">${n}</span></div>`
+      ).join('');
+    }
+
+    function applySearch(q) {
+      q = q.trim().toLowerCase();
+      if (!q) return modalLeads;
+      return modalLeads.filter(c => {
+        return (c.contactName||c.firstName||'').toLowerCase().includes(q)
+          || (c.email||'').toLowerCase().includes(q)
+          || (c.phone||'').toLowerCase().includes(q);
+      });
+    }
+
+    function sortLeads(leads) {
+      return [...leads].sort((a,b) => {
+        let va = a[sortCol] || '', vb = b[sortCol] || '';
+        if (sortCol === 'dateAdded') { va = new Date(va).getTime(); vb = new Date(vb).getTime(); }
+        else { va = String(va).toLowerCase(); vb = String(vb).toLowerCase(); }
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ?  1 : -1;
+        return 0;
+      });
+    }
+
+    function renderModalPage() {
+      const tbody = document.getElementById('leadsTableBody');
+      tbody.innerHTML = '';
+      expandedRow = null;
+      const sorted = sortLeads(filteredLeads);
+      const s = (currentPage-1) * leadsPerPage;
+      const e = Math.min(s + leadsPerPage, sorted.length);
+      sorted.slice(s, e).forEach((c, idx) => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.innerHTML = `
+          <td>${c.contactName || c.firstName || '—'}</td>
+          <td style="font-family:var(--font-mono);font-size:12px;color:var(--muted);">${c.phone||'—'}</td>
+          <td style="color:var(--muted);">${c.email||'—'}</td>
+          <td><span class="src-badge${!c.source?' none':''}">${c.source||'—'}</span></td>
+          <td style="font-family:var(--font-mono);font-size:12px;color:var(--muted);">${fmtDT(c.dateAdded)}</td>
+        `;
+
+        // ── Row click → expand detail ──
+        tr.addEventListener('click', () => {
+          // collapse any open expand row
+          if (expandedRow) { expandedRow.remove(); expandedRow = null; }
+          // if clicking same row again, just collapse
+          if (tr.dataset.expanded === '1') { tr.dataset.expanded = '0'; return; }
+          tr.dataset.expanded = '1';
+
+          const expTr = document.createElement('tr');
+          expTr.className = 'expand-row';
+          expTr.innerHTML = `<td colspan="6">
+            <div class="expand-detail">
+              <div class="expand-field"><div class="expand-field-label">Full Name</div><div class="expand-field-value">${c.contactName||c.firstName||'—'} ${c.lastName||''}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Phone</div><div class="expand-field-value">${c.phone||'—'}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Email</div><div class="expand-field-value">${c.email||'—'}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Source</div><div class="expand-field-value">${c.source||'—'}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Date Added</div><div class="expand-field-value">${fmtDT(c.dateAdded)}</div></div>
+              <div class="expand-field"><div class="expand-field-label">City</div><div class="expand-field-value">${c.city||'—'}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Tags</div><div class="expand-field-value">${(c.tags||[]).join(', ')||'—'}</div></div>
+              <div class="expand-field"><div class="expand-field-label">Contact ID</div><div class="expand-field-value" style="font-size:10px;color:var(--muted);">${c.id||'—'}</div></div>
+            </div>
+          </td>`;
+          tr.after(expTr);
+          expandedRow = expTr;
+
+          // unflag previous row
+          tbody.querySelectorAll('tr[data-expanded="1"]').forEach(r => { if(r!==tr) r.dataset.expanded='0'; });
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('paginationInfo').textContent = `Showing ${sorted.length ? s+1 : 0}–${e} of ${sorted.length}`;
+      document.getElementById('prevPageBtn').disabled = currentPage === 1;
+      document.getElementById('nextPageBtn').disabled = e >= sorted.length;
+      document.getElementById('searchCount').textContent = filteredLeads.length !== modalLeads.length
+        ? `${filteredLeads.length} match${filteredLeads.length!==1?'es':''}` : '';
+    }
+
+    function setupSortHeaders() {
+      document.querySelectorAll('.leads-table thead th[data-col]').forEach(th => {
+        th.classList.remove('sort-asc','sort-desc');
+        if (th.dataset.col === sortCol) th.classList.add(sortDir==='asc'?'sort-asc':'sort-desc');
+        th.onclick = () => {
+          if (sortCol === th.dataset.col) sortDir = sortDir==='asc'?'desc':'asc';
+          else { sortCol = th.dataset.col; sortDir = 'asc'; }
+          currentPage = 1;
+          setupSortHeaders();
+          renderModalPage();
+        };
+      });
+    }
+
+    function displayLeadsInModal(leads, label) {
+      modalLeads = leads;
+      filteredLeads = leads;
+      currentPage = 1;
+      sortCol = 'dateAdded'; sortDir = 'desc';
+
+      document.getElementById('leadsModalLabel').textContent = `Leads — ${label}`;
+      document.getElementById('modalSearch').value = '';
+      buildDrillHeader(leads, label);
+      setupSortHeaders();
+      renderModalPage();
+
+      // Rebind pagination (clone to remove stale listeners)
+      ['prevPageBtn','nextPageBtn'].forEach(id => {
+        const old = document.getElementById(id), fresh = old.cloneNode(true);
+        old.parentNode.replaceChild(fresh, old);
+      });
+      document.getElementById('prevPageBtn').addEventListener('click', () => { currentPage--; renderModalPage(); });
+      document.getElementById('nextPageBtn').addEventListener('click', () => { currentPage++; renderModalPage(); });
+
+      // Search
+      const searchEl = document.getElementById('modalSearch');
+      const newSearch = searchEl.cloneNode(true);
+      searchEl.parentNode.replaceChild(newSearch, searchEl);
+      newSearch.addEventListener('input', () => {
+        filteredLeads = applySearch(newSearch.value);
+        currentPage = 1;
+        renderModalPage();
+      });
+
+      new bootstrap.Modal(document.getElementById('leadsModal')).show();
+    }
+
+    // ── Controls ──────────────────────────────────────────────────────────────
+    function updatePipelines() {
+      const sel = document.getElementById('pipeline'), cur = sel.value;
+      sel.innerHTML = '<option value="">All Pipelines</option>';
+      pipelines.forEach(p => { const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o); });
+      sel.value = cur||'';
+    }
+    function clearAllFilters() {
+      const sel = document.getElementById('pipeline');
+      const ps = pipelines.find(p => p.name.toLowerCase()==='presales');
+      sel.value = ps ? ps.id : (pipelines[0]?.id||'');
+      document.getElementById('dateRange').value = 'today';
+      selectedStartDate = null; selectedEndDate = null; dateRangePicker.clear();
+      allContacts = []; renderChart();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function initWidget() {
+      const {config, locationId:locId} = await loadConfig();
+      if (!config) { document.getElementById('barChart').innerHTML='<p style="color:var(--muted);padding:40px;text-align:center;">No config found.</p>'; return; }
+      CONFIG = config; locationId = locId;
+
+      pipelines = await fetchPipelinesV2(CONFIG, locationId);
+      updatePipelines();
+      const ps = pipelines.find(p => p.name.toLowerCase()==='presales');
+      document.getElementById('pipeline').value = ps ? ps.id : (pipelines[0]?.id||'');
+
+      document.getElementById('dateRange').value = 'today';
+
+      dateRangePicker = flatpickr('#modalDateRange', {
+        mode:'range', dateFormat:'Y/m/d',
+        onClose: dates => {
+          if (dates.length===2) {
+            selectedStartDate = dates[0]; selectedEndDate = dates[1];
+            document.getElementById('dateRange').value = 'custom';
+            allContacts = []; renderChart();
+            bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+          }
+        }
+      });
+
+      document.getElementById('dateRange').addEventListener('change', async function() {
+        if (this.value==='custom') { new bootstrap.Modal(document.getElementById('dateSelectionModal')).show(); }
+        else { selectedStartDate=null; selectedEndDate=null; dateRangePicker.clear(); allContacts=[]; await renderChart(); }
+      });
+      document.getElementById('clearDateFilter').addEventListener('click', async () => {
+        dateRangePicker.clear(); selectedStartDate=null; selectedEndDate=null;
+        document.getElementById('dateRange').value='today'; allContacts=[]; await renderChart();
+        bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
+      });
+      document.getElementById('applyDateFilter').addEventListener('click', async () => {
+        if (selectedStartDate && selectedEndDate) { allContacts=[]; await renderChart(); bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide(); }
+      });
+
+      document.getElementById('pipeline').addEventListener('change', renderChart);
+      document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+      document.getElementById('forceRefresh').addEventListener('click', async () => {
+        showSpinner();
+        try {
+          await clearContactsCache(); allContacts=[];
+          pipelines = await fetchPipelinesV2(CONFIG, locationId); updatePipelines();
+          await renderChart(); localStorage.setItem('ghl_last_refresh', Date.now().toString());
+        } catch(e) { console.error(e); } finally { hideSpinner(); }
+      });
+
+      await renderChart();
+      setInterval(async () => { await clearContactsCache(); allContacts=[]; renderChart(); }, BG_REFRESH);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => initWidget());
+  </script>
+</body>
+</html>
