@@ -70,7 +70,7 @@ if (!file_exists($mappingsFile)) {
 $mappings = json_decode(file_get_contents($mappingsFile), true);
 
 // Project Validation
-$inputProject = $raw['Interested Project'] ?? 'Unknown';
+$inputProject = $raw['(Contact) Interested Project'] ?? 'Unknown';
 $normalizedInput = normalize($inputProject);
 $projectId = null;
 
@@ -103,7 +103,7 @@ foreach ($mappings['sales_persons'] as $mapName => $id) {
 
 // Lead Source Mapping
 $leadSourceId = null;
-$inputLeadSource = $raw['PX Lead Source'] ?? null;
+$inputLeadSource = $raw['(Contact) PX Lead Source'] ?? null;
 if ($inputLeadSource && strtoupper(trim($inputLeadSource)) === 'AI') {
     $leadSourceId = $mappings['lead_source']['ai'] ?? null;
 }
