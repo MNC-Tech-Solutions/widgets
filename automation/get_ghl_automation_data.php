@@ -1,3 +1,5 @@
+<!-- retrieve data from ghl automation (POST DATA) -->
+
 <?php
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
