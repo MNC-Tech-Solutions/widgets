@@ -4,40 +4,58 @@ import time
 import os
 from datetime import datetime
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-GHL_TOKEN = "pit-02cea63b-562a-4808-a724-db8959c228ae"
-LOCATION_ID = "THkkSZ21VAMIoOp3RFax"
+from dotenv import load_dotenv
+load_dotenv()
 
-# ChatDaddy API credentials
-CHATDADDY_TOKEN = "apit_eMROwmrJF_i759xkq4KJBUX7v1FtHjYLAmGLAjr0CEE"
-CHATDADDY_ACCOUNT_ID = "acc_30528e6f-8033-4303-8d_3706"  # used in message fetch URL
-MESSAGE_CUTOFF_DATE = "2025-12-31"  # only sync messages on or before this date
+from supabase import create_client
 
 # ============================================================================
-# TEST MODE — set to True to only process the first TEST_LIMIT contacts
+# CONFIGURATION — loaded from .env
 # ============================================================================
-TEST_MODE = True
-TEST_LIMIT = 5
+GHL_TOKEN            = os.getenv("GHL_TOKEN")
+LOCATION_ID          = os.getenv("LOCATION_ID")
+CHATDADDY_TOKEN      = os.getenv("CHATDADDY_TOKEN")
+CHATDADDY_ACCOUNT_ID = os.getenv("CHATDADDY_ACCOUNT_ID")
+MESSAGE_CUTOFF_DATE  = os.getenv("MESSAGE_CUTOFF_DATE", "2025-12-31")
+NOTE_USER_ID         = os.getenv("NOTE_USER_ID")
+SUPABASE_URL         = os.getenv("SUPABASE_URL")
+SUPABASE_KEY         = os.getenv("SUPABASE_KEY")
+TEST_MODE            = os.getenv("TEST_MODE", "false").lower() == "true"
+TEST_LIMIT           = int(os.getenv("TEST_LIMIT", "5"))
+
+REQUIRED = {
+    "GHL_TOKEN":            GHL_TOKEN,
+    "LOCATION_ID":          LOCATION_ID,
+    "CHATDADDY_TOKEN":      CHATDADDY_TOKEN,
+    "CHATDADDY_ACCOUNT_ID": CHATDADDY_ACCOUNT_ID,
+    "NOTE_USER_ID":         NOTE_USER_ID,
+    "SUPABASE_URL":         SUPABASE_URL,
+    "SUPABASE_KEY":         SUPABASE_KEY,
+}
+missing = [k for k, v in REQUIRED.items() if not v]
+if missing:
+    print(f"[ERROR] Missing required env vars: {', '.join(missing)}")
+    print("[ERROR] Create a .env file from .env.example and fill in the values.")
+    exit(1)
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ============================================================================
 # FILE MANAGEMENT
 # ============================================================================
 def get_unique_filename(base_filename):
-    """If file exists, append a timestamp to avoid overwriting"""
     if not os.path.exists(base_filename):
         return base_filename
     name, ext = os.path.splitext(base_filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{name}_{timestamp}{ext}"
 
-OUTPUT_FILE = get_unique_filename("contact_mapping.json")
+OUTPUT_FILE          = get_unique_filename("contact_mapping.json")
 FAILED_CONTACTS_FILE = get_unique_filename("failed_contacts.json")
-LOG_FILE = get_unique_filename("migration.log")
+LOG_FILE             = datetime.now().strftime("migration_%Y%m%d_%H%M%S.log")
 
 # ============================================================================
-# LOGGING
+# LOGGING — stdout + timestamped log file
 # ============================================================================
 def log(message, level="INFO"):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -55,73 +73,45 @@ def log_info(message):    log(f"  {message}", "INFO")
 # CHATDADDY — FETCH CONTACTS (cursor-based pagination)
 # ============================================================================
 def fetch_all_contacts():
-    """
-    Fetch contacts from ChatDaddy API using cursor pagination.
-    Returns a list of contacts (up to TEST_LIMIT if TEST_MODE is True).
-    """
     all_contacts = []
     cursor = None
     page_num = 0
-    total_reported = None
-
     log_info("Fetching contacts from ChatDaddy API...")
-
     while True:
         page_num += 1
         conn = http.client.HTTPSConnection("api.chatdaddy.tech")
-
-        # Build query string
         params = "returnTotalCount=true"
         if cursor:
             params += f"&page={cursor}"
-
-        headers = {
-            'Authorization': f'Bearer {CHATDADDY_TOKEN}',
-            'Content-Type': 'application/json'
-        }
-
+        headers = {'Authorization': f'Bearer {CHATDADDY_TOKEN}', 'Content-Type': 'application/json'}
         try:
             conn.request("GET", f"/im/contacts?{params}", "", headers)
             res = conn.getresponse()
             data = res.read()
             response = json.loads(data.decode("utf-8"))
-
             if res.status != 200:
                 log_error(f"Failed to fetch contacts page {page_num}: {response}")
                 break
-
             contacts = response.get("contacts", [])
             next_cursor = response.get("nextPage")
-
-            # Capture total count on first page
             if page_num == 1 and "total" in response:
-                total_reported = response["total"]
-                log_info(f"Total contacts reported by API: {total_reported}")
-
+                log_info(f"Total contacts reported by API: {response['total']}")
             log_info(f"Page {page_num}: fetched {len(contacts)} contacts (running total: {len(all_contacts) + len(contacts)})")
-
             all_contacts.extend(contacts)
-
-            # Stop early if TEST_MODE
             if TEST_MODE and len(all_contacts) >= TEST_LIMIT:
                 all_contacts = all_contacts[:TEST_LIMIT]
                 log_warning(f"TEST MODE: capped at {TEST_LIMIT} contacts")
                 break
-
-            # Stop if no more pages
             if not next_cursor:
                 log_info("No more pages — all contacts fetched")
                 break
-
             cursor = next_cursor
-            time.sleep(0.3)  # be polite to the API
-
+            time.sleep(0.3)
         except Exception as e:
             log_error(f"Exception fetching contacts page {page_num}: {str(e)}")
             break
         finally:
             conn.close()
-
     log_success(f"Total contacts fetched: {len(all_contacts)}")
     return all_contacts
 
@@ -130,28 +120,13 @@ def fetch_all_contacts():
 # ============================================================================
 def create_contact(name, phone):
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
-
-    payload = json.dumps({
-        "firstName": name,
-        "lastName": "-",
-        "name": f"{name} -",
-        "locationId": LOCATION_ID,
-        "phone": phone
-    })
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {GHL_TOKEN}',
-        'Version': '2021-07-28'
-    }
-
+    payload = json.dumps({"firstName": name, "lastName": "-", "name": f"{name} -", "locationId": LOCATION_ID, "phone": phone})
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2021-07-28'}
     try:
         conn.request("POST", "/contacts/", payload, headers)
         res = conn.getresponse()
         data = res.read()
         response = json.loads(data.decode("utf-8"))
-
         if res.status in (200, 201):
             contact_id = response.get('contact', {}).get('id') or response.get('id')
             log_success(f"GHL contact created: {name} → {contact_id}")
@@ -168,36 +143,17 @@ def create_contact(name, phone):
 # ============================================================================
 # GHL — CREATE CONTACT NOTE
 # ============================================================================
-NOTE_USER_ID = "zUL9CjEu2tK00WbHnvnB"  # fixed userId for notes
-
 def create_contact_note(contact_id, title, body):
-    """Create a note on a GHL contact"""
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
-
-    payload = json.dumps({
-        "userId": NOTE_USER_ID,
-        "body": body,
-        "title": title,
-        "color": "#FFAA00",
-        "pinned": False
-    })
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {GHL_TOKEN}',
-        'Version': '2023-02-21'
-    }
-
+    payload = json.dumps({"userId": NOTE_USER_ID, "body": body, "title": title, "color": "#FFAA00", "pinned": False})
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2023-02-21'}
     try:
         conn.request("POST", f"/contacts/{contact_id}/notes", payload, headers)
         res = conn.getresponse()
         data = res.read()
         response = json.loads(data.decode("utf-8"))
-
         if res.status in (200, 201):
-            note_id = response.get('note', {}).get('id') or response.get('id')
-            log_info(f"Note created: [{title}] → {note_id}")
+            log_info(f"Note created: [{title}]")
             return True
         else:
             log_error(f"Error creating note [{title}]: {response}")
@@ -209,14 +165,9 @@ def create_contact_note(contact_id, title, body):
         conn.close()
 
 def build_tags_note_body(tags):
-    """
-    Build note body from ChatDaddy tags list.
-    Each tag: "name: value" if value exists, else just "name"
-    Lines joined by newline.
-    """
     lines = []
     for tag in tags:
-        tag_name = tag.get('name', '').strip()
+        tag_name  = tag.get('name', '').strip()
         tag_value = tag.get('value', '').strip() if tag.get('value') else ''
         if tag_name and tag_value:
             lines.append(f"{tag_name}: {tag_value}")
@@ -229,25 +180,13 @@ def build_tags_note_body(tags):
 # ============================================================================
 def create_conversation(contact_id):
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
-
-    payload = json.dumps({
-        "locationId": LOCATION_ID,
-        "contactId": contact_id
-    })
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {GHL_TOKEN}',
-        'Version': '2021-04-15'
-    }
-
+    payload = json.dumps({"locationId": LOCATION_ID, "contactId": contact_id})
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2021-04-15'}
     try:
         conn.request("POST", "/conversations/", payload, headers)
         res = conn.getresponse()
         data = res.read()
         response = json.loads(data.decode("utf-8"))
-
         if res.status in (200, 201):
             conversation_id = response.get('conversation', {}).get('id') or response.get('id')
             log_info(f"GHL conversation created: {conversation_id}")
@@ -265,66 +204,45 @@ def create_conversation(contact_id):
 # CHATDADDY — FETCH MESSAGES
 # ============================================================================
 def fetch_messages(phone_number):
-    """Fetch all messages for a contact using the fixed CHATDADDY_ACCOUNT_ID."""
     all_messages = []
     cursor = None
     page_num = 0
-
     while True:
         page_num += 1
         conn = http.client.HTTPSConnection("api.chatdaddy.tech")
-
         url = f"/im/messages/{CHATDADDY_ACCOUNT_ID}/{phone_number}"
         if cursor:
             url += f"?beforeId={cursor}"
-
-        headers = {
-            'Authorization': f'Bearer {CHATDADDY_TOKEN}',
-            'Content-Type': 'application/json'
-        }
-
+        headers = {'Authorization': f'Bearer {CHATDADDY_TOKEN}', 'Content-Type': 'application/json'}
         try:
             conn.request("GET", url, "", headers)
             res = conn.getresponse()
             data = res.read()
             response = json.loads(data.decode("utf-8"))
-
             if res.status != 200:
                 log_error(f"Error fetching messages page {page_num} (Status {res.status}): {response}")
                 break
-
             messages = response.get("messages", [])
             next_cursor = response.get("nextPage")
-
             all_messages.extend(messages)
             log_info(f"Messages page {page_num}: {len(messages)} fetched (total: {len(all_messages)})")
-
             if not next_cursor:
                 break
-
             cursor = next_cursor
             time.sleep(0.2)
-
         except Exception as e:
             log_error(f"Exception fetching messages page {page_num}: {str(e)}")
             break
         finally:
             conn.close()
-
     return all_messages
 
 # ============================================================================
 # GHL — PUSH A SINGLE PAYLOAD TO /conversations/messages/inbound
 # ============================================================================
 def _post_ghl_message(payload):
-    """Low-level helper: POST one payload to GHL inbound messages endpoint."""
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {GHL_TOKEN}',
-        'Version': '2021-04-15'
-    }
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2021-04-15'}
     try:
         conn.request("POST", "/conversations/messages/inbound", json.dumps(payload), headers)
         res = conn.getresponse()
@@ -350,141 +268,130 @@ def push_message_to_ghl(message, contact_id, conversation_id):
     attachment_urls = [a["url"] for a in attachments_raw if a.get("url")]
     has_action = 'action' in message
     is_note = message.get('status') == 'note'
-
-    # Skip system/action messages with no text and no attachments
     if not text and not attachment_urls and (is_note or has_action):
         log_info("Skipping system/action message with no content")
         return True
-
-    # Edge case: truly empty message
     if not text and not attachment_urls:
         log_info("Skipping empty message")
         return True
-
-    # Parse timestamp
     try:
         iso_date = message.get("timestamp", "").replace("Z", "+00:00") or datetime.now().isoformat()
     except:
         iso_date = datetime.now().isoformat()
-
-    # Determine direction
     if message.get("fromMe") is True:
         direction = "outbound"
     elif str(message.get("senderContactId", "")).startswith("603"):
         direction = "outbound"
     else:
         direction = "inbound"
-
-    base = {
-        "conversationId": conversation_id,
-        "contactId": contact_id,
-        "direction": direction,
-        "date": iso_date,
-    }
-
+    base = {"conversationId": conversation_id, "contactId": contact_id, "direction": direction, "date": iso_date}
     success = True
-
-    # Push 1: text part as WhatsApp (no attachments)
     if text:
         ok = _post_ghl_message({**base, "type": "WhatsApp", "message": text})
         if not ok:
             success = False
         elif attachment_urls:
-            time.sleep(0.2)  # preserve ordering in GHL thread
-
-    # Push 2: each attachment separately as SMS
-    # Splitting per attachment ensures GHL renders each one cleanly
+            time.sleep(0.2)
     for url in attachment_urls:
         ok = _post_ghl_message({**base, "type": "SMS", "message": "", "attachments": [url]})
         if not ok:
             success = False
         time.sleep(0.2)
-
     return success
 
 # ============================================================================
 # MAIN MIGRATION
 # ============================================================================
 def run_migration():
-    # Init log
     with open(LOG_FILE, 'w', encoding='utf-8') as f:
         f.write("=" * 70 + "\n")
-        f.write("GHL MIGRATION LOG (ChatDaddy source)\n")
+        f.write("GHL MIGRATION LOG\n")
         f.write("=" * 70 + "\n")
-        f.write(f"Started:     {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"Test Mode:   {TEST_MODE} (limit: {TEST_LIMIT})\n" if TEST_MODE else f"Test Mode:   OFF\n")
-        f.write(f"Output File: {OUTPUT_FILE}\n")
-        f.write(f"Log File:    {LOG_FILE}\n")
+        f.write(f"Started:    {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Test Mode:  {TEST_MODE} (limit: {TEST_LIMIT})\n" if TEST_MODE else "Test Mode:  OFF\n")
+        f.write(f"Cutoff:     {MESSAGE_CUTOFF_DATE}\n")
         f.write("=" * 70 + "\n\n")
 
-    log("\n" + "=" * 70)
-    log(f"STARTING GHL MIGRATION {'[TEST MODE — ' + str(TEST_LIMIT) + ' contacts]' if TEST_MODE else '[FULL RUN]'}")
-    log("=" * 70 + "\n")
-
     stats = {
-        'total': 0,
-        'contacts_created': 0,
-        'conversations_created': 0,
-        'contacts_failed': 0,
-        'notes_created': 0,
-        'messages_synced': 0,
-        'contacts_with_messages': 0,
-        'contacts_no_messages': 0,
+        'total': 0, 'contacts_created': 0, 'conversations_created': 0,
+        'contacts_failed': 0, 'notes_created': 0, 'messages_synced': 0,
+        'contacts_with_messages': 0, 'contacts_no_messages': 0,
     }
-
     mapping_data = []
-    failed_data = []
-
-    # ========================================================================
-    # PHASE 1: FETCH CONTACTS FROM CHATDADDY API
-    # ========================================================================
-    log("\n" + "=" * 70)
-    log("PHASE 1: FETCHING CONTACTS FROM CHATDADDY")
-    log("=" * 70 + "\n")
+    failed_data  = []
 
     contacts = fetch_all_contacts()
     stats['total'] = len(contacts)
-
     if not contacts:
         log_error("No contacts fetched. Exiting.")
         return
 
+    # Load existing Supabase state for resumability
+    try:
+        existing_rows = supabase.table("contacts").select(
+            "phone_number, ghl_contact_id, ghl_convo_id, phase1_pushed"
+        ).execute()
+        existing = {row["phone_number"]: row for row in existing_rows.data}
+        log_info(f"Loaded {len(existing)} existing rows from Supabase")
+    except Exception as e:
+        log_error(f"Failed to load existing state from Supabase: {str(e)}")
+        existing = {}
+
     # ========================================================================
     # PHASE 2: CREATE GHL CONTACTS & CONVERSATIONS
     # ========================================================================
-    log("\n" + "=" * 70)
-    log("PHASE 2: CREATING GHL CONTACTS & CONVERSATIONS")
-    log("=" * 70 + "\n")
-
     for idx, contact in enumerate(contacts, 1):
         platform_names = contact.get('platformNames') or []
-        phone = contact.get('phoneNumber', '').strip()
+        phone      = contact.get('phoneNumber', '').strip()
         account_id = contact.get('accountId', '').strip()
-
-        # Use first platformName if available, else fall back to phone number
-        name = platform_names[0].strip() if platform_names else phone
+        name       = platform_names[0].strip() if platform_names else phone
         if not name:
             name = phone
 
         log(f"\n[{idx}/{stats['total']}] Processing: {name} ({phone})")
 
-        # Create GHL contact
-        contact_id, contact_error = create_contact(name, phone)
+        if existing.get(phone, {}).get("ghl_contact_id"):
+            log_info(f"Skipping {phone} — already created in GHL")
+            if existing.get(phone, {}).get("ghl_convo_id"):
+                mapping_data.append({
+                    "name":            name,
+                    "phone":           phone,
+                    "account_id":      account_id,
+                    "phone_number":    phone,
+                    "contact_id":      existing[phone]["ghl_contact_id"],
+                    "conversation_id": existing[phone]["ghl_convo_id"],
+                    "created_at":      datetime.now().isoformat(),
+                })
+            continue
 
+        contact_id, contact_error = create_contact(name, phone)
         if not contact_id:
             stats['contacts_failed'] += 1
-            failed_data.append({
-                "row": idx, "name": name, "phone": phone,
-                "account_id": account_id, "failed_step": "create_contact",
-                "error": contact_error, "timestamp": datetime.now().isoformat()
-            })
+            failed_data.append({"row": idx, "name": name, "phone": phone, "account_id": account_id, "failed_step": "create_contact", "error": contact_error, "timestamp": datetime.now().isoformat()})
+            try:
+                supabase.table("contacts").upsert({
+                    "phone_number": phone,
+                    "name":         name,
+                    "account_id":   account_id,
+                    "error":        json.dumps(contact_error),
+                }).execute()
+            except Exception as e:
+                log_error(f"Supabase write failed (contact error): {str(e)}")
             time.sleep(1)
             continue
 
         stats['contacts_created'] += 1
+        try:
+            supabase.table("contacts").upsert({
+                "phone_number":   phone,
+                "name":           name,
+                "account_id":     account_id,
+                "ghl_contact_id": contact_id,
+            }).execute()
+        except Exception as e:
+            log_error(f"Supabase write failed (contact created): {str(e)}")
         time.sleep(0.3)
 
-        # Create note from tags if present
         tags = contact.get('tags') or []
         if tags:
             tags_body = build_tags_note_body(tags)
@@ -494,59 +401,42 @@ def run_migration():
 
         time.sleep(0.3)
 
-        # Create GHL conversation
         conversation_id, convo_error = create_conversation(contact_id)
-
         if not conversation_id:
-            failed_data.append({
-                "row": idx, "name": name, "phone": phone,
-                "account_id": account_id, "contact_id": contact_id,
-                "failed_step": "create_conversation",
-                "error": convo_error, "timestamp": datetime.now().isoformat()
-            })
-            log_error("Failed to create conversation — skipping message sync for this contact")
+            failed_data.append({"row": idx, "name": name, "phone": phone, "account_id": account_id, "contact_id": contact_id, "failed_step": "create_conversation", "error": convo_error, "timestamp": datetime.now().isoformat()})
+            try:
+                supabase.table("contacts").upsert({
+                    "phone_number": phone,
+                    "name":         name,
+                    "account_id":   account_id,
+                    "error":        json.dumps(convo_error),
+                }).execute()
+            except Exception as e:
+                log_error(f"Supabase write failed (convo error): {str(e)}")
+            log_error("Failed to create conversation — skipping message sync")
             time.sleep(1)
             continue
 
         stats['conversations_created'] += 1
+        try:
+            supabase.table("contacts").update({
+                "ghl_convo_id": conversation_id
+            }).eq("phone_number", phone).execute()
+        except Exception as e:
+            log_error(f"Supabase write failed (convo created): {str(e)}")
 
-        mapping_data.append({
-            "name": name,
-            "phone": phone,
-            "account_id": account_id,
-            "phone_number": phone,
-            "contact_id": contact_id,
-            "conversation_id": conversation_id,
-            "created_at": datetime.now().isoformat()
-        })
-
+        mapping_data.append({"name": name, "phone": phone, "account_id": account_id, "phone_number": phone, "contact_id": contact_id, "conversation_id": conversation_id, "created_at": datetime.now().isoformat()})
         time.sleep(1)
 
-    # Save mapping after Phase 2
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(mapping_data, f, indent=2, ensure_ascii=False)
     if failed_data:
         with open(FAILED_CONTACTS_FILE, 'w', encoding='utf-8') as f:
             json.dump(failed_data, f, indent=2, ensure_ascii=False)
 
-    log("\n" + "=" * 70)
-    log("PHASE 2 COMPLETE")
-    log(f"  Contacts created:      {stats['contacts_created']}")
-    log(f"  Conversations created: {stats['conversations_created']}")
-    log(f"  Failed:                {stats['contacts_failed']}")
-    log("=" * 70)
-
-    if not mapping_data:
-        log_error("No contacts mapped successfully. Exiting.")
-        return
-
     # ========================================================================
     # PHASE 3: FETCH & PUSH MESSAGES
     # ========================================================================
-    log("\n" + "=" * 70)
-    log("PHASE 3: SYNCING MESSAGES FROM CHATDADDY")
-    log("=" * 70 + "\n")
-
     for idx, contact in enumerate(mapping_data, 1):
         name            = contact['name']
         account_id      = contact['account_id']
@@ -556,14 +446,14 @@ def run_migration():
 
         log(f"\n[{idx}/{len(mapping_data)}] Syncing messages: {name} ({phone_number})")
 
+        if existing.get(phone_number, {}).get("phase1_pushed"):
+            log_info(f"Skipping {phone_number} — messages already pushed")
+            continue
+
         messages = fetch_messages(phone_number)
 
-        # Drop messages after the cutoff date
         before = len(messages)
-        messages = [
-            m for m in messages
-            if (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE
-        ]
+        messages = [m for m in messages if (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE]
         dropped = before - len(messages)
         if dropped:
             log_info(f"Dropped {dropped} message(s) after {MESSAGE_CUTOFF_DATE}")
@@ -571,58 +461,52 @@ def run_migration():
         if not messages:
             stats['contacts_no_messages'] += 1
             contact['has_messages'] = False
-            log_info("No messages found — flagged False")
+            log_info("No messages — flagged False")
+            try:
+                supabase.table("contacts").update({
+                    "has_messages":     False,
+                    "phase1_pushed":    True,
+                    "phase1_pushed_at": datetime.utcnow().isoformat(),
+                }).eq("phone_number", phone_number).execute()
+            except Exception as e:
+                log_error(f"Supabase write failed (no messages): {str(e)}")
         else:
             stats['contacts_with_messages'] += 1
             contact['has_messages'] = True
-            log_info(f"Found {len(messages)} messages")
-
             synced = 0
             for message in messages:
-                # Note-type messages → create as GHL contact note instead of pushing to conversation
                 if message.get('status') == 'note':
                     note_text = message.get('text', '').strip()
                     if note_text:
                         ts = message.get('timestamp', datetime.now().isoformat())
-                        note_title = f"Note ({ts[:10]})"  # e.g. "Note (2026-05-12)"
-                        if create_contact_note(contact_id, note_title, note_text):
+                        if create_contact_note(contact_id, f"Note ({ts[:10]})", note_text):
                             stats['notes_created'] += 1
                     time.sleep(0.3)
                     continue
-
                 if push_message_to_ghl(message, contact_id, conversation_id):
                     synced += 1
                     stats['messages_synced'] += 1
                 time.sleep(0.3)
-
             log_success(f"Synced {synced}/{len(messages)} messages")
+            try:
+                supabase.table("contacts").update({
+                    "has_messages":     True,
+                    "phase1_pushed":    True,
+                    "phase1_pushed_at": datetime.utcnow().isoformat(),
+                }).eq("phone_number", phone_number).execute()
+            except Exception as e:
+                log_error(f"Supabase write failed (messages pushed): {str(e)}")
 
         time.sleep(1)
 
-    # Update mapping file with has_messages flag
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(mapping_data, f, indent=2, ensure_ascii=False)
 
-    # ========================================================================
-    # FINAL SUMMARY
-    # ========================================================================
-    log("\n" + "=" * 70)
-    log("MIGRATION COMPLETE — FINAL SUMMARY")
-    log("=" * 70)
-    log(f"  Total contacts fetched:      {stats['total']}")
-    log(f"  Contacts created in GHL:     {stats['contacts_created']}")
-    log(f"  Conversations created:       {stats['conversations_created']}")
-    log(f"  Failed:                      {stats['contacts_failed']}")
-    log(f"  Contacts with messages:      {stats['contacts_with_messages']}")
-    log(f"  Contacts without messages:   {stats['contacts_no_messages']}")
-    log(f"  Total messages synced:       {stats['messages_synced']}")
-    log(f"  Total notes created:         {stats['notes_created']}")
-    log(f"\n  Output:  {OUTPUT_FILE}")
-    if failed_data:
-        log(f"  Failed:  {FAILED_CONTACTS_FILE}")
-    log(f"  Log:     {LOG_FILE}")
-    log("=" * 70 + "\n")
-
+    log(f"\nMIGRATION COMPLETE")
+    log(f"  Total: {stats['total']} | Created: {stats['contacts_created']} | Failed: {stats['contacts_failed']}")
+    log(f"  Messages synced: {stats['messages_synced']} | Notes: {stats['notes_created']}")
+    log(f"  Log file: {LOG_FILE}")
+    log(f"  (On Cloud Run, retrieve logs with: gcloud run jobs executions logs tail EXECUTION_NAME)")
 
 if __name__ == "__main__":
     run_migration()
