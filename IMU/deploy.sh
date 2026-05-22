@@ -51,7 +51,12 @@ gcloud run jobs update ghl-migration \
   --region $REGION
 
 # Step 9: Execute the job (triggers one run)
+# Phase 1 — sync messages on or before MESSAGE_CUTOFF_DATE
 gcloud run jobs execute ghl-migration --region $REGION
+
+# Phase 2 — sync messages after MESSAGE_CUTOFF_DATE (run after Phase 1 completes)
+# Edit .env to set PHASE=2, rebuild, update, then:
+# gcloud run jobs execute ghl-migration --region $REGION
 
 # Step 10: Stream live logs for the latest execution
 # Replace EXECUTION_NAME with the execution ID printed by step 9 (e.g. ghl-migration-xxxxx)
