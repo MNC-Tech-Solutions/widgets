@@ -2,3 +2,5 @@ engage/*
 engage/ngrok.exe
 engage/logs
 engage/token_cache.json
+mahsing/*
+archived/*
