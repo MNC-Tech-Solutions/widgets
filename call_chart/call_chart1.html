@@ -1,21 +1,3 @@
-<!-- original -->
-/**
- * WIDGET: Call Status Report
- * * PURPOSE: 
- * This widget visualizes telephony performance by tracking Call Detail Records (CDR) 
- * fetched from an external proxy API.
- * * LOGIC:
- * 1. Data Source: Fetches call logs (caller numbers, duration, status) from a 
- * proxy endpoint based on a specific `locationId` and `clientId`.
- * 2. Visualization: Provides a "Stacked Bar" view to see call outcomes (Answered, 
- * Busy, No Answer) month-over-month, or a "Pie" view for overall distribution.
- * 3. Scope: It tracks actual communication attempts rather than CRM opportunities.
- * 4. Interaction: Clicking on a chart segment opens a paginated modal listing 
- * the specific call logs for that status/period.
- * 5. Refresh Logic: Includes an automated background refresh every 5 minutes 
- * to keep the call stats updated without a page reload.
- */
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,7 +31,6 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-
         .btn-sm {
             height: 38px;
             font-size: 14px;
@@ -222,7 +203,7 @@
 </head>
 <body>
     <div class="widget">
-        <h1 class="display-8 fw-bold mb-3">Call Status Report</h1>
+        <h1 class="display-6 fw-bold mb-4">Call Status Report</h1>
         <div id="loading" class="spinner-container d-none">
             <div class="spinner"></div>
         </div>
@@ -351,7 +332,7 @@
 
         async function loadConfig() {
             try {
-                const response = await fetch('../call_config.json');
+                const response = await fetch('../call_config1.json');
                 if (!response.ok) throw new Error('Failed to load config file');
                 configData = await response.json();
                 initializeWithLocationId();
@@ -375,22 +356,33 @@
                 return;
             }
 
-            selectedStartDate = new Date(client.date_from);
+            // Set earliest date_from from accounts as minDate
+            const minDate = client.accounts.reduce((earliest, account) => {
+                const accountDate = new Date(account.date_from);
+                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+            }, null);
+
+            if (!minDate || isNaN(minDate)) {
+                document.getElementById('loading').textContent = 'Error: Invalid date_from in client accounts.';
+                return;
+            }
+
+            selectedStartDate = minDate;
             selectedEndDate = new Date();
             updateDateRangeButton();
-            initializeDatePicker(client.date_from);
-            fetchData(locationId, client.clientid, client.date_from);
-            
-            // background refresh
-            const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
-            setInterval(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const locationId = urlParams.get('locationId');
-                const client = configData.clients.find(c => c.locationId === locationId);
-                if (client) {
-                    fetchData(locationId, client.clientid, client.date_from);
-                }
-            }, BACKGROUND_REFRESH_INTERVAL);
+            initializeDatePicker(minDate);
+            fetchAllClientData(client);
+
+            // Background refresh every 5 minutes
+            // const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
+            // setInterval(() => {
+            //     const urlParams = new URLSearchParams(window.location.search);
+            //     const locationId = urlParams.get('locationId');
+            //     const client = configData.clients.find(c => c.locationId === locationId);
+            //     if (client) {
+            //         fetchAllClientData(client);
+            //     }
+            // }, BACKGROUND_REFRESH_INTERVAL);
         }
 
         function initializeDatePicker(minDate) {
@@ -412,13 +404,13 @@
         }
 
         function formatDate(date) {
-            if (!date) return '';
+            if (!date || isNaN(date)) return '';
             return date.toISOString().split('T')[0].replace(/-/g, '/');
         }
 
         function updateDateRangeButton() {
             const button = document.getElementById('openDateModal');
-            if (selectedStartDate && selectedEndDate) {
+            if (selectedStartDate && selectedEndDate && !isNaN(selectedStartDate) && !isNaN(selectedEndDate)) {
                 button.textContent = `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`;
             } else {
                 button.textContent = 'Select Date Range';
@@ -462,8 +454,12 @@
                     start = null;
                     end = null;
             }
-            const minDate = new Date(configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId')).date_from);
-            if (start && start < minDate) {
+            const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
+            const minDate = client.accounts.reduce((earliest, account) => {
+                const accountDate = new Date(account.date_from);
+                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+            }, null);
+            if (start && minDate && start < minDate) {
                 start = minDate;
             }
             return { start, end };
@@ -472,24 +468,59 @@
         function clearFilters() {
             const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
             if (client) {
-                selectedStartDate = new Date(client.date_from);
-                selectedEndDate = new Date();
-                dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
-                document.getElementById('statusFilter').value = '';
-                document.getElementById('answerNameFilter').value = '';
-                document.getElementById('chartType').value = 'bar';
-                updateDateRangeButton();
-                applyFilters();
+                const minDate = client.accounts.reduce((earliest, account) => {
+                    const accountDate = new Date(account.date_from);
+                    return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
+                }, null);
+                if (minDate && !isNaN(minDate)) {
+                    selectedStartDate = minDate;
+                    selectedEndDate = new Date();
+                    dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
+                    document.getElementById('statusFilter').value = '';
+                    document.getElementById('answerNameFilter').value = '';
+                    document.getElementById('chartType').value = 'bar';
+                    updateDateRangeButton();
+                    applyFilters();
+                } else {
+                    document.getElementById('loading').textContent = 'Error: Invalid date_from in client accounts.';
+                }
             }
         }
 
-        async function fetchData(locationId, clientId, dateFrom) {
+        async function fetchAllClientData(client) {
             const loading = document.getElementById('loading');
             loading.classList.remove('d-none');
+            callData = [];
 
             const auth = configData.authentication;
-            const apiUrl = `https://widget.salesjourney360.com/widget/call/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
+            const promises = client.accounts.map(account =>
+                fetchDataForClientId(account.clientid, account.date_from, auth).catch(error => {
+                    console.warn(`Failed to fetch data for client ID ${account.clientid}: ${error.message}`);
+                    return []; // Return empty array to continue with other accounts
+                })
+            );
 
+            try {
+                const results = await Promise.all(promises);
+                callData = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
+                filteredData = callData;
+                if (callData.length === 0) {
+                    document.getElementById('loading').textContent = 'Warning: No data retrieved from any accounts. Check authentication credentials or client IDs.';
+                } else {
+                    populateStatusFilter();
+                    populateAnswerNameFilter();
+                    applyFilters();
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('loading').textContent = 'Error: Unable to fetch data. Ensure the PHP proxy (proxy.php) is correctly set up on your server.';
+            } finally {
+                loading.classList.add('d-none');
+            }
+        }
+
+        async function fetchDataForClientId(clientId, dateFrom, auth) {
+            const apiUrl = `https://widget.salesjourney360.com/widget/call/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
             try {
                 const response = await fetch(apiUrl, {
                     method: 'GET',
@@ -498,19 +529,15 @@
                     }
                 });
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    if (response.status === 401) {
+                        throw new Error(`Unauthorized access for client ID ${clientId}. Please verify the username and password in the configuration.`);
+                    }
+                    throw new Error(`HTTP error for client ID ${clientId}! Status: ${response.status}`);
                 }
                 const data = await response.json();
-                callData = (data.calls || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-                filteredData = callData;
-                populateStatusFilter();
-                populateAnswerNameFilter();
-                applyFilters();
+                return data.calls || [];
             } catch (error) {
-                console.error('Error fetching data:', error);
-                loading.textContent = 'Error: Unable to fetch data. Ensure the PHP proxy (proxy.php) is correctly set up on your server.';
-            } finally {
-                loading.classList.add('d-none');
+                throw new Error(`Failed to fetch data for client ID ${clientId}: ${error.message}`);
             }
         }
 
@@ -564,6 +591,7 @@
         }
 
         function getMonthLabel(date) {
+            if (!date || isNaN(date)) return '';
             return date.toLocaleString('default', { year: 'numeric', month: 'short' });
         }
 
@@ -632,6 +660,7 @@
                 const statusCounts = {};
                 filteredData.forEach(record => {
                     const date = new Date(record.date.replace(/\//g, '-'));
+                    if (!date || isNaN(date)) return;
                     const month = getMonthLabel(date);
                     if (!months.includes(month)) {
                         months.push(month);
@@ -771,7 +800,7 @@
             });
 
             $('#applyDateFilter').on('click', () => {
-                if (selectedStartDate && selectedEndDate) {
+                if (selectedStartDate && selectedEndDate && !isNaN(selectedStartDate) && !isNaN(selectedEndDate)) {
                     applyFilters();
                     bootstrap.Modal.getInstance(document.getElementById('dateSelectionModal')).hide();
                 }

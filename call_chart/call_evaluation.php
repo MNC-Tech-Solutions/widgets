@@ -1,4 +1,4 @@
-/**
+<!-- /**
  * WIDGET: Evaluation Performance Cards
  * * PURPOSE: 
  * This widget analyzes call quality by aggregating "Yes/No" responses to specific 
@@ -16,7 +16,7 @@
  * rate for that specific metric.
  * 5. Data Handling: Automatically handles cases where questions exist but 
  * have not yet received any responses (empty states).
- */
+ */ -->
 
 <!DOCTYPE html>
 <html lang="en">
