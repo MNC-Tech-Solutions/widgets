@@ -1,5 +1,3 @@
-<!-- lead by hours -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -341,7 +339,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelinesV2, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlDataV2.js?v=1.0.0';
+    import { loadConfig, fetchPipelinesV2, fetchAllOpportunities, fetchNewOpportunities, applyFilters, clearOpportunitiesCache, clearIndexedDB, getAllByIndex, progressManager } from '../ghlDataV2.js?v=1.0.5';
 
     let CONFIG = {};
     let locationId = '';
@@ -367,7 +365,7 @@
       const currentRefresh = localStorage.getItem('ghl_last_refresh') || '0';
       
       if (currentRefresh !== lastRefreshCheck && currentRefresh !== '0') {
-        console.log('🔄 Refresh detected in another widget, syncing data...');
+        console.log('ðŸ”„ Refresh detected in another widget, syncing data...');
         
         const pipelineId = document.getElementById('pipeline').value;
         if (!pipelineId) return;
@@ -377,7 +375,7 @@
           opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
           
           if (opportunitiesData.length > 0) {
-            console.log(`✅ Synced ${opportunitiesData.length} opportunities`);
+            console.log(`âœ… Synced ${opportunitiesData.length} opportunities`);
             await renderBarChart(); // or renderTableAndChart() for donut
           }
           
@@ -897,7 +895,7 @@
           localStorage.setItem('ghl_last_refresh', Date.now().toString());
           
           // Final step
-          progressManager.setProgress(100, 'Refresh complete! ✓');
+          progressManager.setProgress(100, 'Refresh complete! âœ“');
           await new Promise(resolve => setTimeout(resolve, 500));
           progressManager.hide();
           

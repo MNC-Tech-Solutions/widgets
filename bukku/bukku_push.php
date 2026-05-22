@@ -22,7 +22,7 @@ const GHL_WEBHOOK_URL   = "https://services.leadconnectorhq.com/hooks/BXuCudh2EK
 const EXPECTED_TRIGGER  = "map_bukku";
 
 // Override date for testing e.g. "2026-05-04". Leave null to use yesterday.
-const DATE_OVERRIDE     = "2026-05-04";
+const DATE_OVERRIDE     = "null";
 
 const LOG_DIR           = __DIR__ . "/logs";
 
