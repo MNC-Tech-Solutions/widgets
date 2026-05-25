@@ -4,3 +4,15 @@ engage/logs
 engage/token_cache.json
 mahsing/*
 archived/*
+
+# Credential config files — tokens migrated to AWS SSM Parameter Store (Phase 1)
+config.json
+call_config1.json
+SAR_config.json
+
+# Lambda local dev
+lambda/env.json
+lambda/layer/nodejs/node_modules/
+lambda/.aws-sam/
+scripts/node_modules/
+samconfig.toml
