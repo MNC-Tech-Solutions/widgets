@@ -805,6 +805,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+        const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+        const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
+            ...opts,
+            headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+        });
+
         // ═══════════════════════════════════════════════════
         //  GLOBAL STATE
         // ═══════════════════════════════════════════════════
@@ -920,10 +927,11 @@
                 return;
             }
             try {
-                const configData = await fetch(`../config.json?t=${Date.now()}`).then(r => r.json());
-                selectedLocation = configData.find(loc => loc.defaultLocationId === locationIdFromUrl);
-                if (!selectedLocation) {
-                    showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found in config.json`, 'error');
+                const configRes = await lambdaFetch(`/config?locationId=${locationIdFromUrl}`);
+                if (!configRes.ok) throw new Error(`Config error: ${configRes.status}`);
+                selectedLocation = await configRes.json();
+                if (!selectedLocation || !selectedLocation.locationId) {
+                    showConfigStatus(`Error: Location ID "${locationIdFromUrl}" not found`, 'error');
                     return;
                 }
                 showConfigStatus(`Connected to location: ${selectedLocation.name}`, 'success');
@@ -962,10 +970,7 @@
         async function fetchUsersMap() {
             const map = {};
             try {
-                const res = await fetch(
-                    `https://services.leadconnectorhq.com/users/?locationId=${selectedLocation.defaultLocationId}`,
-                    { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': '2021-07-28' } }
-                );
+                const res = await lambdaFetch(`/ghl/users?locationId=${selectedLocation.locationId}`);
                 if (!res.ok) return map;
                 const data = await res.json();
                 (data.users || []).forEach(u => {
@@ -979,15 +984,10 @@
             let contacts = [], searchAfter = null;
             const limit = 100;
             while (true) {
-                const body = { locationId: selectedLocation.defaultLocationId, pageLimit: limit };
+                const body = { pageLimit: limit };
                 if (searchAfter) body.searchAfter = searchAfter;
-                const res = await fetch('https://services.leadconnectorhq.com/contacts/search', {
+                const res = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${selectedLocation.accessToken}`,
-                        'Content-Type': 'application/json',
-                        'Version': selectedLocation.apiVersion || '2021-07-28'
-                    },
                     body: JSON.stringify(body)
                 });
                 if (!res.ok) throw new Error(`Contacts API error: ${res.status}`);
@@ -1010,16 +1010,13 @@
             let fetchCount = 0;
             while (fetchCount < maxFetches) {
                 const params = new URLSearchParams({
-                    locationId: selectedLocation.defaultLocationId,
+                    locationId: selectedLocation.locationId,
                     limit: limit.toString(),
                     sort: 'desc',
                     sortBy: 'last_message_date'
                 });
                 if (startAfterDate) params.append('startAfterDate', startAfterDate);
-                const res = await fetch(
-                    `https://services.leadconnectorhq.com/conversations/search?${params}`,
-                    { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': selectedLocation.apiVersion || '2021-07-28' } }
-                );
+                const res = await lambdaFetch(`/ghl/conversations?${params}`);
                 if (!res.ok) throw new Error(`Conversations API error: ${res.status}`);
                 const data = await res.json();
                 const batch = data.conversations || [];
@@ -1037,18 +1034,12 @@
 
         async function fetchAppointmentsForUser(userId, startMs, endMs) {
             const params = new URLSearchParams({
-                locationId: selectedLocation.defaultLocationId,
+                locationId: selectedLocation.locationId,
                 startTime: startMs.toString(),
                 endTime: endMs.toString(),
                 userId
             });
-            const response = await fetch(`https://services.leadconnectorhq.com/calendars/events?${params}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${selectedLocation.accessToken}`,
-                    'Version': '2021-04-15'
-                }
-            });
+            const response = await lambdaFetch(`/ghl/calendars/events?${params}`);
             if (!response.ok) {
                 const err = await response.text();
                 throw new Error(`Appointments API error for ${usersMap[userId] || userId}: ${response.status} - ${err}`);
@@ -1415,10 +1406,7 @@
         async function fetchPipelinesMap() {
             const map = {};
             try {
-                const res = await fetch(
-                    `https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${selectedLocation.defaultLocationId}`,
-                    { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': '2021-07-28' } }
-                );
+                const res = await lambdaFetch(`/ghl/pipelines?locationId=${selectedLocation.locationId}`);
                 if (!res.ok) return map;
                 const data = await res.json();
                 (data.pipelines || []).forEach(p => {
@@ -1436,14 +1424,11 @@
             const limit = 100;
             while (true) {
                 const params = new URLSearchParams({
-                    location_id: selectedLocation.defaultLocationId,
+                    locationId: selectedLocation.locationId,
                     limit,
                     page
                 });
-                const res = await fetch(
-                    `https://services.leadconnectorhq.com/opportunities/search?${params}`,
-                    { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': '2021-07-28' } }
-                );
+                const res = await lambdaFetch(`/ghl/opportunities?${params}`);
                 if (!res.ok) break;
                 const data = await res.json();
                 const batch = data.opportunities || [];
@@ -1486,10 +1471,7 @@
             let notes = [];
             try {
                 if (opp.contactId) {
-                    const res = await fetch(
-                        `https://services.leadconnectorhq.com/contacts/${opp.contactId}/notes`,
-                        { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': '2021-07-28' } }
-                    );
+                    const res = await lambdaFetch(`/ghl/contacts/${opp.contactId}/notes?locationId=${selectedLocation.locationId}`);
                     if (res.ok) {
                         const data = await res.json();
                         notes = (data.notes || []).sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
@@ -2245,10 +2227,7 @@
             const notesContainer = document.getElementById('notesContainer');
             if (!notesContainer) return;
             try {
-                const res = await fetch(
-                    `https://services.leadconnectorhq.com/contacts/${contactId}/notes`,
-                    { headers: { 'Authorization': `Bearer ${selectedLocation.accessToken}`, 'Version': '2021-07-28' } }
-                );
+                const res = await lambdaFetch(`/ghl/contacts/${contactId}/notes?locationId=${selectedLocation.locationId}`);
                 if (!res.ok) throw new Error(`Notes API error: ${res.status}`);
                 const data  = await res.json();
                 const notes = (data.notes || []).sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));

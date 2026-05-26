@@ -473,9 +473,17 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
     filtered = filtered.filter(op => new Date(op.createdAt) <= end);
   }
   if (additionalFilters.project) filtered = filtered.filter(op => op.project === additionalFilters.project);
-  if (additionalFilters.sourceCategory) filtered = filtered.filter(op => op.sourceCategory === additionalFilters.sourceCategory);
   if (additionalFilters.channels?.length > 0 && !additionalFilters.channels.includes('all')) {
     filtered = filtered.filter(op => op.source && additionalFilters.channels.includes(op.source));
+  }
+  if (additionalFilters.sourceCategories?.length > 0) {
+    filtered = filtered.filter(op => additionalFilters.sourceCategories.includes(op.sourceCategory));
+  }
+  if (additionalFilters.agents?.length > 0) {
+    filtered = filtered.filter(op => additionalFilters.agents.includes(op.assignedTo));
+  }
+  if (additionalFilters.teams?.length > 0) {
+    filtered = filtered.filter(op => additionalFilters.teams.includes(op.team));
   }
   return filtered;
 }

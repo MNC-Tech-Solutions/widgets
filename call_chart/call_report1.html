@@ -134,6 +134,9 @@
         // Define constants and global variables
         const recordsPerPage = 10;
         let currentPage = 1;
+        const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+        const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+
         let callData = [];
         let configData = {};
         let filteredData = [];
@@ -147,36 +150,37 @@
             return str.trim().toLowerCase();
         }
 
-        // Load configuration file
+        // Load configuration from Lambda
         async function loadConfig() {
-            try {
-                const response = await fetch('../call_config1.json');
-                if (!response.ok) throw new Error('Failed to load config file');
-                configData = await response.json();
-                initializeWithLocationId();
-            } catch (error) {
-                console.error('Error loading config:', error);
-                document.getElementById('loading').textContent = 'Error: Unable to load config file.';
-            }
-        }
-
-        // Initialize based on locationId from URL
-        function initializeWithLocationId() {
             const urlParams = new URLSearchParams(window.location.search);
             const locationId = urlParams.get('locationId');
             if (!locationId) {
                 document.getElementById('loading').textContent = 'Error: No locationId provided in URL.';
                 return;
             }
+            try {
+                const res = await fetch(`${LAMBDA_BASE_URL}/config?locationId=${locationId}`, {
+                    headers: { 'X-Api-Key': LAMBDA_API_KEY }
+                });
+                if (!res.ok) throw new Error(`Config error: ${res.status}`);
+                configData = await res.json();
+                initializeWithLocationId(configData);
+            } catch (error) {
+                console.error('Error loading config:', error);
+                document.getElementById('loading').textContent = 'Error: Unable to load config.';
+            }
+        }
 
-            const client = configData.clients.find(c => c.locationId === locationId);
-            if (!client) {
-                document.getElementById('loading').textContent = 'Error: Invalid locationId.';
+        // Initialize based on locationId from URL
+        function initializeWithLocationId(client) {
+            const accounts = client.callClientIds || [];
+            if (!accounts.length) {
+                document.getElementById('loading').textContent = 'Error: No call accounts configured for this location.';
                 return;
             }
 
             // Set earliest date_from as minDate for date picker
-            const minDate = client.accounts.reduce((earliest, account) => {
+            const minDate = accounts.reduce((earliest, account) => {
                 const accountDate = new Date(account.date_from);
                 return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
             }, null);
@@ -308,9 +312,9 @@
             loading.classList.remove('d-none');
             callData = [];
 
-            const auth = configData.authentication;
-            const promises = client.accounts.map(account => 
-                fetchDataForClientId(account.clientid, account.date_from, auth)
+            const accounts = client.callClientIds || [];
+            const promises = accounts.map(account =>
+                fetchDataForClientId(client.locationId, account.clientid, account.date_from)
             );
 
             try {
@@ -330,13 +334,11 @@
         }
 
         // Fetch data for a single client ID
-        async function fetchDataForClientId(clientId, dateFrom, auth) {
-            const apiUrl = `https://widget.salesjourney360.com/widget/call/proxy.php?action=getCDR&client_id=${clientId}&date_from=${dateFrom}&limit=10000`;
+        async function fetchDataForClientId(locationId, clientId, dateFrom) {
+            const apiUrl = `${LAMBDA_BASE_URL}/call/cdr?locationId=${locationId}&clientId=${clientId}&dateFrom=${encodeURIComponent(dateFrom)}`;
             const response = await fetch(apiUrl, {
                 method: 'GET',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${auth.username}:${auth.password}`)
-                }
+                headers: { 'X-Api-Key': LAMBDA_API_KEY }
             });
             if (!response.ok) {
                 throw new Error(`HTTP error for client ID ${clientId}! Status: ${response.status}`);

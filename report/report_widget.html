@@ -198,6 +198,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
   <script>
+    const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+    const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+    const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
+        ...opts,
+        headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+    });
+
     // Global config object and location ID
     let CONFIG = {};
     let locationId = '';
@@ -240,18 +247,14 @@
     document.addEventListener('DOMContentLoaded', async function() {
       // Load config
       try {
-        const response = await fetch('../config.json');
-        if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
-        const configs = await response.json();
-        console.log('Configs loaded:', configs);
-
-        // Get location ID and select config
         locationId = getLocationId(null); // No fallback location ID
-        CONFIG = selectConfig(configs, locationId);
-        console.log('Selected config for locationId:', locationId, CONFIG);
+        const response = await lambdaFetch(`/config?locationId=${locationId}`);
+        if (!response.ok) throw new Error(`Failed to load config: ${response.status}`);
+        CONFIG = await response.json();
+        console.log('Config loaded for locationId:', locationId, CONFIG);
 
-        // If no config is selected, handle empty state
-        if (Object.keys(CONFIG).length === 0) {
+        // If no config is found, handle empty state
+        if (!CONFIG || !CONFIG.locationId) {
           console.warn('No config found for locationId:', locationId);
           document.getElementById('tableBody').innerHTML = '<tr><td colspan="1" class="error-message">No configuration available for this location.</td></tr>';
           hideSpinner();
@@ -316,16 +319,10 @@
       }
     }
 
-    // Fetch pipelines (and stages) from v1 API
+    // Fetch pipelines (and stages) from Lambda
     async function fetchPipelinesV2() {
       try {
-        const response = await fetch(`https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${locationId}`, {
-          headers: { 
-              'Authorization': `Bearer ${CONFIG.accessToken}`, 
-              'Version': '2021-07-28',
-              'Content-Type': 'application/json',
-          }
-        });
+        const response = await lambdaFetch(`/ghl/pipelines?locationId=${locationId}`);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         // Use the first pipeline's stages (or adjust if specific pipeline needed)
@@ -337,16 +334,10 @@
       }
     }
 
-    // Fetch users from v1 API
+    // Fetch users from Lambda
     async function fetchAllUsers() {
       try {
-        const response = await fetch(`https://services.leadconnectorhq.com/users/?locationId=${locationId}`, {
-          headers: { 
-              'Authorization': `Bearer ${CONFIG.accessToken}`, 
-              'Version': '2021-07-28',
-              'Content-Type': 'application/json',
-          }
-        });
+        const response = await lambdaFetch(`/ghl/users?locationId=${locationId}`);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data = await response.json();
         data.users.forEach(user => {
@@ -358,16 +349,10 @@
       }
     }
 
-    // Fetch user roles from users API
+    // Fetch user roles from Lambda
     async function fetchUserRoles() {
       try {
-        const response = await fetch(`https://services.leadconnectorhq.com/users/?locationId=${locationId}`, {
-          headers: {
-            'Authorization': `Bearer ${CONFIG.accessToken}`,
-            'Version': '2021-07-28',
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await lambdaFetch(`/ghl/users?locationId=${locationId}`);
         if (!response.ok) {
           if (response.status === 404) {
             console.warn(`User data not found for locationId: ${locationId}. Displaying all users without admin filtering.`);
@@ -404,14 +389,13 @@
 
       try {
         while (hasMore) {
-          let url = `https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=${limit}`;
+          const params = new URLSearchParams({ locationId, limit });
           if (startAfter && startAfterId) {
-            url += `&startAfter=${startAfter}&startAfterId=${startAfterId}`;
+            params.set('startAfter', startAfter);
+            params.set('startAfterId', startAfterId);
           }
 
-          const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${CONFIG.accessToken}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' }
-          });
+          const response = await lambdaFetch(`/ghl/opportunities?${params}`);
           if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
           const data = await response.json();
 

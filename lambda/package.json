@@ -1,0 +1,22 @@
+{
+  "name": "ghl-widgets-lambda",
+  "version": "1.0.0",
+  "description": "Lambda functions for GHL widget backend",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ssm": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb-local": "^3.0.0"
+  },
+  "scripts": {
+    "migrate": "node ../scripts/migrate-to-ssm.js",
+    "build-layer": "npm install --prefix layer/nodejs",
+    "deploy": "bash deploy.sh"
+  }
+}

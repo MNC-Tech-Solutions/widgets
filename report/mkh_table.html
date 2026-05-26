@@ -626,7 +626,14 @@
       applyFilters,
       formatDateTimeWithOffset,
       clearIndexedDB
-    } from '../ghlDataV2.js?v=1.0.0';
+    } from '../ghlDataV3.js?v=2.0.0';
+
+    const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+    const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+    const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
+      ...opts,
+      headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+    });
 
     let CONFIG = {};
     let locationId = '';
@@ -671,15 +678,8 @@
           sortBy: 'last_message_date'
         });
         if (startAfterDate) params.append('startAfterDate', startAfterDate.toString());
-        const url = `https://services.leadconnectorhq.com/conversations/search?${params}`;
 
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${config.accessToken}`,
-            'Version': config.apiVersion || '2021-07-28'
-          }
-        });
+        const response = await lambdaFetch(`/ghl/conversations?${params}`);
         if (!response.ok) {
           const err = await response.text();
           throw new Error(`Conversations API error: ${response.status} – ${err}`);

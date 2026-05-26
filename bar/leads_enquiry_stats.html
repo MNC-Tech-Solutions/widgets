@@ -557,7 +557,14 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.0/dist/plotly.min.js"></script>
   <script type="module">
-    import { loadConfig, fetchPipelinesV2, clearIndexedDB, progressManager, openDB } from '../ghlDataV2.js?v=1.0.0';
+    import { loadConfig, fetchPipelinesV2, clearIndexedDB, progressManager, openDB } from '../ghlDataV3.js?v=2.0.0';
+
+    const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+    const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+    const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
+      ...opts,
+      headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+    });
 
     let CONFIG = {}, locationId = '', pipelines = [];
     let selectedStartDate = null, selectedEndDate = null, dateRangePicker;
@@ -644,11 +651,10 @@
       let hasMore = true, searchAfter = null;
       while (hasMore) {
         try {
-          const payload = { locationId, pageLimit: limit, filters: [], sort: [{ field:'dateAdded', direction:'desc' }] };
+          const payload = { pageLimit: limit, filters: [], sort: [{ field:'dateAdded', direction:'desc' }] };
           if (searchAfter) payload.searchAfter = searchAfter;
-          const res = await fetch('https://services.leadconnectorhq.com/contacts/search', {
+          const res = await lambdaFetch(`/ghl/contacts/search?locationId=${locationId}`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${CONFIG.accessToken}`, 'Content-Type': 'application/json', 'Version': '2021-07-28' },
             body: JSON.stringify(payload)
           });
           if (!res.ok) { console.error(`${res.status}:`, await res.text()); break; }

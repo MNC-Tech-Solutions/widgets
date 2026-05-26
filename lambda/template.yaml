@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: GHL Widgets Lambda Backend
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Layers:
+      - !Ref SharedLayer
+    Environment:
+      Variables:
+        DYNAMO_CACHE_TABLE: ghl-cache
+        DYNAMO_TENANTS_TABLE: ghl-tenants
+
+Resources:
+  # ── Shared Layer ────────────────────────────────────────────────────────────
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ghl-widgets-shared
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - nodejs18.x
+
+  # ── HTTP API ─────────────────────────────────────────────────────────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - X-Api-Key
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        MaxAge: 86400
+
+  # ── Functions ────────────────────────────────────────────────────────────────
+  GhlConfigApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ghl-config-api
+      CodeUri: ghl-config-api/
+      Handler: index.handler
+      Timeout: 10
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: ghl-widgets/*
+        - DynamoDBReadPolicy:
+            TableName: ghl-tenants
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /config
+            Method: GET
+
+  GhlDataProxy:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ghl-data-proxy
+      CodeUri: ghl-data-proxy/
+      Handler: index.handler
+      Timeout: 30
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: ghl-widgets/*
+        - DynamoDBCrudPolicy:
+            TableName: ghl-cache
+        - DynamoDBReadPolicy:
+            TableName: ghl-tenants
+      Events:
+        Pipelines:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/pipelines
+            Method: GET
+        Users:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/users
+            Method: GET
+        Opportunities:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/opportunities
+            Method: GET
+        Conversations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/conversations
+            Method: GET
+        ContactsSearch:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/contacts/search
+            Method: POST
+        ContactNotes:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/contacts/{contactId}/notes
+            Method: GET
+        CalendarEvents:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/calendars/events
+            Method: GET
+        CacheInvalidate:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/cache
+            Method: DELETE
+
+  CallDataProxy:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: call-data-proxy
+      CodeUri: call-data-proxy/
+      Handler: index.handler
+      Timeout: 30
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: ghl-widgets/*
+        - DynamoDBCrudPolicy:
+            TableName: ghl-cache
+        - DynamoDBReadPolicy:
+            TableName: ghl-tenants
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /call/cdr
+            Method: GET
+
+  GhlCacheWarmer:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ghl-cache-warmer
+      CodeUri: ghl-cache-warmer/
+      Handler: index.handler
+      Timeout: 600
+      MemorySize: 512
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: ghl-widgets/*
+        - DynamoDBCrudPolicy:
+            TableName: ghl-cache
+        - DynamoDBReadPolicy:
+            TableName: ghl-tenants
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 */20 * * ? *)
+            Description: Warm GHL cache every 20 minutes
+            Enabled: true
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API endpoint URL
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
