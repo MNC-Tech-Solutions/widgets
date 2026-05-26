@@ -69,6 +69,9 @@ Resources:
       Handler: index.handler
       Timeout: 120
       MemorySize: 512
+      Environment:
+        Variables:
+          WARMER_FUNCTION_NAME: ghl-cache-warmer
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: ghl-widgets/*
@@ -78,6 +81,10 @@ Resources:
             TableName: ghl-tenants
         - S3CrudPolicy:
             BucketName: mnc-ghl-cache-overflow
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt GhlCacheWarmer.Arn
       Events:
         Pipelines:
           Type: HttpApi

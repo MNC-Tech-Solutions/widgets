@@ -1,8 +1,15 @@
 const { getTenantToken } = require('/opt/nodejs/lib/secrets');
-const { getAllTenants, getCached, setCached } = require('/opt/nodejs/lib/dynamo');
+const { getAllTenants, getTenant, getCached, setCached } = require('/opt/nodejs/lib/dynamo');
 const ghl = require('/opt/nodejs/lib/ghl-client');
 
-exports.handler = async () => {
+exports.handler = async (event = {}) => {
+  // Targeted invocation from ghl-data-proxy: warm one specific pipeline immediately
+  if (event.locationId && event.pipelineId) {
+    await warmSinglePipeline(event.locationId, event.pipelineId);
+    return;
+  }
+
+  // Scheduled full-cycle warm
   const tenants = await getAllTenants();
   console.log(`Cache warming started — ${tenants.length} tenants`);
 
@@ -15,6 +22,22 @@ exports.handler = async () => {
 
   console.log('Cache warming complete');
 };
+
+async function warmSinglePipeline(locationId, pipelineId) {
+  try {
+    const tenant = await getTenant(locationId);
+    if (!tenant) { console.error(`warmSinglePipeline: unknown location ${locationId}`); return; }
+    const token = await getTenantToken(locationId);
+    const pk = `${locationId}#ghl`;
+    const sk = `opportunities#${pipelineId}`;
+    // No deadline — Lambda has 900s, fetch everything
+    const { opps } = await ghl.fetchOpportunities(token, locationId, pipelineId, tenant.customFieldIds || {});
+    await setCached(pk, sk, opps);
+    console.log(`warmSinglePipeline: ${locationId}/${pipelineId} — ${opps.length} opps`);
+  } catch (err) {
+    console.error(`warmSinglePipeline failed ${locationId}/${pipelineId}: ${err.message}`);
+  }
+}
 
 async function warmTenant(tenant) {
   const { locationId, name, customFieldIds = {} } = tenant;
@@ -44,7 +67,7 @@ async function warmTenant(tenant) {
       const sk = `opportunities#${pipeline.id}`;
       const deadline = Date.now() + 90000; // 90s per pipeline
       try {
-        const opps = await ghl.fetchOpportunities(token, locationId, pipeline.id, customFieldIds, deadline);
+        const { opps } = await ghl.fetchOpportunities(token, locationId, pipeline.id, customFieldIds, deadline);
         await setCached(pk, sk, opps);
       } catch (pipelineErr) {
         console.error(`Failed to warm pipeline ${pipeline.id} for ${name}: ${pipelineErr.message}`);

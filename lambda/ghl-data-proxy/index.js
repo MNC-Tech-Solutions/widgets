@@ -1,6 +1,9 @@
 const { getTenantToken, getApiKey } = require('/opt/nodejs/lib/secrets');
 const { getCached, setCached, deleteCached, deleteAllCached, getTenant } = require('/opt/nodejs/lib/dynamo');
 const ghl = require('/opt/nodejs/lib/ghl-client');
+const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
+
+const lambdaClient = new LambdaClient({});
 
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
@@ -50,12 +53,35 @@ exports.handler = async (event) => {
     if (path.startsWith('/ghl/opportunities')) {
       const { pipelineId } = qs;
       if (!pipelineId) return reply(400, { error: 'pipelineId required' });
-      // 24s deadline: on a cold-cache fetch, stop early and cache partial results
-      // rather than exceeding API Gateway's 29s integration timeout.
-      // The warmer fills the full dataset on its next scheduled run.
+
+      const pk = `${locationId}#ghl`;
+      const sk = `opportunities#${pipelineId}`;
+
+      const hit = await getCached(pk, sk);
+      if (hit !== null) {
+        return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
+      }
+
+      // Cache miss — 24s deadline to stay within API Gateway's 29s hard limit.
+      // If we hit the deadline, we cache partial results and immediately trigger
+      // the warmer async (fire-and-forget) to finish the job in the background.
       const deadline = Date.now() + 24000;
-      return cached(locationId, `opportunities#${pipelineId}`, () =>
-        ghl.fetchOpportunities(token, locationId, pipelineId, tenant.customFieldIds, deadline));
+      const { opps, isPartial } = await ghl.fetchOpportunities(
+        token, locationId, pipelineId, tenant.customFieldIds, deadline
+      );
+      await setCached(pk, sk, opps);
+
+      if (isPartial) {
+        const warmerFn = process.env.WARMER_FUNCTION_NAME || 'ghl-cache-warmer';
+        lambdaClient.send(new InvokeCommand({
+          FunctionName: warmerFn,
+          InvocationType: 'Event', // async fire-and-forget
+          Payload: JSON.stringify({ locationId, pipelineId }),
+        })).catch(e => console.error('Failed to invoke warmer:', e.message));
+      }
+
+      const headers = { ...CORS, 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) };
+      return { statusCode: 200, headers, body: JSON.stringify(opps) };
     }
 
     if (path.startsWith('/ghl/conversations')) {

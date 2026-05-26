@@ -67,11 +67,11 @@ async function getMetaFetchedAt(metaKey) {
   });
 }
 
-async function setMetaFetchedAt(metaKey) {
+async function setMetaFetchedAt(metaKey, ts = Date.now()) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('cache_meta', 'readwrite');
-    tx.objectStore('cache_meta').put({ key: metaKey, fetchedAt: Date.now() });
+    tx.objectStore('cache_meta').put({ key: metaKey, fetchedAt: ts });
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
@@ -276,6 +276,29 @@ async function lambdaFetch(path, options = {}, attempt = 0) {
   return res.json();
 }
 
+// Like lambdaFetch but also returns isPartial from X-Partial response header.
+// Only used for the opportunities endpoint which may return partial data on cold cache.
+async function lambdaFetchWithHeaders(path, options = {}, attempt = 0) {
+  const url = `${LAMBDA_BASE_URL}${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...options.headers },
+  });
+  if (res.status === 503 && attempt < 3) {
+    const delay = [35000, 25000, 20000][attempt];
+    console.warn(`Lambda 503 at ${path} — retrying in ${delay / 1000}s (attempt ${attempt + 1})`);
+    await new Promise(r => setTimeout(r, delay));
+    return lambdaFetchWithHeaders(path, options, attempt + 1);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Lambda ${res.status} at ${path}: ${text}`);
+  }
+  const data = await res.json();
+  const isPartial = res.headers.get('X-Partial') === 'true';
+  return { data, isPartial };
+}
+
 // ── Public API — same signatures as v1, no accessToken needed ─────────────────
 
 async function loadConfig() {
@@ -355,7 +378,9 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
 
   try {
     if (showProgress) progressManager.setProgress(20, 'Fetching from server...');
-    const opps = await lambdaFetch(`/ghl/opportunities?locationId=${locationId}&pipelineId=${pipelineId}`);
+    const { data: opps, isPartial } = await lambdaFetchWithHeaders(
+      `/ghl/opportunities?locationId=${locationId}&pipelineId=${pipelineId}`
+    );
     if (showProgress) progressManager.setProgress(70, 'Caching locally...');
 
     const db = await openDB();
@@ -364,10 +389,23 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
     opps.forEach(op => store.put({ locationId, pipelineId: op.pipelineId, id: op.id, data: op }));
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
 
-    await setMetaFetchedAt(metaKey);
+    if (isPartial) {
+      // Store with a 90s TTL so IndexedDB expires before the background warmer finishes.
+      // The warmer Lambda was already triggered server-side; after ~90s DynamoDB will have
+      // the full dataset. The scheduled reload picks it up without user action.
+      const shortTs = Date.now() - LOCAL_TTL_MS + 90_000;
+      await setMetaFetchedAt(metaKey, shortTs);
+      console.warn(`fetchAllOpportunities: partial data for ${pipelineId} (${opps.length} records) — auto-reload in 95s`);
+      if (!window.__ghlPartialReloadScheduled) {
+        window.__ghlPartialReloadScheduled = true;
+        setTimeout(() => { window.__ghlPartialReloadScheduled = false; window.location.reload(); }, 95_000);
+      }
+    } else {
+      await setMetaFetchedAt(metaKey);
+    }
 
     if (showProgress) {
-      progressManager.setProgress(100, 'Complete!');
+      progressManager.setProgress(100, isPartial ? 'Loading (partial)...' : 'Complete!');
       localStorage.setItem('ghl_last_refresh', Date.now().toString());
       setTimeout(() => progressManager.hide(), 800);
     }

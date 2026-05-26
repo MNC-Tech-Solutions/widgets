@@ -49,10 +49,12 @@ async function fetchOpportunities(token, locationId, pipelineId, customFieldIds 
   let startAfter = null;
   let startAfterId = null;
   let page = 0;
+  let isPartial = false;
 
   while (page < 150) {
     if (deadlineMs && Date.now() > deadlineMs) {
       console.warn(`fetchOpportunities: deadline reached after ${page} pages — returning ${results.length} partial results`);
+      isPartial = true;
       break;
     }
 
@@ -71,7 +73,7 @@ async function fetchOpportunities(token, locationId, pipelineId, customFieldIds 
     page++;
   }
 
-  return results;
+  return { opps: results, isPartial };
 }
 
 function processOpportunity(opp, pipelineId, customFieldIds) {
