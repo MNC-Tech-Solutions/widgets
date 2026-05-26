@@ -10,6 +10,10 @@ config.json
 call_config1.json
 SAR_config.json
 
+# IMU secrets
+IMU/.env
+IMU/*.json
+
 # Lambda local dev
 lambda/env.json
 lambda/layer/nodejs/node_modules/

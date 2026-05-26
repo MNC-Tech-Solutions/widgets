@@ -44,13 +44,18 @@ async function fetchUsers(token, locationId) {
   }));
 }
 
-async function fetchOpportunities(token, locationId, pipelineId, customFieldIds = {}) {
+async function fetchOpportunities(token, locationId, pipelineId, customFieldIds = {}, deadlineMs = null) {
   const results = [];
   let startAfter = null;
   let startAfterId = null;
   let page = 0;
 
   while (page < 150) {
+    if (deadlineMs && Date.now() > deadlineMs) {
+      console.warn(`fetchOpportunities: deadline reached after ${page} pages — returning ${results.length} partial results`);
+      break;
+    }
+
     const params = new URLSearchParams({ location_id: locationId, pipeline_id: pipelineId, limit: '100' });
     if (startAfter) params.set('startAfter', startAfter);
     if (startAfterId) params.set('startAfterId', startAfterId);

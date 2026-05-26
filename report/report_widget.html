@@ -239,6 +239,7 @@
 
     // Global variables
     let stages = [];
+    let currentPipelineId = '';
     let usersMap = new Map();
     let opportunities = [];
     let userRoles = new Map(); // Store user roles
@@ -324,9 +325,12 @@
       try {
         const response = await lambdaFetch(`/ghl/pipelines?locationId=${locationId}`);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        // Lambda returns the array directly (not {pipelines: [...]})
         const data = await response.json();
-        // Use the first pipeline's stages (or adjust if specific pipeline needed)
-        stages = data.pipelines.length > 0 ? data.pipelines[0].stages : [];
+        if (data.length > 0) {
+          currentPipelineId = data[0].id;
+          stages = data[0].stages || [];
+        }
         console.log('Stages fetched:', stages.length);
       } catch (error) {
         console.error('Error fetching pipelines/stages:', error);
@@ -339,9 +343,10 @@
       try {
         const response = await lambdaFetch(`/ghl/users?locationId=${locationId}`);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        // Lambda returns array of {id, name, email} directly
         const data = await response.json();
-        data.users.forEach(user => {
-          usersMap.set(user.id, `${user.firstName} ${user.lastName}`.trim() || user.email);
+        data.forEach(user => {
+          usersMap.set(user.id, user.name || user.email);
         });
         console.log('Users fetched:', usersMap.size);
       } catch (error) {
@@ -349,29 +354,15 @@
       }
     }
 
-    // Fetch user roles from Lambda
+    // Fetch user roles from Lambda (Lambda returns {id, name, email} — no roles field, admin filtering is skipped)
     async function fetchUserRoles() {
       try {
         const response = await lambdaFetch(`/ghl/users?locationId=${locationId}`);
         if (!response.ok) {
-          if (response.status === 404) {
-            console.warn(`User data not found for locationId: ${locationId}. Displaying all users without admin filtering.`);
-            return; // Continue without filtering admins
-          }
-          throw new Error(`HTTP error! Status: ${response.status}`);
+          console.warn(`Could not fetch user roles (${response.status}). Displaying all users without admin filtering.`);
+          return;
         }
-        const data = await response.json();
-        data.users.forEach(user => {
-          if (user.roles && user.roles.role) {
-            userRoles.set(user.id, user.roles.role); // Map userId to role
-          }
-        });
-        // Filter out admins from usersMap
-        usersMap.forEach((name, userId) => {
-          if (userRoles.get(userId)?.toLowerCase() === 'admin') {
-            usersMap.delete(userId);
-          }
-        });
+        // Lambda does not return role info — admin filtering is not supported
         console.log('Users after filtering admins:', usersMap.size);
       } catch (error) {
         console.error('Error fetching user roles:', error);
@@ -379,35 +370,17 @@
       }
     }
 
-    // Fetch opportunities from v2 API
+    // Fetch opportunities from Lambda (pagination is handled server-side; pipelineId is required)
     async function fetchAllOpportunities() {
-      let allOpportunities = [];
-      let startAfter = null;
-      let startAfterId = null;
-      let hasMore = true;
-      const limit = 100;
-
       try {
-        while (hasMore) {
-          const params = new URLSearchParams({ locationId, limit });
-          if (startAfter && startAfterId) {
-            params.set('startAfter', startAfter);
-            params.set('startAfterId', startAfterId);
-          }
-
-          const response = await lambdaFetch(`/ghl/opportunities?${params}`);
-          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-          const data = await response.json();
-
-          allOpportunities = allOpportunities.concat(data.opportunities);
-          console.log('Fetched opportunities so far:', allOpportunities.length);
-
-          startAfter = data.meta?.startAfter || null;
-          startAfterId = data.meta?.startAfterId || null;
-          hasMore = !!startAfter && !!startAfterId && allOpportunities.length < (data.meta?.total || 0);
-        }
-        console.log('Total opportunities fetched:', allOpportunities.length);
-        return allOpportunities;
+        if (!currentPipelineId) return [];
+        const params = new URLSearchParams({ locationId, pipelineId: currentPipelineId });
+        const response = await lambdaFetch(`/ghl/opportunities?${params}`);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        // Lambda returns the full array directly (server handles all pagination)
+        const data = await response.json();
+        console.log('Total opportunities fetched:', data.length);
+        return data;
       } catch (error) {
         console.error('Error fetching opportunities:', error);
         return [];

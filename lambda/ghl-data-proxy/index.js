@@ -50,8 +50,12 @@ exports.handler = async (event) => {
     if (path.startsWith('/ghl/opportunities')) {
       const { pipelineId } = qs;
       if (!pipelineId) return reply(400, { error: 'pipelineId required' });
+      // 24s deadline: on a cold-cache fetch, stop early and cache partial results
+      // rather than exceeding API Gateway's 29s integration timeout.
+      // The warmer fills the full dataset on its next scheduled run.
+      const deadline = Date.now() + 24000;
       return cached(locationId, `opportunities#${pipelineId}`, () =>
-        ghl.fetchOpportunities(token, locationId, pipelineId, tenant.customFieldIds));
+        ghl.fetchOpportunities(token, locationId, pipelineId, tenant.customFieldIds, deadline));
     }
 
     if (path.startsWith('/ghl/conversations')) {

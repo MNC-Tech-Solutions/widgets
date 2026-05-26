@@ -37,12 +37,19 @@ async function warmTenant(tenant) {
       await setCached(pk, 'users', users);
     }
 
-    // Opportunities — 20min TTL, always refresh (warmer runs every 20min)
-    for (const pipeline of pipelines) {
+    // Opportunities — 20min TTL, always refresh (warmer runs every 20min).
+    // Fetch all pipelines in parallel; allow up to 90s per pipeline so large
+    // tenants don't time out. Errors on one pipeline don't block the others.
+    await Promise.all(pipelines.map(async (pipeline) => {
       const sk = `opportunities#${pipeline.id}`;
-      const opps = await ghl.fetchOpportunities(token, locationId, pipeline.id, customFieldIds);
-      await setCached(pk, sk, opps);
-    }
+      const deadline = Date.now() + 90000; // 90s per pipeline
+      try {
+        const opps = await ghl.fetchOpportunities(token, locationId, pipeline.id, customFieldIds, deadline);
+        await setCached(pk, sk, opps);
+      } catch (pipelineErr) {
+        console.error(`Failed to warm pipeline ${pipeline.id} for ${name}: ${pipelineErr.message}`);
+      }
+    }));
 
     console.log(`Warmed: ${name} (${locationId}) — ${pipelines.length} pipeline(s)`);
   } catch (err) {

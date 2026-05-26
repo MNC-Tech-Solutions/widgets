@@ -276,8 +276,8 @@
                     end = null;
             }
             // Ensure start date is not before minDate
-            const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
-            const minDate = client.accounts.reduce((earliest, account) => {
+            const accounts = configData.callClientIds || [];
+            const minDate = accounts.reduce((earliest, account) => {
                 const accountDate = new Date(account.date_from);
                 return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
             }, null);
@@ -289,9 +289,9 @@
 
         // Clear all filters and reset to defaults
         function clearFilters() {
-            const client = configData.clients.find(c => c.locationId === new URLSearchParams(window.location.search).get('locationId'));
-            if (client) {
-                const minDate = client.accounts.reduce((earliest, account) => {
+            const accounts = configData.callClientIds || [];
+            if (accounts.length) {
+                const minDate = accounts.reduce((earliest, account) => {
                     const accountDate = new Date(account.date_from);
                     return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
                 }, null);

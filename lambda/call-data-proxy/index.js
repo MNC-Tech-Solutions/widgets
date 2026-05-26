@@ -2,7 +2,7 @@ const { getCallCredentials, getApiKey } = require('/opt/nodejs/lib/secrets');
 const { getCached, setCached, getTenant } = require('/opt/nodejs/lib/dynamo');
 
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-const CDR_PROXY = 'https://widget.salesjourney360.com/widget/call/proxy.php';
+const AVANSER_API = 'https://api.avanser.com/JSON';
 
 exports.handler = async (event) => {
   try {
@@ -39,8 +39,13 @@ exports.handler = async (event) => {
     const { username, password } = await getCallCredentials();
     const creds = Buffer.from(`${username}:${password}`).toString('base64');
 
-    const url = `${CDR_PROXY}?action=getCDR&client_id=${clientId}&date_from=${encodeURIComponent(dateFrom)}&limit=${limit}`;
-    const res = await fetch(url, { headers: { Authorization: `Basic ${creds}` } });
+    const url = `${AVANSER_API}?action=getCDR&client_id=${clientId}&date_from=${encodeURIComponent(dateFrom)}&limit=${limit}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Basic ${creds}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
     if (!res.ok) throw new Error(`Call CDR proxy returned ${res.status}`);
 
     const data = await res.json();

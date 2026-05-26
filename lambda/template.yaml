@@ -67,7 +67,8 @@ Resources:
       FunctionName: ghl-data-proxy
       CodeUri: ghl-data-proxy/
       Handler: index.handler
-      Timeout: 30
+      Timeout: 120
+      MemorySize: 512
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: ghl-widgets/*
@@ -133,7 +134,8 @@ Resources:
       FunctionName: call-data-proxy
       CodeUri: call-data-proxy/
       Handler: index.handler
-      Timeout: 30
+      Timeout: 120
+      MemorySize: 512
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: ghl-widgets/*
@@ -157,7 +159,7 @@ Resources:
       FunctionName: ghl-cache-warmer
       CodeUri: ghl-cache-warmer/
       Handler: index.handler
-      Timeout: 600
+      Timeout: 900
       MemorySize: 512
       Policies:
         - SSMParameterReadPolicy:

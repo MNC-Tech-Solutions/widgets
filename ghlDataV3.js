@@ -255,12 +255,20 @@ const progressManager = new ProgressModalManager();
 
 // ── Lambda fetch helper ───────────────────────────────────────────────────────
 
-async function lambdaFetch(path, options = {}) {
+async function lambdaFetch(path, options = {}, attempt = 0) {
   const url = `${LAMBDA_BASE_URL}${path}`;
   const res = await fetch(url, {
     ...options,
     headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...options.headers },
   });
+  // 503 = cold-cache load in progress; Lambda keeps running in background and
+  // writes to DynamoDB — retry after a delay to hit the cache.
+  if (res.status === 503 && attempt < 3) {
+    const delay = [35000, 25000, 20000][attempt];
+    console.warn(`Lambda 503 at ${path} — data loading, retrying in ${delay / 1000}s (attempt ${attempt + 1})`);
+    await new Promise(r => setTimeout(r, delay));
+    return lambdaFetch(path, options, attempt + 1);
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Lambda ${res.status} at ${path}: ${text}`);
