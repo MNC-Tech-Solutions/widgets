@@ -74,7 +74,9 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
   const getField = (fieldId) => {
     if (!fieldId) return null;
     const f = customFields.find(c => c.id === fieldId);
-    return f ? (f.fieldValue || null) : null;
+    if (!f) return null;
+    // fieldValueString is the human-readable label (important for select/dropdown fields)
+    return f.fieldValueString || f.fieldValue || null;
   };
 
   return {

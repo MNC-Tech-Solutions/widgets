@@ -184,6 +184,8 @@ function applyFilters(opportunities, pipelineId, startDate, endDate, hiddenProje
     const end = new Date(endDate.includes(' ') ? endDate : `${endDate} 23:59:59.999`);
     f = f.filter(op => new Date(op.createdAt) <= end);
   }
+  if (hiddenProjects?.size > 0)
+    f = f.filter(op => !hiddenProjects.has(op.project));
   if (additionalFilters.project) f = f.filter(op => op.project === additionalFilters.project);
   if (additionalFilters.channels?.length > 0 && !additionalFilters.channels.includes('all'))
     f = f.filter(op => op.source && additionalFilters.channels.includes(op.source));
