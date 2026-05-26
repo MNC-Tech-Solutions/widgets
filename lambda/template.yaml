@@ -11,6 +11,7 @@ Globals:
       Variables:
         DYNAMO_CACHE_TABLE: ghl-cache
         DYNAMO_TENANTS_TABLE: ghl-tenants
+        CACHE_OVERFLOW_BUCKET: mnc-ghl-cache-overflow
 
 Resources:
   # ── Shared Layer ────────────────────────────────────────────────────────────
@@ -74,6 +75,8 @@ Resources:
             TableName: ghl-cache
         - DynamoDBReadPolicy:
             TableName: ghl-tenants
+        - S3CrudPolicy:
+            BucketName: mnc-ghl-cache-overflow
       Events:
         Pipelines:
           Type: HttpApi
@@ -138,6 +141,8 @@ Resources:
             TableName: ghl-cache
         - DynamoDBReadPolicy:
             TableName: ghl-tenants
+        - S3CrudPolicy:
+            BucketName: mnc-ghl-cache-overflow
       Events:
         Api:
           Type: HttpApi
@@ -161,6 +166,8 @@ Resources:
             TableName: ghl-cache
         - DynamoDBReadPolicy:
             TableName: ghl-tenants
+        - S3CrudPolicy:
+            BucketName: mnc-ghl-cache-overflow
       Events:
         Schedule:
           Type: Schedule

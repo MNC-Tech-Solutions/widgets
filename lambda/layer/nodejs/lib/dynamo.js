@@ -7,14 +7,18 @@ const {
   UpdateCommand,
   ScanCommand,
 } = require('@aws-sdk/lib-dynamodb');
+const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const client = new DynamoDBClient({
   ...(process.env.DYNAMO_ENDPOINT && { endpoint: process.env.DYNAMO_ENDPOINT }),
 });
 const ddb = DynamoDBDocumentClient.from(client);
+const s3 = new S3Client({});
 
 const CACHE_TABLE = process.env.DYNAMO_CACHE_TABLE || 'ghl-cache';
 const TENANTS_TABLE = process.env.DYNAMO_TENANTS_TABLE || 'ghl-tenants';
+const OVERFLOW_BUCKET = process.env.CACHE_OVERFLOW_BUCKET || 'mnc-ghl-cache-overflow';
+const DYNAMO_SIZE_LIMIT = 380 * 1024; // 380KB — stay under DynamoDB's 400KB item limit
 
 const TTL_SECONDS = {
   pipelines: 24 * 60 * 60,
@@ -38,23 +42,53 @@ async function getCached(pk, sk) {
   if (!item) return null;
   // Manual TTL check in case DynamoDB hasn't swept the item yet
   if (item.ttl && item.ttl < Math.floor(Date.now() / 1000)) return null;
+
+  if (item.storageRef) {
+    // Large payload was spilled to S3
+    try {
+      const s3Res = await s3.send(new GetObjectCommand({ Bucket: OVERFLOW_BUCKET, Key: item.storageRef }));
+      const body = await s3Res.Body.transformToString();
+      return JSON.parse(body);
+    } catch (e) {
+      // S3 object expired or missing — treat as cache miss so Lambda re-fetches
+      return null;
+    }
+  }
+
   return JSON.parse(item.data);
 }
 
 async function setCached(pk, sk, data) {
-  await ddb.send(new PutCommand({
-    TableName: CACHE_TABLE,
-    Item: {
-      pk,
-      sk,
-      data: JSON.stringify(data),
-      fetchedAt: Date.now(),
-      ttl: Math.floor(Date.now() / 1000) + ttlFor(sk),
-    },
-  }));
+  const json = JSON.stringify(data);
+  const ttl = Math.floor(Date.now() / 1000) + ttlFor(sk);
+
+  if (Buffer.byteLength(json, 'utf8') > DYNAMO_SIZE_LIMIT) {
+    // Payload too large for DynamoDB — store in S3, keep pointer in DynamoDB
+    const s3Key = `cache/${pk.replace(/#/g, '_')}/${sk.replace(/#/g, '_')}.json`;
+    await s3.send(new PutObjectCommand({
+      Bucket: OVERFLOW_BUCKET,
+      Key: s3Key,
+      Body: json,
+      ContentType: 'application/json',
+    }));
+    await ddb.send(new PutCommand({
+      TableName: CACHE_TABLE,
+      Item: { pk, sk, storageRef: s3Key, fetchedAt: Date.now(), ttl },
+    }));
+  } else {
+    await ddb.send(new PutCommand({
+      TableName: CACHE_TABLE,
+      Item: { pk, sk, data: json, fetchedAt: Date.now(), ttl },
+    }));
+  }
 }
 
 async function deleteCached(pk, sk) {
+  // Clean up S3 object if present
+  const result = await ddb.send(new GetCommand({ TableName: CACHE_TABLE, Key: { pk, sk } }));
+  if (result.Item?.storageRef) {
+    await s3.send(new DeleteObjectCommand({ Bucket: OVERFLOW_BUCKET, Key: result.Item.storageRef })).catch(() => {});
+  }
   await ddb.send(new DeleteCommand({ TableName: CACHE_TABLE, Key: { pk, sk } }));
 }
 
