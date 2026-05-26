@@ -6,6 +6,8 @@ const {
   DeleteCommand,
   UpdateCommand,
   ScanCommand,
+  QueryCommand,
+  BatchWriteCommand,
 } = require('@aws-sdk/lib-dynamodb');
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
@@ -92,6 +94,38 @@ async function deleteCached(pk, sk) {
   await ddb.send(new DeleteCommand({ TableName: CACHE_TABLE, Key: { pk, sk } }));
 }
 
+async function deleteAllCached(pk) {
+  let lastKey;
+  do {
+    const result = await ddb.send(new QueryCommand({
+      TableName: CACHE_TABLE,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': pk },
+      ProjectionExpression: 'pk, sk, storageRef',
+      ...(lastKey && { ExclusiveStartKey: lastKey }),
+    }));
+    const items = result.Items || [];
+    if (!items.length) break;
+
+    // Clean up any S3 overflow objects
+    await Promise.all(items
+      .filter(i => i.storageRef)
+      .map(i => s3.send(new DeleteObjectCommand({ Bucket: OVERFLOW_BUCKET, Key: i.storageRef })).catch(() => {}))
+    );
+
+    // Batch delete DynamoDB items (max 25 per request)
+    for (let i = 0; i < items.length; i += 25) {
+      const chunk = items.slice(i, i + 25);
+      await ddb.send(new BatchWriteCommand({
+        RequestItems: {
+          [CACHE_TABLE]: chunk.map(({ pk, sk }) => ({ DeleteRequest: { Key: { pk, sk } } })),
+        },
+      }));
+    }
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+}
+
 async function getTenant(locationId) {
   const result = await ddb.send(new GetCommand({ TableName: TENANTS_TABLE, Key: { locationId } }));
   return result.Item || null;
@@ -117,4 +151,4 @@ async function updateTenant(locationId, updates) {
   }));
 }
 
-module.exports = { getCached, setCached, deleteCached, getTenant, getAllTenants, updateTenant, TTL_SECONDS };
+module.exports = { getCached, setCached, deleteCached, deleteAllCached, getTenant, getAllTenants, updateTenant, TTL_SECONDS };

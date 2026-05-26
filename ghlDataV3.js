@@ -145,6 +145,14 @@ async function clearIndexedDB() {
   return new Promise(resolve => { tx.oncomplete = resolve; });
 }
 
+async function clearAllCache(locationId) {
+  // 1. Wipe all DynamoDB cache entries for this location (all pipelines, all resources)
+  const res = await lambdaFetch(`/ghl/cache?locationId=${locationId}`, { method: 'DELETE' });
+  if (!res.ok) console.warn('Server cache clear failed:', res.status);
+  // 2. Wipe local IndexedDB entirely
+  await clearIndexedDB();
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 function getLocationId() {
@@ -323,9 +331,8 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
   const metaKey = `opportunities#${locationId}#${pipelineId}`;
 
   if (forceRefresh) {
-    // Invalidate server cache + local cache
-    await lambdaFetch(`/ghl/cache?locationId=${locationId}&resource=opportunities&pipelineId=${pipelineId}`, { method: 'DELETE' }).catch(() => {});
-    await clearOpportunitiesCache(locationId, pipelineId);
+    // Wipe entire location cache on server (all pipelines, all resources) + local IndexedDB
+    await clearAllCache(locationId);
   } else {
     const fetchedAt = await getMetaFetchedAt(metaKey);
     if (isFresh(fetchedAt)) {
@@ -388,6 +395,6 @@ async function fetchNewOpportunities(_config, locationId, pipelineId) {
 export {
   openDB, getCache, setCache, getAllByIndex, clearOpportunitiesCache,
   getLocationId, loadConfig, fetchPipelinesV2, fetchAllOpportunities,
-  formatDateTimeWithOffset, applyFilters, clearIndexedDB, progressManager,
+  formatDateTimeWithOffset, applyFilters, clearIndexedDB, clearAllCache, progressManager,
   fetchNewOpportunities, fetchAllUsers,
 };

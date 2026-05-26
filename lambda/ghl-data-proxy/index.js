@@ -1,5 +1,5 @@
 const { getTenantToken, getApiKey } = require('/opt/nodejs/lib/secrets');
-const { getCached, setCached, deleteCached, getTenant } = require('/opt/nodejs/lib/dynamo');
+const { getCached, setCached, deleteCached, deleteAllCached, getTenant } = require('/opt/nodejs/lib/dynamo');
 const ghl = require('/opt/nodejs/lib/ghl-client');
 
 const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -26,10 +26,14 @@ exports.handler = async (event) => {
     // Cache invalidation
     if (method === 'DELETE' && path.includes('/ghl/cache')) {
       const { resource, pipelineId } = qs;
-      if (!resource) return reply(400, { error: 'resource required' });
+      if (!resource) {
+        // No resource specified — clear entire location cache (all pipelines, all resources)
+        await deleteAllCached(`${locationId}#ghl`);
+        return reply(200, { ok: true, cleared: 'all' });
+      }
       const sk = pipelineId ? `${resource}#${pipelineId}` : resource;
       await deleteCached(`${locationId}#ghl`, sk);
-      return reply(200, { ok: true });
+      return reply(200, { ok: true, cleared: sk });
     }
 
     const token = await getTenantToken(locationId);
