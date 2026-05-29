@@ -6,10 +6,10 @@
 // --- CONFIGURATION ---
 $telegramToken  = '8784179877:AAFJHa6d_LZIl0XmltS_7YbEsD5socMb6DE'; 
 $telegramChatId = '6364840867';
-$mappingsFile   = 'mappings.json';
-$auditLog       = 'logs.jsonl';         
-$activityLog    = 'activity_log.jsonl'; 
-$payloadLog     = 'sent_payloads.jsonl'; // <--- NEW LOG FILE
+$mappingsFile   = __DIR__ . '/mappings.json';
+$auditLog       = __DIR__ . '/logs.jsonl';
+$activityLog    = __DIR__ . '/activity_log.jsonl';
+$payloadLog     = __DIR__ . '/sent_payloads.jsonl';
 
 // --- 1. CAPTURE INCOMING DATA ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

@@ -4,8 +4,8 @@
  * Logs what was received and what would have been sent.
  */
 
-$mappingsFile = 'mappings.json';
-$testLog      = 'test_log.jsonl';
+$mappingsFile = __DIR__ . '/mappings.json';
+$testLog      = __DIR__ . '/test_log.jsonl';
 
 // --- 1. LOG INCOMING DATA ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
