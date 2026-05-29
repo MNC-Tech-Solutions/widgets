@@ -14,6 +14,9 @@ SAR_config.json
 IMU/.env
 IMU/*.json
 
+# SSH keys
+*.pem
+
 # Lambda local dev
 lambda/env.json
 lambda/layer/nodejs/node_modules/
