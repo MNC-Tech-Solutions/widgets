@@ -17,6 +17,12 @@ IMU/*.json
 # SSH keys
 *.pem
 
+# Twilio secrets and logs
+twilio/config.json
+twilio/logs/
+twilio/error_log
+twilio.zip
+
 # Lambda local dev
 lambda/env.json
 lambda/layer/nodejs/node_modules/
