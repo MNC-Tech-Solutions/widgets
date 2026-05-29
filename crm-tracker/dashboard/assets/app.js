@@ -558,7 +558,7 @@ function renderPipeline(locationId) {
     return '<section class="tab-panel--pipeline"><p class="pipeline-empty">No location selected.</p></section>';
   }
 
-  const pipelineUrl = `https://widget.salesjourney360.com/widget/funnel/funnel_one_chart.html?locationId=${encodeURIComponent(locationId)}`;
+  const pipelineUrl = `https://d1u9vpyrlpzvbr.cloudfront.net/funnel/funnel_one_chart.html?locationId=${encodeURIComponent(locationId)}`;
   return `
     <section class="tab-panel--pipeline">
       <iframe
