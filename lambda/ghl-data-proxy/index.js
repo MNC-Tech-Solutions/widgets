@@ -87,16 +87,13 @@ exports.handler = async (event) => {
     if (path.startsWith('/ghl/conversations')) {
       const extra = { ...qs };
       delete extra.locationId;
-      return cached(locationId, 'conversations', () =>
-        ghl.fetchConversations(token, locationId, extra));
+      return cached(locationId, 'conversations', async () => ({
+        conversations: await ghl.fetchConversations(token, locationId, extra),
+      }));
     }
 
     if (method === 'POST' && path.startsWith('/ghl/contacts/search')) {
-      const body = event.body ? JSON.parse(event.body) : {};
-      // Contacts search varies by body; use a short stable key based on body content
-      const bodyKey = Buffer.from(JSON.stringify(body)).toString('base64').slice(0, 40);
-      return cached(locationId, `contacts#${bodyKey}`, () =>
-        ghl.searchContacts(token, locationId, body));
+      return cached(locationId, 'contacts', () => ghl.fetchAllContacts(token, locationId));
     }
 
     const notesMatch = path.match(/\/ghl\/contacts\/([^/]+)\/notes/);

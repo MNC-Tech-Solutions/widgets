@@ -120,11 +120,23 @@ async function fetchConversations(token, locationId, extraParams = {}) {
   return results;
 }
 
-async function searchContacts(token, locationId, body) {
-  return ghlFetch(token, `/contacts/search`, {
-    method: 'POST',
-    body: JSON.stringify({ locationId, ...body }),
-  });
+async function fetchAllContacts(token, locationId) {
+  let contacts = [];
+  let searchAfter = null;
+  while (true) {
+    const body = { locationId, pageLimit: 100 };
+    if (searchAfter) body.searchAfter = searchAfter;
+    const data = await ghlFetch(token, `/contacts/search`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    const batch = data.contacts || [];
+    contacts = contacts.concat(batch);
+    if (batch.length < 100) break;
+    searchAfter = batch[batch.length - 1]?.searchAfter;
+    if (!searchAfter) break;
+  }
+  return { contacts };
 }
 
 async function fetchContactNotes(token, contactId) {
@@ -144,7 +156,7 @@ module.exports = {
   fetchUsers,
   fetchOpportunities,
   fetchConversations,
-  searchContacts,
+  fetchAllContacts,
   fetchContactNotes,
   fetchCalendarEvents,
 };

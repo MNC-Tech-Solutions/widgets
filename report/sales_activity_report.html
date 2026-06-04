@@ -910,59 +910,29 @@
         }
 
         async function fetchAllContacts() {
-            let contacts = [];
-            let searchAfter = null;
-            const limit = 100;
-            while (true) {
-                const body = { pageLimit: limit };
-                if (searchAfter) body.searchAfter = searchAfter;
-                const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
-                    method: 'POST',
-                    body: JSON.stringify(body)
-                });
-                if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
-                const data = await response.json();
-                const batch = data.contacts || [];
-                if (batch.length === 0) break;
-                contacts = contacts.concat(batch);
-                if (batch.length < limit) break;
-                searchAfter = batch[batch.length - 1].searchAfter;
-                if (!searchAfter) break;
-            }
-            return contacts;
+            const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
+                method: 'POST',
+                body: JSON.stringify({ pageLimit: 100 })
+            });
+            if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+            const data = await response.json();
+            return data.contacts || [];
         }
 
         async function fetchAllConversations() {
-            const conversations = [];
-            let startAfterDate = null;
-            const limit = 100;
-            const maxFetches = 1000;
-            let fetchCount = 0;
-
-            while (fetchCount < maxFetches) {
-                const params = new URLSearchParams({
-                    locationId: selectedLocation.locationId,
-                    limit: limit.toString(),
-                    sort: 'desc',
-                    sortBy: 'last_message_date'
-                });
-                if (startAfterDate) params.append('startAfterDate', startAfterDate);
-                const response = await lambdaFetch(`/ghl/conversations?${params}`);
-                if (!response.ok) {
-                    const err = await response.text();
-                    throw new Error(`Conversations API error: ${response.status} – ${err}`);
-                }
-                const data = await response.json();
-                const batch = data.conversations || [];
-                if (batch.length === 0) break;
-                conversations.push(...batch);
-                fetchCount++;
-                if (batch.length < limit) break;
-                const last = batch[batch.length - 1];
-                if (!last?.lastMessageDate) break;
-                startAfterDate = last.lastMessageDate;
+            const params = new URLSearchParams({
+                locationId: selectedLocation.locationId,
+                limit: '100',
+                sort: 'desc',
+                sortBy: 'last_message_date'
+            });
+            const response = await lambdaFetch(`/ghl/conversations?${params}`);
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`Conversations API error: ${response.status} – ${err}`);
             }
-            return conversations;
+            const data = await response.json();
+            return data.conversations || [];
         }
 
         async function fetchAppointmentsForUser(userId, startMs, endMs) {
