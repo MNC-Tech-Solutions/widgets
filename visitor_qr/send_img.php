@@ -38,7 +38,7 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
 $twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201';
-$twilio_auth_token = '9c048a45f4ec7ac08841b4ebeea37503';
+$twilio_auth_token = '5d4e5f4f07af376cf17eca35db07d92b';
 $twilio_whatsapp_number = '+60145500532';
 $messaging_service_sid = 'MGcbb564952ffcda04a57c4719d6e31cae';
 $reply_template = 'HXa8d082b3f803b6449bc25fd608b42349';
@@ -81,6 +81,7 @@ if ($from && ($button_payload === 'yes')) {
     $project_name = $user_data['project_name'];
     $unit_no = $user_data['unit_no'];
     $car_plate_no = $user_data['car_plate_no'];
+    $floor_level = $user_data['floor_level'];
 
     try {
         // Send reply template

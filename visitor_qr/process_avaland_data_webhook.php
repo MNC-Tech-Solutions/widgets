@@ -12,15 +12,48 @@ function writeLog($message, $log_file) {
     file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
 }
 
+// Function to format phone number to +601[1-9][0-9]{7,8}
+function formatPhoneNumber($input_phone) {
+    // Remove non-digit characters
+    $phone = preg_replace('/[^0-9]/', '', $input_phone);
+    
+    // Handle prefixes
+    if (substr($phone, 0, 3) === '601') {
+        // Already starts with 601, keep it
+    } elseif (substr($phone, 0, 2) === '01') {
+        // Starts with 01, prepend 6
+        $phone = '6' . $phone;
+    } elseif (substr($phone, 0, 1) === '1') {
+        // Starts with 1, prepend 60
+        $phone = '60' . $phone;
+    } else {
+        // No recognizable prefix, prepend 601
+        $phone = '601' . $phone;
+    }
+    
+    // Add + prefix if not already present
+    if (substr($phone, 0, 1) !== '+') {
+        $phone = '+' . $phone;
+    }
+    
+    // Validate: must match +601[0-9]{8,9}
+    if (!preg_match('/^\+601[0-9]{8,9}$/', $phone)) {
+        return false;
+    }
+    
+    return $phone;
+}
+
 // Function to save user data
-function saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no) {
+function saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no, $floor_level) {
     $data = [
         'visitor_name' => $visitor_name,
         'image_url' => $image_url,
         'visitation_date' => $visitation_date,
         'project_name' => $project_name,
         'unit_no' => $unit_no,
-        'car_plate_no' => $car_plate_no
+        'car_plate_no' => $car_plate_no,
+        'floor_level' => $floor_level
     ];
     $filename = __DIR__ . '/user_data/' . str_replace('+', '_', $phone_number) . '.json';
     if (!file_exists(__DIR__ . '/user_data')) {
@@ -34,7 +67,7 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
 $twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201';
-$twilio_auth_token = '9c048a45f4ec7ac08841b4ebeea37503';
+$twilio_auth_token = '5d4e5f4f07af376cf17eca35db07d92b';
 $twilio_whatsapp_number = '+60145500532';
 
 // Initialize Twilio client
@@ -69,14 +102,24 @@ foreach ($required_fields as $field) {
 
 $image_url = filter_var($input['image_url'], FILTER_VALIDATE_URL);
 $visitor_name = filter_var($input['visitor_name'], FILTER_SANITIZE_STRING);
-$phone_number = trim($input['phone_number']);
+$raw_phone_number = trim($input['phone_number']);
 $visitation_date = trim($input['visitation_date']);
 $project_name = trim($input['project_name']);
 $unit_no = trim($input['unit_no']);
 $car_plate_no = trim($input['car_plate_no']);
+$floor_level = trim($input['floor_level']);
+
+// Format and validate phone number
+$phone_number = formatPhoneNumber($raw_phone_number);
+if ($phone_number === false) {
+    writeLog("Invalid phone number format: $raw_phone_number", $log_file);
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid phone number format. Must be a valid Malaysian mobile number starting with +601 followed by a digit 1-9 and 7-8 more digits (e.g., +60163931826 or +601639318269)']);
+    exit;
+}
 
 // Log received data
-writeLog("Received data: image_url=$image_url, visitor_name=$visitor_name, phone_number=$phone_number, visitation_date=$visitation_date", $log_file);
+writeLog("Received data: image_url=$image_url, visitor_name=$visitor_name, raw_phone_number=$raw_phone_number, formatted_phone_number=$phone_number, visitation_date=$visitation_date, project_name=$project_name, unit_no=$unit_no, car_plate_no=$car_plate_no, floor_level=$floor_level", $log_file);
 
 // Validate image URL
 if (!$image_url) {
@@ -86,21 +129,13 @@ if (!$image_url) {
     exit;
 }
 
-// Ensure phone number starts with +60
-if (!preg_match('/^\+60[0-9]{9,10}$/', $phone_number)) {
-    writeLog('Invalid phone number format. Must start with +60 followed by 9-10 digits', $log_file);
-    http_response_code(400);
-    echo json_encode(['error' => 'Invalid phone number format. Must start with +60 followed by 9-10 digits']);
-    exit;
-}
-
 try {
     // Log the from address being used
     $from_address = "whatsapp:+60145500532";
     writeLog("Attempting to send with from address: $from_address", $log_file);
 
     // Save user data
-    saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no);
+    saveUserData($phone_number, $visitor_name, $image_url, $visitation_date, $project_name, $unit_no, $car_plate_no, $floor_level);
 
     // Initial template message with content variables
     $message = $twilio->messages->create(

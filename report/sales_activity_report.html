@@ -961,7 +961,6 @@
                 const last = batch[batch.length - 1];
                 if (!last?.lastMessageDate) break;
                 startAfterDate = last.lastMessageDate;
-                await new Promise(r => setTimeout(r, 100));
             }
             return conversations;
         }
