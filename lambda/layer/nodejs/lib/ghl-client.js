@@ -120,23 +120,42 @@ async function fetchConversations(token, locationId, extraParams = {}) {
   return results;
 }
 
-async function fetchAllContacts(token, locationId) {
+async function fetchAllContacts(token, locationId, deadlineMs = null) {
   let contacts = [];
   let searchAfter = null;
+  let isPartial = false;
+
   while (true) {
+    if (deadlineMs && Date.now() > deadlineMs) {
+      console.warn(`fetchAllContacts: deadline reached after ${contacts.length} contacts — returning partial`);
+      isPartial = true;
+      break;
+    }
     const body = { locationId, pageLimit: 100 };
     if (searchAfter) body.searchAfter = searchAfter;
     const data = await ghlFetch(token, `/contacts/search`, {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    const batch = data.contacts || [];
+    const batch = (data.contacts || []).map(c => ({
+      id: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      contactName: c.contactName,
+      phone: c.phone,
+      email: c.email,
+      source: c.source,
+      dateAdded: c.dateAdded,
+      assignedTo: c.assignedTo,
+      tags: c.tags,
+      customFields: (c.customFields || []).map(f => ({ id: f.id, value: f.value })),
+    }));
     contacts = contacts.concat(batch);
     if (batch.length < 100) break;
     searchAfter = batch[batch.length - 1]?.searchAfter;
     if (!searchAfter) break;
   }
-  return { contacts };
+  return { contacts, isPartial };
 }
 
 async function fetchContactNotes(token, contactId) {

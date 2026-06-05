@@ -38,7 +38,7 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 
 // Hardcoded Twilio credentials
 $twilio_account_sid = 'ACca73e5834d56cc841d1ba7cb07aad201';
-$twilio_auth_token = '5d4e5f4f07af376cf17eca35db07d92b';
+$twilio_auth_token = 'fccad19023fceaf4d70d1fa90641d379';
 $twilio_whatsapp_number = '+60145500532';
 $messaging_service_sid = 'MGcbb564952ffcda04a57c4719d6e31cae';
 $reply_template = 'HXa8d082b3f803b6449bc25fd608b42349';

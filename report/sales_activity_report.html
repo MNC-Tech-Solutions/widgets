@@ -935,17 +935,17 @@
             return data.conversations || [];
         }
 
-        async function fetchAppointmentsForUser(userId, startMs, endMs) {
+        async function fetchAllAppointments(startMs, endMs) {
             const params = new URLSearchParams({
                 locationId: selectedLocation.locationId,
                 startTime: startMs.toString(),
                 endTime: endMs.toString(),
-                userId
+                userIds: Object.keys(usersMap).join(','),
             });
             const response = await lambdaFetch(`/ghl/calendars/events?${params}`);
             if (!response.ok) {
                 const err = await response.text();
-                throw new Error(`Appointments API error for ${usersMap[userId] || userId}: ${response.status} - ${err}`);
+                throw new Error(`Appointments API error: ${response.status} - ${err}`);
             }
             const data = await response.json();
             return normalizeAppointmentApiResponse(data);
@@ -973,25 +973,14 @@
             isLoadingAppointments = true;
             showAppointmentLoading();
             try {
-                const results = await Promise.all(userIds.map(userId =>
-                    fetchAppointmentsForUser(userId, filterStartDate.getTime(), filterEndDate.getTime())
-                        .then(events => ({ events: events.map(event => ({ ...event, fetchedForUserId: userId })), error: null }))
-                        .catch(error => {
-                            console.warn(error);
-                            return { events: [], error };
-                        })
-                ));
+                const events = await fetchAllAppointments(filterStartDate.getTime(), filterEndDate.getTime());
                 const deduped = new Map();
-                results.flatMap(result => result.events).forEach(event => {
-                    const id = event.id || event.eventId || `${event.calendarId || ''}-${event.contactId || ''}-${event.startTime || ''}-${event.assignedUserId || event.fetchedForUserId || ''}`;
+                events.forEach(event => {
+                    const id = event.id || event.eventId || `${event.calendarId || ''}-${event.contactId || ''}-${event.startTime || ''}-${event.assignedUserId || ''}`;
                     deduped.set(id, { ...event, id });
                 });
                 allFetchedAppointments = Array.from(deduped.values()).filter(isAppointmentInCurrentRange);
                 renderAppointments();
-                const failedCount = results.filter(result => result.error).length;
-                if (failedCount > 0) {
-                    appointmentStatsContent.insertAdjacentHTML('afterbegin', `<div class="alert alert-warning">Appointments loaded for ${userIds.length - failedCount} of ${userIds.length} users. Some users could not be fetched.</div>`);
-                }
             } catch (error) {
                 console.error('Error loading appointments:', error);
                 appointmentStatsContent.innerHTML = `<div class="alert alert-danger">Failed to load appointments: ${escapeHtml(error.message)}</div>`;

@@ -17,12 +17,12 @@
 const BUKKU_TOKEN       = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2F2YW5zZXIuYnVra3UubXkvc2V0dGluZ3MvYXBpIiwiaWF0IjoxNzc3ODY2NjY2LCJuYmYiOjE3Nzc4NjY2NjYsImp0aSI6IkZBcEkzb04yWmNZWmlCNWoiLCJzdWIiOiIxMTE2MDMiLCJwcnYiOiIyOWZjOGNlNzRmNWMwZjkxNmNjYTc0YTg2NmJjOGUzMWZlMDY0ZDdhIn0.7QwfGL1Rt7zXTdLESY_Hx8CZQuA1wKxNvqofU46z8VA";
 const BUKKU_SUBDOMAIN   = "avanser";
 
-const GHL_WEBHOOK_URL   = "https://services.leadconnectorhq.com/hooks/BXuCudh2EKUEmv1gC4ai/webhook-trigger/0c915ae1-ea30-400d-959c-6e7bc80c94cf"; // replace
+const GHL_WEBHOOK_URL   = "https://services.leadconnectorhq.com/hooks/BXuCudh2EKUEmv1gC4ai/webhook-trigger/470500f6-d141-479f-aec6-36240425643c"; 
 
 const EXPECTED_TRIGGER  = "map_bukku";
 
 // Override date for testing e.g. "2026-05-04". Leave null to use yesterday.
-const DATE_OVERRIDE     = "null";
+const DATE_OVERRIDE     = "2026-03-05";
 
 const LOG_DIR           = __DIR__ . "/logs";
 
@@ -127,6 +127,7 @@ function postWebhook(string $url, array $payload): array {
 $targetDate = DATE_OVERRIDE ?? date('Y-m-d', strtotime('yesterday'));
 log_msg("Triggered by GHL (trigger_word: map_bukku). Syncing date: $targetDate");
 
+
 // ─── STEP 1: FETCH ALL INVOICES FOR TARGET DATE (paginated) ────────────────
 
 log_msg("Fetching invoices dated $targetDate...");
@@ -136,7 +137,7 @@ $page        = 1;
 
 do {
     $data     = bukkuGet("/sales/invoices?date_from={$targetDate}&date_to={$targetDate}&per_page=100&page={$page}&sort=date&order=asc");
-    $invoices = $data['data'] ?? [];
+    $invoices = $data['transactions'] ?? [];
 
     foreach ($invoices as $inv) {
         $allInvoices[] = $inv;
@@ -291,6 +292,12 @@ foreach ($allInvoices as $inv) {
             'balance'     => $t['balance']     ?? null,
         ], $transaction['term_items'] ?? []),
 
+        'expiry_date'        => (function() use ($transaction) {
+            foreach ($transaction['fields'] ?? [] as $f) {
+                if ($f['id'] === 755) return $f['value'] ?? null;
+            }
+            return null;
+        })(),
         'custom_fields'      => $transaction['fields']             ?? [],
         'linked_items'       => $transaction['linked_items']       ?? [],
         'reconciliations'    => $transaction['reconciliations']    ?? [],

@@ -3,9 +3,15 @@ const { getAllTenants, getTenant, getCached, setCached } = require('/opt/nodejs/
 const ghl = require('/opt/nodejs/lib/ghl-client');
 
 exports.handler = async (event = {}) => {
-  // Targeted invocation from ghl-data-proxy: warm one specific pipeline immediately
+  // Targeted invocation: warm one specific pipeline
   if (event.locationId && event.pipelineId) {
     await warmSinglePipeline(event.locationId, event.pipelineId);
+    return;
+  }
+
+  // Targeted invocation: warm contacts for one location
+  if (event.locationId && event.resource === 'contacts') {
+    await warmContacts(event.locationId);
     return;
   }
 
@@ -39,6 +45,17 @@ async function warmSinglePipeline(locationId, pipelineId) {
   }
 }
 
+async function warmContacts(locationId) {
+  try {
+    const token = await getTenantToken(locationId);
+    const { contacts } = await ghl.fetchAllContacts(token, locationId); // no deadline
+    await setCached(`${locationId}#ghl`, 'contacts', { contacts });
+    console.log(`warmContacts: ${locationId} — ${contacts.length} contacts`);
+  } catch (err) {
+    console.error(`warmContacts failed ${locationId}: ${err.message}`);
+  }
+}
+
 async function warmTenant(tenant) {
   const { locationId, name, customFieldIds = {} } = tenant;
 
@@ -61,11 +78,9 @@ async function warmTenant(tenant) {
     }
 
     // Opportunities — 20min TTL, always refresh (warmer runs every 20min).
-    // Fetch all pipelines in parallel; allow up to 90s per pipeline so large
-    // tenants don't time out. Errors on one pipeline don't block the others.
     await Promise.all(pipelines.map(async (pipeline) => {
       const sk = `opportunities#${pipeline.id}`;
-      const deadline = Date.now() + 90000; // 90s per pipeline
+      const deadline = Date.now() + 90000;
       try {
         const { opps } = await ghl.fetchOpportunities(token, locationId, pipeline.id, customFieldIds, deadline);
         await setCached(pk, sk, opps);
@@ -73,6 +88,12 @@ async function warmTenant(tenant) {
         console.error(`Failed to warm pipeline ${pipeline.id} for ${name}: ${pipelineErr.message}`);
       }
     }));
+
+    // Contacts — 20min TTL, always refresh
+    const contactsCached = await getCached(pk, 'contacts');
+    if (!contactsCached) {
+      await warmContacts(locationId);
+    }
 
     console.log(`Warmed: ${name} (${locationId}) — ${pipelines.length} pipeline(s)`);
   } catch (err) {

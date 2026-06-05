@@ -664,37 +664,19 @@
 
     // Add these function
     async function fetchAllConversations(config, locationId) {
-      const conversations = [];
-      let startAfterDate = null;
-      const limit = 100;
-      const maxFetches = 1000;
-      let fetchCount = 0;
-
-      while (fetchCount < maxFetches) {
-        const params = new URLSearchParams({
-          locationId: locationId,
-          limit: limit.toString(),
-          sort: 'desc',
-          sortBy: 'last_message_date'
-        });
-        if (startAfterDate) params.append('startAfterDate', startAfterDate.toString());
-
-        const response = await lambdaFetch(`/ghl/conversations?${params}`);
-        if (!response.ok) {
-          const err = await response.text();
-          throw new Error(`Conversations API error: ${response.status} – ${err}`);
-        }
-        const data = await response.json();
-        const batch = data.conversations || [];
-        if (batch.length === 0) break;
-        conversations.push(...batch);
-        fetchCount++;
-        if (batch.length < limit) break;
-        const last = batch[batch.length - 1];
-        if (!last?.lastMessageDate) break;
-        startAfterDate = last.lastMessageDate;
-        await new Promise(r => setTimeout(r, 100));
+      const params = new URLSearchParams({
+        locationId,
+        limit: '100',
+        sort: 'desc',
+        sortBy: 'last_message_date'
+      });
+      const response = await lambdaFetch(`/ghl/conversations?${params}`);
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Conversations API error: ${response.status} – ${err}`);
       }
+      const data = await response.json();
+      const conversations = data.conversations || [];
       console.log(`Fetched ${conversations.length} conversations.`);
       return conversations;
     }

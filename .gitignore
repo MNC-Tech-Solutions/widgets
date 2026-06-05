@@ -1,9 +1,6 @@
-engage/*
-engage/ngrok.exe
-engage/logs
-engage/token_cache.json
-mahsing/*
-archived/*
+engage/
+mahsing/
+archived/
 
 # Credential config files — tokens migrated to AWS SSM Parameter Store (Phase 1)
 config.json
@@ -16,6 +13,7 @@ IMU/*.json
 
 # SSH keys
 *.pem
+*.ppk
 
 # Twilio secrets and logs
 twilio/config.json
@@ -29,3 +27,10 @@ lambda/layer/nodejs/node_modules/
 lambda/.aws-sam/
 scripts/node_modules/
 samconfig.toml
+
+IMU/
+
+visitor_qr/
+
+# Bukku logs
+bukku/logs/

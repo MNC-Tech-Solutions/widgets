@@ -1,13 +1,16 @@
 import http.client
 import json
-import time
 import os
+import time
+from collections import deque
 from datetime import datetime
+from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from supabase import create_client
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # ============================================================================
 # CONFIG
@@ -18,37 +21,79 @@ CHATDADDY_TOKEN      = os.getenv("CHATDADDY_TOKEN")
 CHATDADDY_ACCOUNT_ID = os.getenv("CHATDADDY_ACCOUNT_ID")
 MESSAGE_CUTOFF_DATE  = os.getenv("MESSAGE_CUTOFF_DATE", "2025-12-31")
 NOTE_USER_ID         = os.getenv("NOTE_USER_ID")
-SUPABASE_URL         = os.getenv("SUPABASE_URL")
-SUPABASE_KEY         = os.getenv("SUPABASE_KEY")
+FIREBASE_PROJECT_ID  = os.getenv("FIREBASE_PROJECT_ID")
 TEST_MODE            = os.getenv("TEST_MODE", "false").lower() == "true"
 TEST_LIMIT           = int(os.getenv("TEST_LIMIT", "5"))
 
 REQUIRED = {
-    "GHL_TOKEN": GHL_TOKEN, "LOCATION_ID": LOCATION_ID,
-    "CHATDADDY_TOKEN": CHATDADDY_TOKEN, "CHATDADDY_ACCOUNT_ID": CHATDADDY_ACCOUNT_ID,
-    "NOTE_USER_ID": NOTE_USER_ID, "SUPABASE_URL": SUPABASE_URL, "SUPABASE_KEY": SUPABASE_KEY,
+    "GHL_TOKEN": GHL_TOKEN,
+    "LOCATION_ID": LOCATION_ID,
+    "CHATDADDY_TOKEN": CHATDADDY_TOKEN,
+    "CHATDADDY_ACCOUNT_ID": CHATDADDY_ACCOUNT_ID,
+    "NOTE_USER_ID": NOTE_USER_ID,
+    "FIREBASE_PROJECT_ID": FIREBASE_PROJECT_ID,
 }
 missing = [k for k, v in REQUIRED.items() if not v]
 if missing:
     print(f"[ERROR] Missing env vars: {', '.join(missing)}")
     exit(1)
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-LOG_FILE = datetime.now().strftime("messages_%Y%m%d_%H%M%S.log")
+cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if cred_path:
+    firebase_admin.initialize_app(credentials.Certificate(cred_path), {"projectId": FIREBASE_PROJECT_ID})
+else:
+    firebase_admin.initialize_app(options={"projectId": FIREBASE_PROJECT_ID})
+
+db = firestore.client()
+
+_BASE    = Path(__file__).parent
+_MSG_DIR = _BASE / "logs" / "migration_messages"
+_MSG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = str(_MSG_DIR / datetime.now().strftime("messages_%Y%m%d_%H%M%S.log"))
 
 # ============================================================================
 # LOGGING
 # ============================================================================
 def log(msg, level="INFO"):
     entry = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [{level}] {msg}"
-    print(msg)
-    with open(LOG_FILE, 'a', encoding='utf-8') as f:
+    print(entry)
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(entry + "\n")
 
-def log_error(m):   log(f"✗ {m}", "ERROR")
+def log_error(m):   log(f"x {m}", "ERROR")
 def log_success(m): log(f"✓ {m}", "SUCCESS")
-def log_warning(m): log(f"⚠ {m}", "WARNING")
+def log_warning(m): log(f"! {m}", "WARNING")
 def log_info(m):    log(f"  {m}", "INFO")
+
+# ============================================================================
+# RATE LIMITER
+# ============================================================================
+class RateLimiter:
+    def __init__(self, max_per_window=100, window_seconds=10, daily_limit=200_000):
+        self.max_per_window = max_per_window
+        self.window = window_seconds
+        self.timestamps = deque()
+        self.daily_count = 0
+        self.daily_limit = daily_limit
+
+    def wait(self):
+        if self.daily_count >= self.daily_limit:
+            log_error(f"Daily GHL limit ({self.daily_limit:,}) reached — stopping. Rerun tomorrow to continue.")
+            raise SystemExit(0)
+
+        now = time.time()
+        while self.timestamps and now - self.timestamps[0] >= self.window:
+            self.timestamps.popleft()
+
+        if len(self.timestamps) >= self.max_per_window:
+            sleep_for = self.window - (now - self.timestamps[0]) + 0.05
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+
+        self.timestamps.append(time.time())
+        self.daily_count += 1
+
+rate_limiter = RateLimiter()
 
 # ============================================================================
 # CHATDADDY — FETCH MESSAGES
@@ -63,7 +108,7 @@ def fetch_messages(phone_number):
         url = f"/im/messages/{CHATDADDY_ACCOUNT_ID}/{phone_number}"
         if cursor:
             url += f"?beforeId={cursor}"
-        headers = {'Authorization': f'Bearer {CHATDADDY_TOKEN}', 'Content-Type': 'application/json'}
+        headers = {"Authorization": f"Bearer {CHATDADDY_TOKEN}", "Content-Type": "application/json"}
         try:
             conn.request("GET", url, "", headers)
             res = conn.getresponse()
@@ -90,8 +135,14 @@ def fetch_messages(phone_number):
 # GHL — PUSH MESSAGE
 # ============================================================================
 def _post_ghl_message(payload):
+    rate_limiter.wait()
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2021-04-15'}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {GHL_TOKEN}",
+        "Version": "2021-04-15",
+    }
     try:
         conn.request("POST", "/conversations/messages/inbound", json.dumps(payload), headers)
         res = conn.getresponse()
@@ -107,12 +158,12 @@ def _post_ghl_message(payload):
         conn.close()
 
 def push_message_to_ghl(message, contact_id, conversation_id):
-    text            = (message.get('text') or "").strip()
-    attachments_raw = message.get('attachments') or []
+    text            = (message.get("text") or "").strip()
+    attachments_raw = message.get("attachments") or []
     attachment_urls = [a["url"] for a in attachments_raw if a.get("url")]
 
-    is_note    = message.get('status') == 'note'
-    has_action = 'action' in message
+    is_note    = message.get("status") == "note"
+    has_action = "action" in message
     if not text and not attachment_urls and (is_note or has_action):
         log_info("Skipping system/action message")
         return True
@@ -122,7 +173,7 @@ def push_message_to_ghl(message, contact_id, conversation_id):
 
     try:
         iso_date = message.get("timestamp", "").replace("Z", "+00:00") or datetime.now().isoformat()
-    except:
+    except Exception:
         iso_date = datetime.now().isoformat()
 
     direction = "outbound" if (
@@ -149,12 +200,18 @@ def push_message_to_ghl(message, contact_id, conversation_id):
     return success
 
 # ============================================================================
-# GHL — CREATE NOTE (for messages with status=note)
+# GHL — CREATE NOTE
 # ============================================================================
 def create_contact_note(contact_id, title, body):
+    rate_limiter.wait()
     conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
     payload = json.dumps({"userId": NOTE_USER_ID, "body": body, "title": title, "color": "#FFAA00", "pinned": False})
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {GHL_TOKEN}', 'Version': '2023-02-21'}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {GHL_TOKEN}",
+        "Version": "2023-02-21",
+    }
     try:
         conn.request("POST", f"/contacts/{contact_id}/notes", payload, headers)
         res = conn.getresponse()
@@ -171,104 +228,98 @@ def create_contact_note(contact_id, title, body):
         conn.close()
 
 # ============================================================================
+# FIRESTORE
+# ============================================================================
+def get_pending(limit=500):
+    return list(db.collection("contacts").where("status", "==", "convo_created").limit(limit).stream())
+
+# ============================================================================
 # MAIN
 # ============================================================================
 def run():
-    with open(LOG_FILE, 'w', encoding='utf-8') as f:
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
         f.write("=" * 70 + "\n")
-        f.write("GHL MIGRATION — SCRIPT 2: MESSAGES\n")
+        f.write("GHL MIGRATION — MESSAGES\n")
         f.write("=" * 70 + "\n")
         f.write(f"Started:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Cutoff:    on or before {MESSAGE_CUTOFF_DATE}\n")
         f.write(f"Test Mode: {'ON (limit: ' + str(TEST_LIMIT) + ')' if TEST_MODE else 'OFF'}\n")
         f.write("=" * 70 + "\n\n")
 
-    # Read all contacts from Supabase that have a conversation but no messages pushed yet
-    try:
-        result = supabase.table("contacts").select(
-            "phone_number, name, ghl_contact_id, ghl_convo_id"
-        ).not_.is_("ghl_convo_id", "null").eq("messages_done", False).execute()
-        pending = result.data
-        log_info(f"{len(pending)} contact(s) pending message sync")
-    except Exception as e:
-        log_error(f"Failed to load pending contacts from Supabase: {e}")
-        return
+    processed = 0
 
-    if not pending:
-        log_info("Nothing to do — all messages already synced.")
-        return
+    while True:
+        batch = get_pending()
+        if not batch:
+            log_info("No pending contacts — all messages synced.")
+            break
 
-    if TEST_MODE and len(pending) > TEST_LIMIT:
-        pending = pending[:TEST_LIMIT]
-        log_warning(f"TEST MODE: capped at {TEST_LIMIT}")
+        if TEST_MODE and processed + len(batch) > TEST_LIMIT:
+            batch = batch[:TEST_LIMIT - processed]
 
-    stats = {'total': len(pending), 'with_messages': 0, 'no_messages': 0, 'messages_synced': 0, 'notes': 0}
+        log_info(f"Batch of {len(batch)} contacts to process...")
 
-    for idx, row in enumerate(pending, 1):
-        phone           = row['phone_number']
-        name            = row['name'] or phone
-        contact_id      = row['ghl_contact_id']
-        conversation_id = row['ghl_convo_id']
+        for doc in batch:
+            d           = doc.to_dict()
+            phone       = doc.id
+            name        = d.get("name") or phone
+            contact_id  = d.get("ghl_contact_id")
+            convo_id    = d.get("ghl_convo_id")
 
-        log(f"\n[{idx}/{stats['total']}] {name} ({phone})")
+            log_info(f"[{phone}] {name}")
 
-        # Fetch all messages then filter by cutoff
-        messages = fetch_messages(phone)
-        before   = len(messages)
-        messages = [m for m in messages if (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE]
-        dropped  = before - len(messages)
-        if dropped:
-            log_info(f"Dropped {dropped} message(s) after {MESSAGE_CUTOFF_DATE}")
-
-        if not messages:
-            stats['no_messages'] += 1
-            log_info("No messages in range")
             try:
-                supabase.table("contacts").update({
-                    "has_messages":    False,
-                    "messages_done":   True,
-                    "messages_done_at": datetime.utcnow().isoformat(),
-                }).eq("phone_number", phone).execute()
+                all_messages = fetch_messages(phone)
+                has_msg_before_cutoff = any(
+                    (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE for m in all_messages
+                )
+                messages = [m for m in all_messages if (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE]
+                dropped  = len(all_messages) - len(messages)
+                if dropped:
+                    log_info(f"Dropped {dropped} message(s) after {MESSAGE_CUTOFF_DATE}")
+
+                synced = 0
+                notes  = 0
+
+                for message in messages:
+                    if message.get("status") == "note":
+                        note_text = message.get("text", "").strip()
+                        if note_text:
+                            ts = message.get("timestamp", datetime.now().isoformat())
+                            if create_contact_note(contact_id, f"Note ({ts[:10]})", note_text):
+                                notes += 1
+                        time.sleep(0.3)
+                        continue
+
+                    if push_message_to_ghl(message, contact_id, convo_id):
+                        synced += 1
+                    time.sleep(0.3)
+
+                log_success(f"Synced {synced}/{len(messages)} messages, {notes} notes — {name} ({phone})")
+                update = {
+                    "status":               "messages_done",
+                    "msg_before_cutoff":    has_msg_before_cutoff,
+                    "updated_at":           firestore.SERVER_TIMESTAMP,
+                }
+                doc.reference.update(update)
+
+            except SystemExit:
+                raise
             except Exception as e:
-                log_error(f"Supabase write failed: {e}")
-            time.sleep(0.5)
-            continue
+                log_error(f"Failed {phone}: {e}")
+                doc.reference.update({
+                    "status":     "error_messages",
+                    "error":      str(e),
+                    "updated_at": firestore.SERVER_TIMESTAMP,
+                })
 
-        stats['with_messages'] += 1
-        synced = 0
+            processed += 1
 
-        for message in messages:
-            if message.get('status') == 'note':
-                note_text = message.get('text', '').strip()
-                if note_text:
-                    ts = message.get('timestamp', datetime.now().isoformat())
-                    if create_contact_note(contact_id, f"Note ({ts[:10]})", note_text):
-                        stats['notes'] += 1
-                time.sleep(0.3)
-                continue
+        if TEST_MODE and processed >= TEST_LIMIT:
+            log_warning(f"TEST MODE: reached limit of {TEST_LIMIT}")
+            break
 
-            if push_message_to_ghl(message, contact_id, conversation_id):
-                synced += 1
-                stats['messages_synced'] += 1
-            time.sleep(0.3)
-
-        log_success(f"Synced {synced}/{len(messages)} messages")
-
-        try:
-            supabase.table("contacts").update({
-                "has_messages":    True,
-                "messages_done":   True,
-                "messages_done_at": datetime.utcnow().isoformat(),
-            }).eq("phone_number", phone).execute()
-        except Exception as e:
-            log_error(f"Supabase write failed: {e}")
-
-        time.sleep(1)
-
-    log(f"\nSCRIPT 2 COMPLETE")
-    log(f"  Total: {stats['total']} | With messages: {stats['with_messages']} | No messages: {stats['no_messages']}")
-    log(f"  Messages synced: {stats['messages_synced']} | Notes created: {stats['notes']}")
-    log(f"  Log: {LOG_FILE}")
+    log_info(f"Done — {processed} contacts processed. Log: {LOG_FILE}")
 
 if __name__ == "__main__":
     run()

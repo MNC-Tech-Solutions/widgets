@@ -93,7 +93,25 @@ exports.handler = async (event) => {
     }
 
     if (method === 'POST' && path.startsWith('/ghl/contacts/search')) {
-      return cached(locationId, 'contacts', () => ghl.fetchAllContacts(token, locationId));
+      const pk = `${locationId}#ghl`;
+      const sk = 'contacts';
+      const hit = await getCached(pk, sk);
+      if (hit !== null) {
+        return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
+      }
+      const deadline = Date.now() + 24000;
+      const { contacts, isPartial } = await ghl.fetchAllContacts(token, locationId, deadline);
+      await setCached(pk, sk, { contacts });
+      if (isPartial) {
+        const warmerFn = process.env.WARMER_FUNCTION_NAME || 'ghl-cache-warmer';
+        lambdaClient.send(new InvokeCommand({
+          FunctionName: warmerFn,
+          InvocationType: 'Event',
+          Payload: JSON.stringify({ locationId, resource: 'contacts' }),
+        })).catch(e => console.error('Failed to invoke warmer for contacts:', e.message));
+      }
+      const headers = { ...CORS, 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ contacts }) };
     }
 
     const notesMatch = path.match(/\/ghl\/contacts\/([^/]+)\/notes/);
@@ -104,10 +122,15 @@ exports.handler = async (event) => {
     }
 
     if (path.startsWith('/ghl/calendars/events')) {
-      const { startTime, endTime, userId } = qs;
-      const cacheKey = `calendar#${startTime}#${endTime}${userId ? `#${userId}` : ''}`;
-      return cached(locationId, cacheKey, () =>
-        ghl.fetchCalendarEvents(token, locationId, startTime, endTime, userId));
+      const { startTime, endTime, userIds } = qs;
+      const cacheKey = `calendar#${startTime}#${endTime}`;
+      return cached(locationId, cacheKey, async () => {
+        const ids = userIds ? userIds.split(',').filter(Boolean) : [];
+        const batches = await Promise.all(
+          ids.map(uid => ghl.fetchCalendarEvents(token, locationId, startTime, endTime, uid).catch(() => []))
+        );
+        return batches.flat();
+      });
     }
 
     return reply(404, { error: 'Route not found' });
