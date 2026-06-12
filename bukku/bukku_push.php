@@ -17,12 +17,12 @@
 const BUKKU_TOKEN       = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2F2YW5zZXIuYnVra3UubXkvc2V0dGluZ3MvYXBpIiwiaWF0IjoxNzc3ODY2NjY2LCJuYmYiOjE3Nzc4NjY2NjYsImp0aSI6IkZBcEkzb04yWmNZWmlCNWoiLCJzdWIiOiIxMTE2MDMiLCJwcnYiOiIyOWZjOGNlNzRmNWMwZjkxNmNjYTc0YTg2NmJjOGUzMWZlMDY0ZDdhIn0.7QwfGL1Rt7zXTdLESY_Hx8CZQuA1wKxNvqofU46z8VA";
 const BUKKU_SUBDOMAIN   = "avanser";
 
-const GHL_WEBHOOK_URL   = "https://services.leadconnectorhq.com/hooks/BXuCudh2EKUEmv1gC4ai/webhook-trigger/470500f6-d141-479f-aec6-36240425643c"; 
+const GHL_WEBHOOK_URL   = "https://services.leadconnectorhq.com/hooks/BXuCudh2EKUEmv1gC4ai/webhook-trigger/5986674c-9e62-49b3-815d-b8f730bcd367"; 
 
 const EXPECTED_TRIGGER  = "map_bukku";
 
 // Override date for testing e.g. "2026-05-04". Leave null to use yesterday.
-const DATE_OVERRIDE     = "2026-03-05";
+const DATE_OVERRIDE     = null;
 
 const LOG_DIR           = __DIR__ . "/logs";
 
@@ -362,31 +362,37 @@ foreach ($allInvoices as $inv) {
 
 log_msg(count($records) . " record(s) built.");
 
-// ─── STEP 3: BUILD FINAL PAYLOAD ───────────────────────────────────────────
+// ─── STEP 3: SAVE LOCAL COPY ────────────────────────────────────────────────
 
-$payload = [
-    'event'     => 'bukku_daily_invoice_sync',
-    'date'      => $targetDate,
-    'synced_at' => date('Y-m-d H:i:s'),
-    'total'     => count($records),
-    'records'   => $records,
-];
-
-// Save local copy
 $logFile = LOG_DIR . "/sync_{$targetDate}.json";
-file_put_contents($logFile, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+file_put_contents($logFile, json_encode($records, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 log_msg("Local log saved: $logFile");
 
-// ─── STEP 4: POST BACK TO GHL WEBHOOK ─────────────────────────────────────
+// ─── STEP 4: POST EACH INVOICE SEPARATELY TO GHL WEBHOOK ──────────────────
 
-log_msg("Posting results to GHL webhook...");
+log_msg("Posting " . count($records) . " invoice(s) to GHL webhook one by one...");
 
-$response = postWebhook(GHL_WEBHOOK_URL, $payload);
+foreach ($records as $i => $record) {
+    $invoiceNumber = $record['invoice']['number'] ?? "#{$i}";
+    $payload = [
+        'event'     => 'bukku_daily_invoice_sync',
+        'date'      => $targetDate,
+        'synced_at' => date('Y-m-d H:i:s'),
+        'invoice'   => $record['invoice'],
+        'contact'   => $record['contact'],
+        'meta'      => $record['meta'],
+    ];
 
-if ($response['status'] >= 200 && $response['status'] < 300) {
-    log_msg("GHL webhook accepted (HTTP {$response['status']})");
-} else {
-    log_msg("GHL webhook FAILED (HTTP {$response['status']}): {$response['body']}");
+    log_msg("Posting invoice $invoiceNumber...");
+    $response = postWebhook(GHL_WEBHOOK_URL, $payload);
+
+    if ($response['status'] >= 200 && $response['status'] < 300) {
+        log_msg("Invoice $invoiceNumber accepted (HTTP {$response['status']})");
+    } else {
+        log_msg("Invoice $invoiceNumber FAILED (HTTP {$response['status']}): {$response['body']}");
+    }
+
+    if ($i < count($records) - 1) sleep(1); // avoid hammering GHL between invoices
 }
 
 log_msg("Done.");
