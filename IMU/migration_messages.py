@@ -1,13 +1,18 @@
 import http.client
 import json
 import os
+import smtplib
+import sys
 import time
+import traceback
 from collections import deque
 from datetime import datetime
+from email.mime.text import MIMEText
 from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv()
+_env_file = sys.argv[1] if len(sys.argv) > 1 else None
+load_dotenv(dotenv_path=_env_file)
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -18,18 +23,20 @@ from firebase_admin import credentials, firestore
 GHL_TOKEN            = os.getenv("GHL_TOKEN")
 LOCATION_ID          = os.getenv("LOCATION_ID")
 CHATDADDY_TOKEN      = os.getenv("CHATDADDY_TOKEN")
-CHATDADDY_ACCOUNT_ID = os.getenv("CHATDADDY_ACCOUNT_ID")
 MESSAGE_CUTOFF_DATE  = os.getenv("MESSAGE_CUTOFF_DATE", "2025-12-31")
 NOTE_USER_ID         = os.getenv("NOTE_USER_ID")
 FIREBASE_PROJECT_ID  = os.getenv("FIREBASE_PROJECT_ID")
+COLLECTION_NAME      = os.getenv("COLLECTION_NAME", "contacts")
 TEST_MODE            = os.getenv("TEST_MODE", "false").lower() == "true"
 TEST_LIMIT           = int(os.getenv("TEST_LIMIT", "5"))
+
+_GMAIL_USER = os.getenv("GMAIL_USER")
+_GMAIL_PASS = os.getenv("GMAIL_APP_PASSWORD")
 
 REQUIRED = {
     "GHL_TOKEN": GHL_TOKEN,
     "LOCATION_ID": LOCATION_ID,
     "CHATDADDY_TOKEN": CHATDADDY_TOKEN,
-    "CHATDADDY_ACCOUNT_ID": CHATDADDY_ACCOUNT_ID,
     "NOTE_USER_ID": NOTE_USER_ID,
     "FIREBASE_PROJECT_ID": FIREBASE_PROJECT_ID,
 }
@@ -54,6 +61,20 @@ LOG_FILE = str(_MSG_DIR / datetime.now().strftime("messages_%Y%m%d_%H%M%S.log"))
 # ============================================================================
 # LOGGING
 # ============================================================================
+def send_email(subject, body):
+    if not _GMAIL_USER or not _GMAIL_PASS:
+        return
+    msg = MIMEText(body)
+    msg["Subject"] = f"[Migration:{COLLECTION_NAME}] {subject}"
+    msg["From"]    = _GMAIL_USER
+    msg["To"]      = _GMAIL_USER
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+            s.login(_GMAIL_USER, _GMAIL_PASS)
+            s.send_message(msg)
+    except Exception as e:
+        print(f"[EMAIL FAILED] {e}", flush=True)
+
 def log(msg, level="INFO"):
     entry = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [{level}] {msg}"
     print(entry)
@@ -78,7 +99,9 @@ class RateLimiter:
 
     def wait(self):
         if self.daily_count >= self.daily_limit:
-            log_error(f"Daily GHL limit ({self.daily_limit:,}) reached — stopping. Rerun tomorrow to continue.")
+            msg = f"Daily GHL limit ({self.daily_limit:,}) reached — stopping. Rerun tomorrow to continue."
+            log_error(msg)
+            send_email("Daily GHL limit reached", msg)
             raise SystemExit(0)
 
         now = time.time()
@@ -98,14 +121,14 @@ rate_limiter = RateLimiter()
 # ============================================================================
 # CHATDADDY — FETCH MESSAGES
 # ============================================================================
-def fetch_messages(phone_number):
+def fetch_messages(account_id, chatdaddy_id):
     all_messages = []
     cursor = None
     page_num = 0
     while True:
         page_num += 1
-        conn = http.client.HTTPSConnection("api.chatdaddy.tech")
-        url = f"/im/messages/{CHATDADDY_ACCOUNT_ID}/{phone_number}"
+        conn = http.client.HTTPSConnection("api.chatdaddy.tech", timeout=30)
+        url = f"/im/messages/{account_id}/{chatdaddy_id}"
         if cursor:
             url += f"?beforeId={cursor}"
         headers = {"Authorization": f"Bearer {CHATDADDY_TOKEN}", "Content-Type": "application/json"}
@@ -136,7 +159,7 @@ def fetch_messages(phone_number):
 # ============================================================================
 def _post_ghl_message(payload):
     rate_limiter.wait()
-    conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
+    conn = http.client.HTTPSConnection("services.leadconnectorhq.com", timeout=30)
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -204,7 +227,7 @@ def push_message_to_ghl(message, contact_id, conversation_id):
 # ============================================================================
 def create_contact_note(contact_id, title, body):
     rate_limiter.wait()
-    conn = http.client.HTTPSConnection("services.leadconnectorhq.com")
+    conn = http.client.HTTPSConnection("services.leadconnectorhq.com", timeout=30)
     payload = json.dumps({"userId": NOTE_USER_ID, "body": body, "title": title, "color": "#FFAA00", "pinned": False})
     headers = {
         "Content-Type": "application/json",
@@ -231,7 +254,7 @@ def create_contact_note(contact_id, title, body):
 # FIRESTORE
 # ============================================================================
 def get_pending(limit=500):
-    return list(db.collection("contacts").where("status", "==", "convo_created").limit(limit).stream())
+    return list(db.collection(COLLECTION_NAME).where("status", "==", "convo_created").limit(limit).stream())
 
 # ============================================================================
 # MAIN
@@ -260,16 +283,18 @@ def run():
         log_info(f"Batch of {len(batch)} contacts to process...")
 
         for doc in batch:
-            d           = doc.to_dict()
-            phone       = doc.id
-            name        = d.get("name") or phone
-            contact_id  = d.get("ghl_contact_id")
-            convo_id    = d.get("ghl_convo_id")
+            d            = doc.to_dict()
+            phone        = doc.id
+            name         = d.get("name") or phone
+            contact_id   = d.get("ghl_contact_id")
+            convo_id     = d.get("ghl_convo_id")
+            account_id   = d.get("account_id") or ""
+            chatdaddy_id = d.get("chatdaddy_id") or phone
 
             log_info(f"[{phone}] {name}")
 
             try:
-                all_messages = fetch_messages(phone)
+                all_messages = fetch_messages(account_id, chatdaddy_id)
                 has_msg_before_cutoff = any(
                     (m.get("timestamp") or "")[:10] <= MESSAGE_CUTOFF_DATE for m in all_messages
                 )
@@ -320,6 +345,15 @@ def run():
             break
 
     log_info(f"Done — {processed} contacts processed. Log: {LOG_FILE}")
+    send_email("Migration complete", f"All messages migrated.\n\nCollection: {COLLECTION_NAME}\nProcessed: {processed}\nLog: {LOG_FILE}")
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except SystemExit:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        log_error(f"Unhandled crash: {e}\n{tb}")
+        send_email("CRASH — migration stopped", f"Unhandled exception in migration_messages.py\n\nCollection: {COLLECTION_NAME}\n\n{tb}")
+        raise

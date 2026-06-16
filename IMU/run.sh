@@ -23,11 +23,12 @@ if not firebase_admin._apps:
     )
 db = firestore.client()
 
-state = db.collection("migration_state").document("fetch_cursor").get().to_dict() or {}
+col = os.getenv("COLLECTION_NAME", "contacts")
+state = db.collection("migration_state").document(col).get().to_dict() or {}
 fetch_complete = state.get("fetch_complete", False)
 
-has_fetched  = any(True for _ in db.collection("contacts").where("status","==","fetched").limit(1).stream())
-has_pending  = any(True for _ in db.collection("contacts").where("status","==","contact_created").limit(1).stream())
+has_fetched  = any(True for _ in db.collection(col).where("status","==","fetched").limit(1).stream())
+has_pending  = any(True for _ in db.collection(col).where("status","==","contact_created").limit(1).stream())
 
 if fetch_complete and not has_fetched and not has_pending:
     print("DONE")
