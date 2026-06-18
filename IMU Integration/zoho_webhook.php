@@ -267,14 +267,14 @@ if ($zoho_id === '') {
     $result['actions'][]      = 'zoho_contact_created';
     $result['zoho_record_id'] = $record_id;
 
-    if ($contact_id) {
-        $ok = updateGHLContact($contact_id, $record_id);
-        $result['actions'][] = $ok ? 'ghl_updated' : 'ghl_update_failed';
-    }
-
     if ($tags) {
         $ok = addZohoTags($token, $record_id, $tags);
         $result['actions'][] = $ok ? 'tags_added' : 'tags_failed';
+    }
+
+    if ($contact_id) {
+        $ok = updateGHLContact($contact_id, $record_id);
+        $result['actions'][] = $ok ? 'ghl_updated' : 'ghl_update_failed';
     }
 
 } else {
