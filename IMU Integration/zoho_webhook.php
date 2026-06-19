@@ -4,15 +4,16 @@
  *
  * Two pipelines depending on incoming data:
  *
- *   New contact  (Zoho ID is empty):
+ *   First push  (Zoho ID empty) — new contact:
  *     1. Get Zoho access token
- *     2. Create Zoho contact
+ *     2. Create Zoho contact (Name, Phone, Email — no Nationality yet)
  *     3. Write Zoho record ID back to GHL contact
  *     4. Add tags to Zoho contact
  *
- *   Existing contact (Zoho ID present + Conversation Summary present):
+ *   Second push (Zoho ID present) — existing contact:
  *     1. Get Zoho access token
- *     5. Add note to existing Zoho contact
+ *     2. Upsert contact — writes Nationality + Zoho_ID onto existing record
+ *     3. Add SJ360 Conversation Summary as a Note (if present)
  */
 
 date_default_timezone_set('Asia/Kuala_Lumpur');
@@ -97,13 +98,13 @@ function createZohoContact(string $token, array $data): ?string {
     $name = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
     writeLog("Step 2 — creating Zoho contact: $name <{$data['email']}>");
 
+    // Nationality intentionally excluded — not available during first push.
     $body = json_encode([
         'data' => [[
-            'First_Name'  => $data['first_name']  ?? '',
-            'Last_Name'   => $data['last_name']   ?? ($data['full_name'] ?? 'Unknown'),
-            'Phone'       => $data['phone']        ?? '',
-            'Email'       => $data['email']        ?? '',
-            'Nationality' => $data['Nationality']  ?? '',
+            'First_Name' => $data['first_name'] ?? '',
+            'Last_Name'  => $data['last_name']  ?? ($data['full_name'] ?? 'Unknown'),
+            'Phone'      => $data['phone']       ?? '',
+            'Email'      => $data['email']       ?? '',
         ]]
     ]);
 
@@ -198,6 +199,39 @@ function addZohoTags(string $token, string $record_id, string $tags_raw): bool {
     return false;
 }
 
+// ── Step 2b: Upsert Existing Zoho Contact (Second Push) ──────────────────────
+
+function upsertZohoContact(string $token, string $zoho_id, string $nationality): bool {
+    writeLog("Step 2b — upserting Zoho contact $zoho_id (Nationality: $nationality)");
+
+    $body = json_encode([
+        'data' => [[
+            'id'          => $zoho_id,
+            'Nationality' => $nationality,
+            'Zoho_ID'     => $zoho_id,
+        ]],
+        'duplicate_check_fields' => ['id'],
+    ]);
+
+    $res = httpRequest('POST', ZOHO_API_BASE . '/Contacts/upsert', [
+        'Authorization: Zoho-oauthtoken ' . $token,
+        'Content-Type: application/json',
+    ], $body);
+
+    if ($res['error']) {
+        writeLog("  ✗ cURL error: {$res['error']}");
+        return false;
+    }
+
+    if ($res['code'] >= 200 && $res['code'] < 300) {
+        writeLog('  ✓ Contact upserted');
+        return true;
+    }
+
+    writeLog("  ✗ Upsert failed (HTTP {$res['code']}): {$res['body']}");
+    return false;
+}
+
 // ── Step 5: Add Note to Existing Zoho Contact ─────────────────────────────────
 
 function addZohoNote(string $token, string $zoho_id, string $summary): bool {
@@ -242,12 +276,14 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
     respond(400, ['error' => 'Invalid JSON payload']);
 }
 
-$zoho_id    = trim($data['Zoho ID']              ?? '');
-$conv_summ  = trim($data['Conversation Summary'] ?? '');
-$contact_id = trim($data['contact_id']           ?? '');
-$tags       = trim($data['tags']                 ?? '');
+$zoho_id     = trim($data['Zoho ID']                    ?? '');
+$conv_summ   = trim($data['SJ360 Conversation Summary'] ?? '');
+$contact_id  = trim($data['contact_id']                 ?? '');
+$tags        = trim($data['tags']                       ?? '');
+$nationality = trim($data['Nationality']                ?? '');
 
 writeLog("─── Webhook received ─── contact_id=$contact_id | zoho_id=" . ($zoho_id ?: '(none)') . ' | summary=' . ($conv_summ ? 'yes' : 'no'));
+writeLog('Payload: ' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
 // Step 1 — always needed
 $token = getZohoAccessToken();
@@ -267,27 +303,27 @@ if ($zoho_id === '') {
     $result['actions'][]      = 'zoho_contact_created';
     $result['zoho_record_id'] = $record_id;
 
-    if ($tags) {
-        $ok = addZohoTags($token, $record_id, $tags);
-        $result['actions'][] = $ok ? 'tags_added' : 'tags_failed';
-    }
-
     if ($contact_id) {
         $ok = updateGHLContact($contact_id, $record_id);
         $result['actions'][] = $ok ? 'ghl_updated' : 'ghl_update_failed';
     }
 
+    if ($tags) {
+        $ok = addZohoTags($token, $record_id, $tags);
+        $result['actions'][] = $ok ? 'tags_added' : 'tags_failed';
+    }
+
 } else {
-    // ── Existing contact pipeline ─────────────────────────────────────────────
+    // ── Second push — upsert Nationality + Zoho_ID, then add note ────────────
 
     $result['zoho_record_id'] = $zoho_id;
+
+    $ok = upsertZohoContact($token, $zoho_id, $nationality);
+    $result['actions'][] = $ok ? 'contact_upserted' : 'upsert_failed';
 
     if ($conv_summ !== '') {
         $ok = addZohoNote($token, $zoho_id, $conv_summ);
         $result['actions'][] = $ok ? 'note_added' : 'note_failed';
-    } else {
-        writeLog('Existing contact — no conversation summary, nothing to do');
-        $result['actions'][] = 'no_action_needed';
     }
 }
 
