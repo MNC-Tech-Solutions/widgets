@@ -95,17 +95,24 @@ function getZohoAccessToken(): ?string {
 // ── Step 2: Create Zoho Contact ───────────────────────────────────────────────
 
 function createZohoContact(string $token, array $data): ?string {
-    $name = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''));
-    writeLog("Step 2 — creating Zoho contact: $name <{$data['email']}>");
+    writeLog("Step 2 — creating Zoho contact: {$data['full_name']} <{$data['email']}>");
+
+    $first = trim($data['first_name'] ?? '');
+    $last  = trim($data['last_name']  ?? '');
+    $full  = trim($data['full_name']  ?? '');
+
+    // If both first and last are present, map them individually.
+    // Otherwise fall back to full_name mapped to Last_Name only (no First_Name sent).
+    $name_fields = ($first !== '' && $last !== '')
+        ? ['First_Name' => $first, 'Last_Name' => $last]
+        : ['Last_Name'  => $full ?: 'Unknown'];
 
     // Nationality intentionally excluded — not available during first push.
     $body = json_encode([
-        'data' => [[
-            'First_Name' => $data['first_name'] ?? '',
-            'Last_Name'  => $data['last_name']  ?? ($data['full_name'] ?? 'Unknown'),
-            'Phone'      => $data['phone']       ?? '',
-            'Email'      => $data['email']       ?? '',
-        ]]
+        'data' => [array_merge($name_fields, [
+            'Phone' => $data['phone'] ?? '',
+            'Email' => $data['email'] ?? '',
+        ])]
     ]);
 
     $res = httpRequest('POST', ZOHO_API_BASE . '/Contacts', [
