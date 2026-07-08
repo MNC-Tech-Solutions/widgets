@@ -87,6 +87,12 @@ exports.handler = async (event) => {
     if (path.startsWith('/ghl/conversations')) {
       const extra = { ...qs };
       delete extra.locationId;
+      // Paginated requests (startAfterDate present) must bypass cache —
+      // each page has a different cursor so they can't share a cache entry.
+      if (extra.startAfterDate) {
+        const conversations = await ghl.fetchConversations(token, locationId, extra);
+        return reply(200, { conversations });
+      }
       return cached(locationId, 'conversations', async () => ({
         conversations: await ghl.fetchConversations(token, locationId, extra),
       }));
