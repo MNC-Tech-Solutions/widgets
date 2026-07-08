@@ -945,6 +945,17 @@
             if (!selectedLocation) return;
             showLoading();
             try {
+                // Set today as default before fetching so API calls can be scoped to today
+                const today = new Date();
+                const y = today.getFullYear();
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                const d = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${y}-${m}-${d}`;
+                dateStart.value = todayStr;
+                dateEnd.value   = todayStr;
+                filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
+                filterEndDate   = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
                 usersMap              = await fetchUsersMap();
                 allFetchedContacts    = await fetchAllContacts();
                 allFetchedConversations = await fetchAllConversations();
@@ -952,9 +963,6 @@
                 allOpportunities      = await fetchAllOpportunities();
                 populateProjectFilter();
                 populateSourceFilter();
-                const today = new Date();
-                dateStart.valueAsDate = today;
-                dateEnd.valueAsDate   = today;
                 resetFilters();
             } catch (error) {
                 showConfigStatus(`API Error: ${error.message}`, 'error');
@@ -986,6 +994,8 @@
             while (true) {
                 const body = { pageLimit: limit };
                 if (searchAfter) body.searchAfter = searchAfter;
+                if (filterStartDate) body.startDate = filterStartDate.toISOString();
+                if (filterEndDate)   body.endDate   = filterEndDate.toISOString();
                 const res = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
                     method: 'POST',
                     body: JSON.stringify(body)
@@ -1026,6 +1036,8 @@
                 if (batch.length < limit) break;
                 const last = batch[batch.length - 1];
                 if (!last?.lastMessageDate) break;
+                // Stop paginating once we've passed the start of the filter window
+                if (filterStartDate && new Date(last.lastMessageDate) < filterStartDate) break;
                 startAfterDate = last.lastMessageDate;
                 await new Promise(r => setTimeout(r, 100));
             }

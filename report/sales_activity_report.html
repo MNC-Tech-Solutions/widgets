@@ -920,19 +920,43 @@
         }
 
         async function fetchAllConversations() {
-            const params = new URLSearchParams({
-                locationId: selectedLocation.locationId,
-                limit: '100',
-                sort: 'desc',
-                sortBy: 'last_message_date'
-            });
-            const response = await lambdaFetch(`/ghl/conversations?${params}`);
-            if (!response.ok) {
-                const err = await response.text();
-                throw new Error(`Conversations API error: ${response.status} – ${err}`);
+            const conversations = [];
+            let startAfterDate = null;
+            const limit = 100;
+            const maxFetches = 200;
+            let fetchCount = 0;
+            while (fetchCount < maxFetches) {
+                const params = new URLSearchParams({
+                    locationId: selectedLocation.locationId,
+                    limit: limit.toString(),
+                    sort: 'desc',
+                    sortBy: 'last_message_date'
+                });
+                if (startAfterDate) params.append('startAfterDate', startAfterDate);
+                const response = await lambdaFetch(`/ghl/conversations?${params}`);
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(`Conversations API error: ${response.status} – ${err}`);
+                }
+                const data = await response.json();
+                const batch = data.conversations || [];
+                if (!batch.length) break;
+                conversations.push(...batch);
+                fetchCount++;
+                if (batch.length < limit) break;
+                const last = batch[batch.length - 1];
+                if (!last?.lastMessageDate) break;
+                startAfterDate = last.lastMessageDate;
+                await new Promise(r => setTimeout(r, 100));
             }
-            const data = await response.json();
-            return data.conversations || [];
+            // Deduplicate by id — cursor-based pagination can return the same
+            // conversation twice when multiple records share the same lastMessageDate
+            const seen = new Set();
+            return conversations.filter(c => {
+                if (seen.has(c.id)) return false;
+                seen.add(c.id);
+                return true;
+            });
         }
 
         async function fetchAllAppointments(startMs, endMs) {
@@ -1310,6 +1334,7 @@
 
             allFetchedConversations.forEach(conv => {
                 const convDate = new Date(conv.lastMessageDate || conv.dateAdded);
+                if (isNaN(convDate.getTime())) return;
                 if (convDate < filterStartDate || convDate > filterEndDate) return;
 
                 const contact = allFetchedContacts.find(c => c.id === conv.contactId);
@@ -1464,7 +1489,7 @@
                 const repId = contact.assignedTo || 'Unassigned';
                 const repName = repId === 'Unassigned' ? 'Unassigned' : (usersMap[repId] || repId);
                 
-                const isAttended = allFetchedConversations.some(c => c.contactId === contact.id);
+                const isAttended = allFetchedConversations.some(c => c.contactId === contact.id && c.lastMessageType !== 'TYPE_NO_SHOW');
                 const daysOld = Math.floor((Date.now() - addedDate) / 86400000);
 
                 if (!repData[repName]) {
@@ -1492,27 +1517,28 @@
             const sortedReps = Object.values(repData).sort((a, b) => a.rep.localeCompare(b.rep));
             renderAgingChart(sortedReps);
 
+            window.repIndexCache = sortedReps;
             const tbody = document.getElementById('agingTableBody');
-            tbody.innerHTML = sortedReps.length === 0
-                ? '<tr><td colspan="10" class="text-center">No data for selected filters.</td></tr>'
-                : '';
-
-            sortedReps.forEach(data => {
-                const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
-                tbody.innerHTML += `
-                    <tr>
+            if (sortedReps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No data for selected filters.</td></tr>';
+            } else {
+                const rows = sortedReps.map((data, i) => {
+                    const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
+                    return `<tr>
                         <td><strong>${escapeHtml(data.rep)}</strong></td>
                         <td><strong>${data.totalLeads}</strong></td>
-                        <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(this, 'Attended')">${data.attendedLeads.length}</span></td>
-                        <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(this, 'Unattended')">${data.unattendedLeads.length}</span></td>
+                        <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(${i}, 'Attended')">${data.attendedLeads.length}</span></td>
+                        <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(${i}, 'Unattended')">${data.unattendedLeads.length}</span></td>
                         <td><strong>${conversion}%</strong></td>
-                        <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(this, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
-                        <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(this, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
-                        <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(this, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
-                        <td><span class="badge badge-aging-30 clickable-badge" onclick="showLeadsList(this, 'Aging 15-30d')">${data.aging15to30.length}</span></td>
-                        <td><span class="badge badge-aging-more clickable-badge" onclick="showLeadsList(this, 'Aging >30d')">${data.agingOver30.length}</span></td>
+                        <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(${i}, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
+                        <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(${i}, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
+                        <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(${i}, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
+                        <td><span class="badge badge-aging-30 clickable-badge" onclick="showLeadsList(${i}, 'Aging 15-30d')">${data.aging15to30.length}</span></td>
+                        <td><span class="badge badge-aging-more clickable-badge" onclick="showLeadsList(${i}, 'Aging >30d')">${data.agingOver30.length}</span></td>
                     </tr>`;
-            });
+                });
+                tbody.innerHTML = rows.join('');
+            }
         }
 
         function renderAgingChart(sortedReps) {
@@ -1684,9 +1710,9 @@
         }
 
         // Modal functions
-        async function showLeadsList(el, category) {
-            const repName = el.closest('tr').querySelector('td').textContent.trim();
-            const data = window.repDataCache[repName];
+        async function showLeadsList(repIdx, category) {
+            const data = window.repIndexCache?.[repIdx];
+            if (!data) return;
             let leads = [];
             switch (category) {
                 case 'Attended': leads = data.attendedLeads; break;
@@ -1712,7 +1738,7 @@
                     </div>
                 </div>`;
             }
-            document.getElementById('modalTitle').textContent = `${repName} - ${category}`;
+            document.getElementById('modalTitle').textContent = `${data.rep} - ${category}`;
             document.getElementById('leadDetailsContent').innerHTML = html || '<p>No leads in this category.</p>';
             leadDetailsModal.show();
         }
