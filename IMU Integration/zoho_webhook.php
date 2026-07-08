@@ -97,15 +97,8 @@ function getZohoAccessToken(): ?string {
 function createZohoContact(string $token, array $data): ?string {
     writeLog("Step 2 — creating Zoho contact: {$data['full_name']} <{$data['email']}>");
 
-    $first = trim($data['first_name'] ?? '');
-    $last  = trim($data['last_name']  ?? '');
     $full  = trim($data['full_name']  ?? '');
-
-    // If both first and last are present, map them individually.
-    // Otherwise fall back to full_name mapped to Last_Name only (no First_Name sent).
-    $name_fields = ($first !== '' && $last !== '')
-        ? ['First_Name' => $first, 'Last_Name' => $last]
-        : ['Last_Name'  => $full ?: 'Unknown'];
+    $name_fields = ['Last_Name' => $full ?: 'Unknown'];
 
     // Nationality intentionally excluded — not available during first push.
     $body = json_encode([
