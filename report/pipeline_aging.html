@@ -1,0 +1,1129 @@
+<!-- Leads Aging report: tracks lead aging by pipeline stage, filterable by sales rep -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJ360 Leads Aging Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Design tokens — Ops/Lead Tracking, minimal */
+            --bg: #FAFAFA;
+            --surface: #FFFFFF;
+            --border: #E4E4E7;
+            --border-strong: #D4D4D8;
+            --ink: #17181C;
+            --ink-soft: #71717A;
+            --ink-faint: #A1A1AA;
+            --accent: #3654F4;
+            --accent-soft: #EEF1FE;
+
+            --green-bg: #E7F5EC; --green-text: #1F7A4D;
+            --amber-bg: #FCF3D9; --amber-text: #8A6B14;
+            --orange-bg: #FBE7D4; --orange-text: #9A5B14;
+            --red-bg: #FBDFDD; --red-text: #B23B2E;
+            --red-deep-bg: #F6D3D3; --red-deep-text: #8E1F1F;
+            --unattended-bg: #FCEEE9; --unattended-text: #9A4A1E;
+
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background-color: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding-bottom: 3rem;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container-fluid {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+
+        /* Header */
+        .dashboard-header {
+            border-bottom: 1px solid var(--border);
+            padding: 2.25rem 0 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .dashboard-header .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .dashboard-header h1 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.01em;
+            margin: 0;
+            color: var(--ink);
+        }
+        .dashboard-header h1 i { display: none; }
+
+        /* Filter toolbar — flat, no card chrome */
+        .global-filters {
+            background: transparent;
+            padding: 0 0 1.5rem;
+            margin-bottom: 1.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .global-filters label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin-bottom: 0.35rem;
+            display: block;
+        }
+        .global-filters label i { display: none; }
+        .global-filters .form-control {
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            font-size: 0.87rem;
+            padding: 0.5rem 0.65rem;
+            color: var(--ink);
+            background: var(--surface);
+            box-shadow: none;
+        }
+        .global-filters .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .global-filters .btn-primary {
+            background: var(--ink);
+            border: 1px solid var(--ink);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.5rem 0.9rem;
+        }
+        .global-filters .btn-primary:hover { background: #000; border-color: #000; }
+        .global-filters .btn-primary i { display: none; }
+        .global-filters .btn-outline-secondary {
+            border: none;
+            color: var(--ink-soft);
+            font-size: 0.8rem;
+            padding: 0.4rem 0;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .global-filters .btn-outline-secondary:hover { color: var(--ink); background: transparent; }
+        .global-filters .btn-outline-secondary i { display: none; }
+        .date-filter-active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+        /* Table card */
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: none;
+            margin-bottom: 2rem;
+            background: var(--surface);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.98rem;
+            padding: 1.1rem 1.4rem;
+            border-radius: 10px 10px 0 0;
+            color: var(--ink);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header i { display: none; }
+        .card-body { padding: 0; }
+
+        .table { margin-bottom: 0; }
+        .table th {
+            border-top: none;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            background: transparent;
+            padding: 0.85rem 1rem;
+            white-space: nowrap;
+        }
+        .table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            font-size: 0.88rem;
+        }
+        .table tbody tr:last-child td { border-bottom: none; }
+        .table-hover tbody tr:hover { background-color: #FAFAFB; }
+        .table td strong { font-weight: 600; }
+        .table td:nth-child(n+2) { font-family: var(--font-mono); }
+
+        .pipeline-name {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.66rem;
+            font-weight: 500;
+            color: var(--ink-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.2rem;
+        }
+
+        /* Badges — flat chips, no gradients/scale animation */
+        .badge {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 0.78rem;
+            border-radius: 5px;
+            padding: 0.32em 0.55em;
+        }
+        .clickable-badge { cursor: pointer; transition: opacity 0.12s ease; }
+        .clickable-badge:hover { opacity: 0.72; transform: none; }
+
+        .table .badge.bg-success { background: var(--green-bg) !important; color: var(--green-text) !important; }
+        .table .badge.bg-danger { background: var(--unattended-bg) !important; color: var(--unattended-text) !important; }
+        .badge-aging-5 { background: var(--green-bg) !important; color: var(--green-text); }
+        .badge-aging-10 { background: var(--amber-bg) !important; color: var(--amber-text); }
+        .badge-aging-15 { background: var(--orange-bg) !important; color: var(--orange-text); }
+        .badge-aging-30 { background: var(--red-bg) !important; color: var(--red-text); }
+        .badge-aging-more { background: var(--red-deep-bg) !important; color: var(--red-deep-text); }
+
+        .export-btn {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--border-strong);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.82rem;
+            transition: border-color 0.12s ease;
+        }
+        .export-btn:hover { border-color: var(--ink); background: transparent; }
+        .export-btn i { display: none; }
+
+        .loading-spinner { display: none; text-align: center; padding: 3rem; }
+        .loading-spinner .spinner-border { color: var(--accent) !important; width: 1.75rem; height: 1.75rem; }
+        .loading-spinner p { color: var(--ink-soft); font-size: 0.85rem; }
+
+        .no-data-container {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: transparent;
+            border-radius: 10px;
+            border: 1px dashed var(--border-strong);
+        }
+        .no-data-container i { font-size: 2rem; color: var(--ink-faint); margin-bottom: 1rem; }
+        .no-data-container p { color: var(--ink-soft); font-size: 0.95rem; margin: 0; font-weight: 500; }
+
+        /* Modal */
+        .modal-content { border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+        .modal-header { border-bottom: 1px solid var(--border); padding: 1.1rem 1.4rem; }
+        .modal-title { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+        .modal-body { max-height: 600px; overflow-y: auto; padding: 1.4rem; }
+
+        .lead-item {
+            padding: 0.9rem 0;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            border-radius: 0;
+            margin-bottom: 0;
+            cursor: pointer;
+            transition: background 0.12s ease;
+            background: transparent;
+        }
+        .lead-item:hover { background: #FAFAFB; box-shadow: none; border-color: var(--border); }
+        .lead-item:first-child { padding-top: 0; }
+        .lead-name {
+            font-family: var(--font-body);
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 0.4rem;
+            font-size: 0.92rem;
+        }
+        .lead-name i { color: var(--accent); }
+        .detail-label {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 0.72rem;
+            letter-spacing: 0.02em;
+            color: var(--ink-soft);
+            min-width: 110px;
+            display: inline-block;
+        }
+        .lead-info > div { font-size: 0.85rem; margin-bottom: 0.15rem; }
+
+        .btn-outline-secondary.mb-3 {
+            border: 1px solid var(--border-strong);
+            color: var(--ink-soft);
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+        .btn-outline-secondary.mb-3:hover { border-color: var(--ink); color: var(--ink); background: transparent; }
+
+        .alert { border-radius: 8px; font-size: 0.85rem; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <span class="eyebrow">Lead Tracking</span>
+            <h1><i class="fas fa-hourglass-end me-3"></i>Lead Aging Report</h1>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-3">Fetching data...</p>
+        </div>
+
+        <!-- GLOBAL FILTERS -->
+        <div class="global-filters">
+            <div class="row align-items-end">
+                <div class="col-md-2">
+                    <label for="dateStart"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                    <input type="date" id="dateStart" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label for="dateEnd"><i class="fas fa-calendar-alt me-2"></i>End Date</label>
+                    <input type="date" id="dateEnd" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label for="projectFilter"><i class="fas fa-project-diagram me-2"></i>Project</label>
+                    <select class="form-control" id="projectFilter">
+                        <option value="">All Projects</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="sourceFilter"><i class="fas fa-filter me-2"></i>Source</label>
+                    <select class="form-control" id="sourceFilter">
+                        <option value="">All Sources</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="salesRepFilter"><i class="fas fa-user me-2"></i>Sales Rep</label>
+                    <select class="form-control" id="salesRepFilter">
+                        <option value="">All Sales Reps</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                    <i class="fas fa-undo me-2"></i>Reset to Today
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fas fa-hourglass-end me-2"></i>Lead Aging by Pipeline Stage</span>
+                <button class="export-btn" onclick="exportLeadsAgingCSV()">
+                    <i class="fas fa-download me-2"></i>Export CSV
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Pipeline / Stage</th>
+                                <th>Total Leads</th>
+                                <th>Attended</th>
+                                <th>Unattended</th>
+                                <th>Conversion</th>
+                                <th>0-5d</th>
+                                <th>5-10d</th>
+                                <th>10-15d</th>
+                                <th>15-30d</th>
+                                <th>&gt;30d</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agingTableBody">
+                            <tr><td colspan="10" class="text-center">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lead Details Modal -->
+    <div class="modal fade" id="leadDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Lead Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="leadDetailsContent">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        // NOTE: this is now an ES module (needed for the ghlDataV3.js import below),
+        // so top-level function declarations are module-scoped, not attached to
+        // `window`. The HTML uses onclick="..." attributes for several buttons, so
+        // those specific functions are re-exported to window at the bottom of this
+        // script. If you add more onclick="..." handlers later, add them there too
+        // (or better, switch those buttons to addEventListener).
+
+        // Shared GHL data layer (same module used by the other reporting widgets).
+        // NOTE: adjust the relative path below if this file lives at a different
+        // depth in your folder structure than the other widgets.
+        import { loadConfig, fetchPipelinesV2, fetchAllOpportunities } from '../ghlDataV3.js?v=2.0.0';
+
+        const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
+        const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
+        const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
+            ...opts, headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+        });
+
+        // Message types that can count as a genuine agent reply (i.e. a human touch).
+        const AGENT_REPLY_TYPES = new Set(['TYPE_WHATSAPP', 'TYPE_CALL']);
+        // Message "source" values that indicate the message was sent by a workflow /
+        // automation / bulk action / integration rather than typed by a human agent.
+        // Any outbound WhatsApp/Call message carrying one of these sources is excluded
+        // from "attended", no matter its direction or type.
+        const AUTOMATION_SOURCES = new Set(['workflow', 'campaign', 'bulk_actions', 'api', 'public_api', 'integration']);
+
+        let CONFIG = {};
+        let locationId = '';
+        let selectedLocation = null;
+        let allFetchedContacts = [];
+        let allFetchedConversations = [];
+        let allFetchedOpportunities = [];
+        let contactStageMap = {}; // contactId -> { pipeline, stage }
+        let attendedMap = {};     // contactId -> boolean (genuine human agent reply)
+        let usersMap = {};
+        let allProjects = new Set();
+        let currentLeadsListParams = null; // { stageIdx, category } — lets the lead detail modal go "back"
+
+        // Global filter state
+        let filterStartDate = null;
+        let filterEndDate = null;
+        let filterProject = '';
+        let filterSource = '';
+        let filterRep = '';
+
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const dateStart = document.getElementById('dateStart');
+        const dateEnd = document.getElementById('dateEnd');
+        const projectFilter = document.getElementById('projectFilter');
+        const sourceFilter = document.getElementById('sourceFilter');
+        const salesRepFilter = document.getElementById('salesRepFilter');
+        const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
+        document.getElementById('leadDetailsModal').addEventListener('hidden.bs.modal', () => {
+            currentLeadsListParams = null;
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        function applyFilters() {
+            const startVal = dateStart.value;
+            const endVal = dateEnd.value;
+
+            if (!startVal || !endVal) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            const [sy, sm, sd] = startVal.split('-');
+            const [ey, em, ed] = endVal.split('-');
+            filterStartDate = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+            filterEndDate = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+
+            if (filterStartDate > filterEndDate) {
+                alert('Start date must be before or equal to end date');
+                return;
+            }
+
+            filterProject = projectFilter.value;
+            filterSource = sourceFilter.value;
+            filterRep = salesRepFilter.value;
+
+            updateActiveDateFilterState();
+            renderLeadsAging();
+        }
+
+        function resetFilters() {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${y}-${m}-${d}`;
+
+            dateStart.value = todayStr;
+            dateEnd.value = todayStr;
+            projectFilter.value = '';
+            sourceFilter.value = '';
+            salesRepFilter.value = '';
+
+            filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
+            filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
+            filterProject = '';
+            filterSource = '';
+            filterRep = '';
+
+            applyFilters();
+        }
+
+        function updateActiveDateFilterState() {
+            dateStart.classList.toggle('date-filter-active', Boolean(dateStart.value));
+            dateEnd.classList.toggle('date-filter-active', Boolean(dateEnd.value));
+        }
+
+        async function initializeApp() {
+            // loadConfig() reads locationId from the URL itself (same as the other widgets).
+            const { config, locationId: locId } = await loadConfig();
+            if (!config || !locId) {
+                showConfigStatus('Error: No configuration available for this location.', 'error');
+                return;
+            }
+            CONFIG = config;
+            locationId = locId;
+
+            // Also pull our own reporting-Lambda config (custom field IDs, display name).
+            // This endpoint is separate from ghlDataV3.js's CONFIG and only used for
+            // contacts/conversations/notes lookups below.
+            try {
+                const res = await lambdaFetch(`/config?locationId=${locationId}`);
+                if (res.ok) selectedLocation = await res.json();
+            } catch (err) {
+                console.warn('Location config fetch error:', err);
+            }
+            if (!selectedLocation?.locationId) {
+                selectedLocation = { locationId, name: locationId, customFieldIds: {} };
+            }
+
+            showConfigStatus(`Connected to location: ${selectedLocation.name || locationId}`, 'success');
+            fetchData();
+        }
+
+        async function fetchData() {
+            if (!selectedLocation) return;
+            showLoading();
+            try {
+                usersMap = await fetchUsersMap();
+                allFetchedContacts = await fetchAllContacts();
+                allFetchedConversations = await fetchAllConversations();
+                attendedMap = await buildAttendedMap(allFetchedConversations);
+
+                // Pipeline stage data — via the shared ghlDataV3.js data layer.
+                const pipelines = await fetchPipelinesV2(CONFIG, locationId);
+                const stagesMap = buildStagesMap(pipelines);
+                // fetchAllOpportunities(..., null, ...) returns nothing — it needs a real
+                // pipeline ID each time, so fetch per pipeline and merge the results.
+                const opportunityBatches = await Promise.all(
+                    (pipelines || []).map(p => fetchAllOpportunities(CONFIG, locationId, p.id, false))
+                );
+                allFetchedOpportunities = opportunityBatches.flat();
+                const phoneStageMap = buildPhoneStageMap(allFetchedOpportunities, stagesMap);
+                contactStageMap = buildContactStageMap(allFetchedContacts, phoneStageMap);
+
+                populateProjectFilter();
+                populateSourceFilter();
+                populateSalesRepFilter();
+
+                const today = new Date();
+                dateStart.valueAsDate = today;
+                dateEnd.valueAsDate = today;
+                resetFilters();
+            } catch (error) {
+                showConfigStatus(`API Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function populateProjectFilter() {
+            allProjects.clear();
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+
+            allFetchedContacts.forEach(contact => {
+                if (projectFieldId && contact.customFields) {
+                    const field = contact.customFields.find(cf => cf.id === projectFieldId);
+                    if (field && field.value) {
+                        const vals = Array.isArray(field.value) ? field.value : [field.value];
+                        vals.forEach(v => v && allProjects.add(String(v)));
+                    }
+                }
+            });
+
+            const sorted = Array.from(allProjects).sort();
+            projectFilter.innerHTML = '<option value="">All Projects</option>';
+            sorted.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                projectFilter.appendChild(opt);
+            });
+        }
+
+        function populateSourceFilter() {
+            const sources = new Set();
+            allFetchedContacts.forEach(contact => {
+                if (contact.source) sources.add(contact.source);
+            });
+            const sorted = Array.from(sources).sort();
+            sourceFilter.innerHTML = '<option value="">All Sources</option>';
+            sorted.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                sourceFilter.appendChild(opt);
+            });
+        }
+
+        function populateSalesRepFilter() {
+            const repIds = new Set();
+            allFetchedContacts.forEach(contact => repIds.add(contact.assignedTo || 'Unassigned'));
+
+            const sorted = Array.from(repIds).sort((a, b) => {
+                const nameA = a === 'Unassigned' ? 'Unassigned' : (usersMap[a] || a);
+                const nameB = b === 'Unassigned' ? 'Unassigned' : (usersMap[b] || b);
+                return nameA.localeCompare(nameB);
+            });
+
+            salesRepFilter.innerHTML = '<option value="">All Sales Reps</option>';
+            sorted.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = id === 'Unassigned' ? 'Unassigned' : (usersMap[id] || id);
+                salesRepFilter.appendChild(opt);
+            });
+        }
+
+        // Helper: Check if contact matches current project filter
+        function contactMatchesProject(contact) {
+            if (!filterProject) return true;
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+            if (!projectFieldId || !contact.customFields) return false;
+            const field = contact.customFields.find(cf => cf.id === projectFieldId);
+            if (!field || !field.value) return false;
+            const values = Array.isArray(field.value) ? field.value : [field.value];
+            return values.some(v => String(v) === filterProject);
+        }
+
+        // Helper: Check if contact matches current source filter
+        function contactMatchesSource(contact) {
+            if (!filterSource) return true;
+            return contact.source === filterSource;
+        }
+
+        // Helper: Check if contact matches current sales rep filter
+        function contactMatchesRep(contact) {
+            if (!filterRep) return true;
+            return (contact.assignedTo || 'Unassigned') === filterRep;
+        }
+
+        // Returns { pipeline, stage } for a contact, falling back to placeholders
+        // when the contact couldn't be matched to an opportunity/stage.
+        function getContactStage(contact) {
+            return contactStageMap[contact.id] || { pipeline: '—', stage: 'No Pipeline' };
+        }
+
+        // A lead is "attended" only when an actual human agent replied — i.e. an
+        // outbound WhatsApp message or an outbound call that was NOT sent by a
+        // workflow/automation/bot. Lookup is a plain object read, populated once by
+        // buildAttendedMap() during fetchData().
+        function isContactAttended(contact) {
+            return Boolean(attendedMap[contact.id]);
+        }
+
+        // Fetches the raw message list for a conversation. This hits the messages
+        // endpoint directly (not the conversation summary), because only individual
+        // messages carry the "source" field (e.g. "workflow", "app") needed to tell
+        // a human agent's reply apart from an automated one.
+        async function fetchConversationMessages(conversationId) {
+            const response = await lambdaFetch(`/ghl/conversations/${conversationId}/messages`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.messages?.messages || [];
+        }
+
+        // Given a conversation, determines whether its most recent outbound
+        // WhatsApp/Call message was actually sent by a human agent (as opposed to a
+        // workflow, campaign, or other automation). Activity log entries (e.g.
+        // "Opportunity created") are skipped since they aren't real messages.
+        async function checkGenuineAgentReply(conversationId) {
+            const messages = await fetchConversationMessages(conversationId);
+            // Defensive sort — don't rely on the API's return order.
+            messages.sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0));
+
+            const lastAgentTypeMessage = messages.find(m =>
+                m.direction === 'outbound' && AGENT_REPLY_TYPES.has(m.messageType)
+            );
+            if (!lastAgentTypeMessage) return false;
+
+            const source = String(lastAgentTypeMessage.source || '').toLowerCase();
+            return !AUTOMATION_SOURCES.has(source);
+        }
+
+        // Runs async task fn(item) over items with at most `limit` running concurrently.
+        async function mapWithConcurrency(items, limit, fn) {
+            const queue = [...items];
+            const workerCount = Math.min(limit, queue.length);
+            const workers = Array.from({ length: workerCount }, async () => {
+                while (queue.length) {
+                    const item = queue.shift();
+                    await fn(item);
+                }
+            });
+            await Promise.all(workers);
+        }
+
+        // Builds contactId -> boolean map of "genuinely attended by a human agent".
+        // Only conversations whose last-known message is an outbound WhatsApp/Call are
+        // worth a messages lookup — anything else is unattended by definition, so this
+        // avoids a message-list fetch for every single conversation.
+        async function buildAttendedMap(conversations) {
+            const map = {};
+            const candidates = (conversations || []).filter(c =>
+                c.lastMessageDirection === 'outbound' && AGENT_REPLY_TYPES.has(c.lastMessageType)
+            );
+            await mapWithConcurrency(candidates, 8, async (conv) => {
+                try {
+                    map[conv.contactId] = await checkGenuineAgentReply(conv.id);
+                } catch (err) {
+                    console.warn('Attended check failed for conversation', conv.id, err);
+                    map[conv.contactId] = false;
+                }
+            });
+            return map;
+        }
+
+        async function fetchUsersMap() {
+            const usersMap = {};
+            try {
+                const response = await lambdaFetch(`/ghl/users?locationId=${selectedLocation.locationId}`);
+                if (!response.ok) return usersMap;
+                const users = await response.json();
+                (users || []).forEach(user => { usersMap[user.id] = user.name || user.email || user.id; });
+            } catch (err) { console.warn('Users fetch error:', err); }
+            return usersMap;
+        }
+
+        async function fetchAllContacts() {
+            const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
+                method: 'POST',
+                body: JSON.stringify({ pageLimit: 100 })
+            });
+            if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+            const data = await response.json();
+            return data.contacts || [];
+        }
+
+        async function fetchAllConversations() {
+            const conversations = [];
+            let startAfterDate = null;
+            const limit = 100;
+            const maxFetches = 200;
+            let fetchCount = 0;
+            while (fetchCount < maxFetches) {
+                const params = new URLSearchParams({
+                    locationId: selectedLocation.locationId,
+                    limit: limit.toString(),
+                    sort: 'desc',
+                    sortBy: 'last_message_date'
+                });
+                if (startAfterDate) params.append('startAfterDate', startAfterDate);
+                const response = await lambdaFetch(`/ghl/conversations?${params}`);
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(`Conversations API error: ${response.status} – ${err}`);
+                }
+                const data = await response.json();
+                const batch = data.conversations || [];
+                if (!batch.length) break;
+                conversations.push(...batch);
+                fetchCount++;
+                if (batch.length < limit) break;
+                const last = batch[batch.length - 1];
+                if (!last?.lastMessageDate) break;
+                startAfterDate = last.lastMessageDate;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            const seen = new Set();
+            return conversations.filter(c => {
+                if (seen.has(c.id)) return false;
+                seen.add(c.id);
+                return true;
+            });
+        }
+
+        // Maps stage.id -> { stage: stageName, pipeline: pipelineName, pipelineId }
+        function buildStagesMap(pipelines) {
+            const stagesMap = {};
+            (pipelines || []).forEach(pipeline => {
+                (pipeline.stages || []).forEach(stage => {
+                    stagesMap[stage.id] = {
+                        stage: stage.name,
+                        pipeline: pipeline.name || 'Unnamed Pipeline',
+                        pipelineId: pipeline.id
+                    };
+                });
+            });
+            return stagesMap;
+        }
+
+        // Opportunities from fetchAllOpportunities() don't carry the contact's actual ID
+        // (only a minimal { name, phone } object) — phone number is the only reliable
+        // link back to the full contact record, so match on that.
+        function normalizePhone(phone) {
+            return phone ? String(phone).replace(/\D/g, '') : '';
+        }
+
+        // Maps normalized phone -> { pipeline, stage }
+        function buildPhoneStageMap(opportunities, stagesMap) {
+            const map = {};
+            const sorted = [...(opportunities || [])].sort((a, b) =>
+                new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
+            );
+            sorted.forEach(opp => {
+                const phone = normalizePhone(opp.contact?.phone);
+                if (!phone || map[phone]) return; // keep most recently updated opportunity per phone
+                map[phone] = stagesMap[opp.pipelineStageId] || { pipeline: 'Unknown Pipeline', stage: 'Unknown Stage' };
+            });
+            return map;
+        }
+
+        function buildContactStageMap(contacts, phoneStageMap) {
+            const map = {};
+            (contacts || []).forEach(contact => {
+                const phone = normalizePhone(contact.phone);
+                if (phone && phoneStageMap[phone]) {
+                    map[contact.id] = phoneStageMap[phone];
+                }
+            });
+            return map;
+        }
+
+        async function getContactDisplayName(contact) {
+            return [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.contactName || '—';
+        }
+
+        function formatDateWithDay(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function renderLeadsAging() {
+            const stageData = {};
+            window.stageDataCache = stageData;
+
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSource(contact)) continue;
+                if (!contactMatchesRep(contact)) continue;
+
+                const addedDate = new Date(contact.dateAdded);
+                if (filterStartDate && addedDate < filterStartDate) continue;
+                if (filterEndDate && addedDate > filterEndDate) continue;
+
+                const { pipeline, stage } = getContactStage(contact);
+                const key = `${pipeline}||${stage}`;
+
+                const isAttended = isContactAttended(contact);
+                const daysOld = Math.floor((Date.now() - addedDate) / 86400000);
+
+                if (!stageData[key]) {
+                    stageData[key] = {
+                        pipeline: pipeline,
+                        stage: stage,
+                        totalLeads: 0,
+                        attendedLeads: [], unattendedLeads: [],
+                        aging0to5: [], aging5to10: [], aging10to15: [], aging15to30: [], agingOver30: []
+                    };
+                }
+                const s = stageData[key];
+                s.totalLeads++;
+                if (isAttended) {
+                    s.attendedLeads.push(contact);
+                } else {
+                    s.unattendedLeads.push(contact);
+                    if (daysOld <= 5) s.aging0to5.push(contact);
+                    else if (daysOld <= 10) s.aging5to10.push(contact);
+                    else if (daysOld <= 15) s.aging10to15.push(contact);
+                    else if (daysOld <= 30) s.aging15to30.push(contact);
+                    else s.agingOver30.push(contact);
+                }
+            }
+
+            const sortedStages = Object.values(stageData).sort((a, b) =>
+                a.pipeline.localeCompare(b.pipeline) || a.stage.localeCompare(b.stage)
+            );
+            window.stageIndexCache = sortedStages;
+
+            const tbody = document.getElementById('agingTableBody');
+            if (sortedStages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No data for selected filters.</td></tr>';
+            } else {
+                const rows = sortedStages.map((data, i) => {
+                    const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
+                    return `<tr>
+                        <td><span class="pipeline-name">${escapeHtml(data.pipeline)}</span><strong>${escapeHtml(data.stage)}</strong></td>
+                        <td><strong>${data.totalLeads}</strong></td>
+                        <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(${i}, 'Attended')">${data.attendedLeads.length}</span></td>
+                        <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(${i}, 'Unattended')">${data.unattendedLeads.length}</span></td>
+                        <td><strong>${conversion}%</strong></td>
+                        <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(${i}, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
+                        <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(${i}, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
+                        <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(${i}, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
+                        <td><span class="badge badge-aging-30 clickable-badge" onclick="showLeadsList(${i}, 'Aging 15-30d')">${data.aging15to30.length}</span></td>
+                        <td><span class="badge badge-aging-more clickable-badge" onclick="showLeadsList(${i}, 'Aging >30d')">${data.agingOver30.length}</span></td>
+                    </tr>`;
+                });
+                tbody.innerHTML = rows.join('');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showLoading() { loadingSpinner.style.display = 'block'; }
+        function hideLoading() { loadingSpinner.style.display = 'none'; }
+
+        function showConfigStatus(message, type) {
+            const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+            const html = `<div class="alert ${alertClass} mt-3">${message}</div>`;
+            const container = document.querySelector('.container-fluid');
+            container.querySelector('.alert')?.remove();
+            container.insertAdjacentHTML('afterbegin', html);
+            setTimeout(() => container.querySelector('.alert')?.remove(), 5000);
+        }
+
+        function downloadCSV(filename, content) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function escapeCSV(val) {
+            if (!val) return '';
+            const s = String(val);
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+        }
+
+        function getFilterHeader() {
+            const dateRange = dateStart.value === dateEnd.value
+                ? dateStart.value
+                : `${dateStart.value} to ${dateEnd.value}`;
+            let header = `Date Range,${escapeCSV(dateRange)}\n`;
+            header += `Project,${escapeCSV(filterProject || 'All Projects')}\n`;
+            header += `Source,${escapeCSV(filterSource || 'All Sources')}\n`;
+            header += `Sales Rep,${escapeCSV(filterRep ? (usersMap[filterRep] || filterRep) : 'All Sales Reps')}\n`;
+            header += `Exported At,${escapeCSV(new Date().toLocaleString())}\n`;
+            header += '\n';
+            return header;
+        }
+
+        async function exportLeadsAgingCSV() {
+            const stageData = {};
+            for (const contact of allFetchedContacts) {
+                if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSource(contact)) continue;
+                if (!contactMatchesRep(contact)) continue;
+                const addedDate = new Date(contact.dateAdded);
+                if (filterStartDate && addedDate < filterStartDate) continue;
+                if (filterEndDate && addedDate > filterEndDate) continue;
+
+                const { pipeline, stage } = getContactStage(contact);
+                const key = `${pipeline}||${stage}`;
+                const hasConv = isContactAttended(contact);
+                const days = Math.floor((Date.now() - addedDate) / 86400000);
+                if (!stageData[key]) stageData[key] = { pipeline, stage, total: 0, attended: 0, unattended: 0, a5: 0, a10: 0, a15: 0, a30: 0, a30p: 0 };
+                stageData[key].total++;
+                if (hasConv) stageData[key].attended++;
+                else {
+                    stageData[key].unattended++;
+                    if (days <= 5) stageData[key].a5++;
+                    else if (days <= 10) stageData[key].a10++;
+                    else if (days <= 15) stageData[key].a15++;
+                    else if (days <= 30) stageData[key].a30++;
+                    else stageData[key].a30p++;
+                }
+            }
+            let csv = getFilterHeader();
+            csv += 'Pipeline,Pipeline Stage,Total Leads,Attended,Unattended,Conversion %,0-5d,5-10d,10-15d,15-30d,>30d\n';
+            Object.values(stageData)
+                .sort((a, b) => a.pipeline.localeCompare(b.pipeline) || a.stage.localeCompare(b.stage))
+                .forEach(d => {
+                    const conv = d.total === 0 ? 0 : ((d.attended / d.total) * 100).toFixed(1);
+                    csv += `${escapeCSV(d.pipeline)},${escapeCSV(d.stage)},${d.total},${d.attended},${d.unattended},${conv},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
+                });
+            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}${filterRep ? '_' + (usersMap[filterRep] || filterRep) : ''}.csv`, csv);
+        }
+
+        // Modal functions
+        async function showLeadsList(stageIdx, category) {
+            const data = window.stageIndexCache?.[stageIdx];
+            if (!data) return;
+            currentLeadsListParams = { stageIdx, category };
+            let leads = [];
+            switch (category) {
+                case 'Attended': leads = data.attendedLeads; break;
+                case 'Unattended': leads = data.unattendedLeads; break;
+                case 'Aging 0-5d': leads = data.aging0to5; break;
+                case 'Aging 5-10d': leads = data.aging5to10; break;
+                case 'Aging 10-15d': leads = data.aging10to15; break;
+                case 'Aging 15-30d': leads = data.aging15to30; break;
+                case 'Aging >30d': leads = data.agingOver30; break;
+            }
+            let html = '';
+            for (const c of leads) {
+                const name = await getContactDisplayName(c);
+                const phone = c.phone || '—';
+                const email = c.email || '—';
+                const repName = usersMap[c.assignedTo || ''] || 'Unassigned';
+                const lastDate = allFetchedConversations.find(conv => conv.contactId === c.id)?.lastMessageDate || c.dateAdded;
+                html += `<div class="lead-item" onclick="showLeadDetail('${c.id}')">
+                    <div class="lead-name"><i class="fas fa-user-circle me-1"></i>${escapeHtml(name)}</div>
+                    <div class="lead-info">
+                        <div><span class="detail-label">Phone:</span> ${escapeHtml(phone)}</div>
+                        <div><span class="detail-label">Email:</span> ${escapeHtml(email)}</div>
+                        <div><span class="detail-label">Sales Rep:</span> ${escapeHtml(repName)}</div>
+                        <div><span class="detail-label">Last Activity:</span> ${formatDateWithDay(lastDate)}</div>
+                    </div>
+                </div>`;
+            }
+            document.getElementById('modalTitle').textContent = `${data.pipeline} - ${data.stage} - ${category}`;
+            document.getElementById('leadDetailsContent').innerHTML = html || '<p>No leads in this category.</p>';
+            leadDetailsModal.show();
+        }
+
+        async function showLeadDetail(id) {
+            const contact = allFetchedContacts.find(c => c.id === id);
+            if (!contact) return;
+            const name = await getContactDisplayName(contact);
+            const phone = contact.phone || '—';
+            const email = contact.email || '—';
+            const rep = usersMap[contact.assignedTo || ''] || 'Unassigned';
+            const { pipeline, stage } = getContactStage(contact);
+            const created = new Date(contact.dateAdded).toLocaleDateString();
+            const convCount = allFetchedConversations.filter(c => c.contactId === id).length;
+
+            let backButtonHtml = '';
+            if (currentLeadsListParams) {
+                const { stageIdx, category } = currentLeadsListParams;
+                backButtonHtml = `<button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="showLeadsList(${stageIdx}, '${category.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-arrow-left me-1"></i>Back to list
+                </button>`;
+            }
+
+            let html = `
+                ${backButtonHtml}
+                <div><strong>Name:</strong> ${escapeHtml(name)}</div><hr>
+                <div><strong>Phone:</strong> ${escapeHtml(phone)}</div><hr>
+                <div><strong>Email:</strong> ${escapeHtml(email)}</div><hr>
+                <div><strong>Assigned To:</strong> ${escapeHtml(rep)}</div><hr>
+                <div><strong>Pipeline:</strong> ${escapeHtml(pipeline)}</div><hr>
+                <div><strong>Pipeline Stage:</strong> ${escapeHtml(stage)}</div><hr>
+                <div><strong>Date Added:</strong> ${created}</div><hr>
+                <div><strong>Conversations:</strong> ${convCount}</div>
+            `;
+            if (contact.tags?.length) {
+                html += `<hr><div><strong>Tags:</strong> ${contact.tags.map(t => `<span class="badge bg-info me-1">${escapeHtml(t)}</span>`).join('')}</div>`;
+            }
+
+            html += `<hr><div><strong>Notes:</strong> <div id="notesContainer" style="margin-top: 10px;"><i class="fas fa-spinner fa-spin"></i> Loading notes...</div></div>`;
+
+            document.getElementById('modalTitle').textContent = name;
+            document.getElementById('leadDetailsContent').innerHTML = html;
+            leadDetailsModal.show();
+
+            await fetchAndDisplayNotes(id);
+        }
+
+        async function fetchAndDisplayNotes(contactId) {
+            const notesContainer = document.getElementById('notesContainer');
+            if (!notesContainer) return;
+
+            try {
+                const response = await lambdaFetch(`/ghl/contacts/${contactId}/notes?locationId=${selectedLocation.locationId}`);
+
+                if (!response.ok) {
+                    throw new Error(`Notes API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const notes = data.notes || [];
+
+                if (notes.length === 0) {
+                    notesContainer.innerHTML = '<p class="text-muted small">No notes available for this contact.</p>';
+                    return;
+                }
+
+                notes.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+
+                let notesHtml = '<div style="max-height: 300px; overflow-y: auto;">';
+                notes.forEach(note => {
+                    const noteDate = new Date(note.dateAdded).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    const bodyText = note.bodyText || '';
+
+                    notesHtml += `
+                        <div style="background: #FAFAFB; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 2px solid var(--accent);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <small style="color: var(--ink-soft); font-family: var(--font-mono); font-size: 0.72rem;"><i class="fas fa-clock me-1"></i>${noteDate}</small>
+                            </div>
+                            <div style="color: var(--ink); font-size: 0.87rem;">${escapeHtml(bodyText)}</div>
+                        </div>
+                    `;
+                });
+                notesHtml += '</div>';
+
+                notesContainer.innerHTML = notesHtml;
+            } catch (error) {
+                console.error('Error fetching notes:', error);
+                notesContainer.innerHTML = '<p class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i>Failed to load notes.</p>';
+            }
+        }
+
+        // Re-expose functions used by onclick="..." attributes in the HTML above —
+        // see the note near the top of this script for why this is needed.
+        window.applyFilters = applyFilters;
+        window.resetFilters = resetFilters;
+        window.exportLeadsAgingCSV = exportLeadsAgingCSV;
+        window.showLeadsList = showLeadsList;
+        window.showLeadDetail = showLeadDetail;
+    </script>
+</body>
+</html>
