@@ -739,6 +739,17 @@
             });
             if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
             const data = await response.json();
+            // Server paginates the full contact list itself; a 24s Lambda deadline can
+            // still cut it short (X-Partial: true). When that happens, the background
+            // cache warmer finishes the job — reload once so the page picks up the
+            // complete set instead of silently under-counting.
+            if (response.headers.get('X-Partial') === 'true') {
+                console.warn(`fetchAllContacts: partial data (${(data.contacts || []).length} contacts) — auto-reload in 95s`);
+                if (!window.__ghlContactsPartialReloadScheduled) {
+                    window.__ghlContactsPartialReloadScheduled = true;
+                    setTimeout(() => window.location.reload(), 95_000);
+                }
+            }
             return data.contacts || [];
         }
 

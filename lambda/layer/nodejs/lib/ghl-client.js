@@ -158,6 +158,10 @@ async function fetchAllContacts(token, locationId, deadlineMs = null) {
   return { contacts, isPartial };
 }
 
+async function fetchConversationMessages(token, conversationId) {
+  return ghlFetch(token, `/conversations/${conversationId}/messages`);
+}
+
 async function fetchContactNotes(token, contactId) {
   const data = await ghlFetch(token, `/contacts/${contactId}/notes`);
   return data.notes || [];
@@ -175,6 +179,7 @@ module.exports = {
   fetchUsers,
   fetchOpportunities,
   fetchConversations,
+  fetchConversationMessages,
   fetchAllContacts,
   fetchContactNotes,
   fetchCalendarEvents,

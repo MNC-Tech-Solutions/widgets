@@ -5,7 +5,11 @@ const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 
 const lambdaClient = new LambdaClient({});
 
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const CORS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Expose-Headers': 'X-Cache, X-Partial',
+};
 
 exports.handler = async (event) => {
   try {
@@ -84,7 +88,14 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(opps) };
     }
 
-    if (path.startsWith('/ghl/conversations')) {
+    const messagesMatch = path.match(/\/ghl\/conversations\/([^/]+)\/messages$/);
+    if (messagesMatch) {
+      const conversationId = messagesMatch[1];
+      return cached(locationId, `conversation-messages#${conversationId}`, () =>
+        ghl.fetchConversationMessages(token, conversationId));
+    }
+
+    if (path === '/ghl/conversations') {
       const extra = { ...qs };
       delete extra.locationId;
       // Paginated requests (startAfterDate present) must bypass cache —
@@ -102,12 +113,17 @@ exports.handler = async (event) => {
       const pk = `${locationId}#ghl`;
       const sk = 'contacts';
       const hit = await getCached(pk, sk);
-      if (hit !== null) {
+      // Only trust the cache once it holds a complete contact list — a partial
+      // result (deadline hit mid-pagination) must never be served as a HIT, or
+      // callers get stuck on the first ~100 contacts forever.
+      if (hit?.complete === true && Array.isArray(hit.contacts)) {
         return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
       }
       const deadline = Date.now() + 24000;
       const { contacts, isPartial } = await ghl.fetchAllContacts(token, locationId, deadline);
-      await setCached(pk, sk, { contacts });
+      if (!isPartial) {
+        await setCached(pk, sk, { contacts, complete: true });
+      }
       if (isPartial) {
         const warmerFn = process.env.WARMER_FUNCTION_NAME || 'ghl-cache-warmer';
         lambdaClient.send(new InvokeCommand({
