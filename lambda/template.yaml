@@ -110,6 +110,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /ghl/conversations
             Method: GET
+        ConversationMessages:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/conversations/{conversationId}/messages
+            Method: GET
         ContactsSearch:
           Type: HttpApi
           Properties:
