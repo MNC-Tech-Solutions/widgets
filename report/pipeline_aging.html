@@ -283,6 +283,9 @@
         .btn-outline-secondary.mb-3:hover { border-color: var(--ink); color: var(--ink); background: transparent; }
 
         .alert { border-radius: 8px; font-size: 0.85rem; border: 1px solid var(--border); }
+
+        /* Hidden columns (Attended / Unattended) — data & click-through logic kept intact */
+        .col-hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -354,9 +357,9 @@
                             <tr>
                                 <th>Pipeline / Stage</th>
                                 <th>Total Leads</th>
-                                <th>Attended</th>
-                                <th>Unattended</th>
-                                <th>Conversion</th>
+                                <th class="col-hidden">Attended</th>
+                                <th class="col-hidden">Unattended</th>
+                                <th class="col-hidden">Conversion</th>
                                 <th>0-5d</th>
                                 <th>5-10d</th>
                                 <th>10-15d</th>
@@ -365,7 +368,7 @@
                             </tr>
                         </thead>
                         <tbody id="agingTableBody">
-                            <tr><td colspan="10" class="text-center">Loading…</td></tr>
+                            <tr><td colspan="7" class="text-center">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -895,16 +898,16 @@
 
             const tbody = document.getElementById('agingTableBody');
             if (sortedStages.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No data for selected filters.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No data for selected filters.</td></tr>';
             } else {
                 const rows = sortedStages.map((data, i) => {
                     const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
                     return `<tr>
                         <td><span class="pipeline-name">${escapeHtml(data.pipeline)}</span><strong>${escapeHtml(data.stage)}</strong></td>
                         <td><strong>${data.totalLeads}</strong></td>
-                        <td><span class="badge bg-success clickable-badge" onclick="showLeadsList(${i}, 'Attended')">${data.attendedLeads.length}</span></td>
-                        <td><span class="badge bg-danger clickable-badge" onclick="showLeadsList(${i}, 'Unattended')">${data.unattendedLeads.length}</span></td>
-                        <td><strong>${conversion}%</strong></td>
+                        <td class="col-hidden"><span class="badge bg-success clickable-badge" onclick="showLeadsList(${i}, 'Attended')">${data.attendedLeads.length}</span></td>
+                        <td class="col-hidden"><span class="badge bg-danger clickable-badge" onclick="showLeadsList(${i}, 'Unattended')">${data.unattendedLeads.length}</span></td>
+                        <td class="col-hidden"><strong>${conversion}%</strong></td>
                         <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(${i}, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
                         <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(${i}, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
                         <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(${i}, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
