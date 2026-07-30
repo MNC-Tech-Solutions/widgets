@@ -129,6 +129,81 @@
         .global-filters .btn-outline-secondary i { display: none; }
         .date-filter-active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-soft); }
 
+        /* Multi-select checkbox dropdowns */
+        .multi-select { position: relative; }
+        .multi-select-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            background: var(--surface);
+            color: var(--ink);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .multi-select-btn::after {
+            content: '';
+            flex: 0 0 auto;
+            width: 7px;
+            height: 7px;
+            border-right: 1.5px solid var(--ink-soft);
+            border-bottom: 1.5px solid var(--ink-soft);
+            transform: rotate(45deg);
+            margin-top: -3px;
+        }
+        .multi-select-btn.has-selection { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); color: var(--accent); }
+        .multi-select-panel {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 0.35rem 0;
+        }
+        .multi-select-panel.open { display: block; }
+        .multi-select-panel .ms-actions {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.25rem;
+        }
+        .multi-select-panel .ms-actions button {
+            background: none;
+            border: none;
+            padding: 0;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--accent);
+            cursor: pointer;
+        }
+        .multi-select-panel .ms-actions button:hover { text-decoration: underline; }
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            color: var(--ink);
+            cursor: pointer;
+        }
+        .multi-select-option:hover { background: #FAFAFB; }
+        .multi-select-option input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+        .multi-select-empty { padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--ink-faint); }
+
         /* Table card */
         .card {
             border: 1px solid var(--border);
@@ -313,22 +388,25 @@
                     <input type="date" id="dateEnd" class="form-control">
                 </div>
                 <div class="col-md-2">
-                    <label for="projectFilter"><i class="fas fa-project-diagram me-2"></i>Project</label>
-                    <select class="form-control" id="projectFilter">
-                        <option value="">All Projects</option>
-                    </select>
+                    <label for="projectFilterBtn"><i class="fas fa-project-diagram me-2"></i>Project</label>
+                    <div class="multi-select" id="projectFilterWrap">
+                        <button type="button" class="form-control multi-select-btn" id="projectFilterBtn">All Projects</button>
+                        <div class="multi-select-panel" id="projectFilterPanel"></div>
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <label for="sourceFilter"><i class="fas fa-filter me-2"></i>Source</label>
-                    <select class="form-control" id="sourceFilter">
-                        <option value="">All Sources</option>
-                    </select>
+                    <label for="sourceFilterBtn"><i class="fas fa-filter me-2"></i>Source</label>
+                    <div class="multi-select" id="sourceFilterWrap">
+                        <button type="button" class="form-control multi-select-btn" id="sourceFilterBtn">All Sources</button>
+                        <div class="multi-select-panel" id="sourceFilterPanel"></div>
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <label for="salesRepFilter"><i class="fas fa-user me-2"></i>Sales Rep</label>
-                    <select class="form-control" id="salesRepFilter">
-                        <option value="">All Sales Reps</option>
-                    </select>
+                    <label for="salesRepFilterBtn"><i class="fas fa-user me-2"></i>Sales Rep</label>
+                    <div class="multi-select" id="salesRepFilterWrap">
+                        <button type="button" class="form-control multi-select-btn" id="salesRepFilterBtn">All Sales Reps</button>
+                        <div class="multi-select-panel" id="salesRepFilterPanel"></div>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-primary w-100" onclick="applyFilters()">
@@ -429,20 +507,121 @@
         let allProjects = new Set();
         let currentLeadsListParams = null; // { stageIdx, category } — lets the lead detail modal go "back"
 
-        // Global filter state
+        // Global filter state — each is now an array of selected values (empty = "All")
         let filterStartDate = null;
         let filterEndDate = null;
-        let filterProject = '';
-        let filterSource = '';
-        let filterRep = '';
+        let filterProject = [];
+        let filterSource = [];
+        let filterRep = [];
 
         const loadingSpinner = document.getElementById('loadingSpinner');
         const dateStart = document.getElementById('dateStart');
         const dateEnd = document.getElementById('dateEnd');
-        const projectFilter = document.getElementById('projectFilter');
-        const sourceFilter = document.getElementById('sourceFilter');
-        const salesRepFilter = document.getElementById('salesRepFilter');
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
+
+        // ---- Generic multi-select checkbox dropdown ----
+        // Each entry: { options: [{value,label}], selected: Set, allLabel }
+        const multiSelects = {
+            project: { btn: document.getElementById('projectFilterBtn'), panel: document.getElementById('projectFilterPanel'), options: [], selected: new Set(), allLabel: 'All Projects' },
+            source: { btn: document.getElementById('sourceFilterBtn'), panel: document.getElementById('sourceFilterPanel'), options: [], selected: new Set(), allLabel: 'All Sources' },
+            rep: { btn: document.getElementById('salesRepFilterBtn'), panel: document.getElementById('salesRepFilterPanel'), options: [], selected: new Set(), allLabel: 'All Sales Reps' }
+        };
+
+        function setMultiSelectOptions(key, options) {
+            const ms = multiSelects[key];
+            // Drop any previously-selected values that no longer exist in the new option set
+            const validValues = new Set(options.map(o => o.value));
+            ms.selected.forEach(v => { if (!validValues.has(v)) ms.selected.delete(v); });
+            ms.options = options;
+            renderMultiSelectPanel(key);
+            updateMultiSelectButtonLabel(key);
+        }
+
+        function renderMultiSelectPanel(key) {
+            const ms = multiSelects[key];
+            if (!ms.options.length) {
+                ms.panel.innerHTML = '<div class="multi-select-empty">No options available.</div>';
+                return;
+            }
+            const actions = `<div class="ms-actions">
+                <button type="button" data-action="all">Select all</button>
+                <button type="button" data-action="clear">Clear</button>
+            </div>`;
+            const items = ms.options.map((opt, i) => {
+                const checked = ms.selected.has(opt.value) ? 'checked' : '';
+                const cbId = `ms-${key}-${i}`;
+                return `<label class="multi-select-option" for="${cbId}">
+                    <input type="checkbox" id="${cbId}" data-value="${escapeHtml(opt.value)}" ${checked}>
+                    <span>${escapeHtml(opt.label)}</span>
+                </label>`;
+            }).join('');
+            ms.panel.innerHTML = actions + items;
+
+            ms.panel.querySelector('[data-action="all"]').addEventListener('click', () => {
+                ms.options.forEach(o => ms.selected.add(o.value));
+                renderMultiSelectPanel(key);
+                updateMultiSelectButtonLabel(key);
+            });
+            ms.panel.querySelector('[data-action="clear"]').addEventListener('click', () => {
+                ms.selected.clear();
+                renderMultiSelectPanel(key);
+                updateMultiSelectButtonLabel(key);
+            });
+            ms.panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) ms.selected.add(cb.dataset.value);
+                    else ms.selected.delete(cb.dataset.value);
+                    updateMultiSelectButtonLabel(key);
+                });
+            });
+        }
+
+        function updateMultiSelectButtonLabel(key) {
+            const ms = multiSelects[key];
+            const n = ms.selected.size;
+            if (n === 0) {
+                ms.btn.textContent = ms.allLabel;
+                ms.btn.classList.remove('has-selection');
+            } else if (n === 1) {
+                const val = [...ms.selected][0];
+                const opt = ms.options.find(o => o.value === val);
+                ms.btn.textContent = opt ? opt.label : val;
+                ms.btn.classList.add('has-selection');
+            } else {
+                ms.btn.textContent = `${n} selected`;
+                ms.btn.classList.add('has-selection');
+            }
+        }
+
+        function clearMultiSelect(key) {
+            multiSelects[key].selected.clear();
+            renderMultiSelectPanel(key);
+            updateMultiSelectButtonLabel(key);
+        }
+
+        function getMultiSelectValues(key) {
+            return Array.from(multiSelects[key].selected);
+        }
+
+        function getMultiSelectLabel(key) {
+            const ms = multiSelects[key];
+            if (ms.selected.size === 0) return ms.allLabel;
+            return Array.from(ms.selected).map(v => (ms.options.find(o => o.value === v) || {}).label || v).join(' | ');
+        }
+
+        Object.entries(multiSelects).forEach(([key, ms]) => {
+            ms.btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = ms.panel.classList.contains('open');
+                Object.values(multiSelects).forEach(other => other.panel.classList.remove('open'));
+                if (!isOpen) ms.panel.classList.add('open');
+            });
+        });
+        document.addEventListener('click', (e) => {
+            Object.values(multiSelects).forEach(ms => {
+                if (!ms.panel.contains(e.target) && e.target !== ms.btn) ms.panel.classList.remove('open');
+            });
+        });
         document.getElementById('leadDetailsModal').addEventListener('hidden.bs.modal', () => {
             currentLeadsListParams = null;
         });
@@ -468,9 +647,9 @@
                 return;
             }
 
-            filterProject = projectFilter.value;
-            filterSource = sourceFilter.value;
-            filterRep = salesRepFilter.value;
+            filterProject = getMultiSelectValues('project');
+            filterSource = getMultiSelectValues('source');
+            filterRep = getMultiSelectValues('rep');
 
             updateActiveDateFilterState();
             renderLeadsAging();
@@ -485,15 +664,15 @@
 
             dateStart.value = todayStr;
             dateEnd.value = todayStr;
-            projectFilter.value = '';
-            sourceFilter.value = '';
-            salesRepFilter.value = '';
+            clearMultiSelect('project');
+            clearMultiSelect('source');
+            clearMultiSelect('rep');
 
             filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
             filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
-            filterProject = '';
-            filterSource = '';
-            filterRep = '';
+            filterProject = [];
+            filterSource = [];
+            filterRep = [];
 
             applyFilters();
         }
@@ -582,13 +761,7 @@
             });
 
             const sorted = Array.from(allProjects).sort();
-            projectFilter.innerHTML = '<option value="">All Projects</option>';
-            sorted.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p;
-                opt.textContent = p;
-                projectFilter.appendChild(opt);
-            });
+            setMultiSelectOptions('project', sorted.map(p => ({ value: p, label: p })));
         }
 
         function populateSourceFilter() {
@@ -597,13 +770,7 @@
                 if (contact.source) sources.add(contact.source);
             });
             const sorted = Array.from(sources).sort();
-            sourceFilter.innerHTML = '<option value="">All Sources</option>';
-            sorted.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s;
-                opt.textContent = s;
-                sourceFilter.appendChild(opt);
-            });
+            setMultiSelectOptions('source', sorted.map(s => ({ value: s, label: s })));
         }
 
         function populateSalesRepFilter() {
@@ -616,36 +783,33 @@
                 return nameA.localeCompare(nameB);
             });
 
-            salesRepFilter.innerHTML = '<option value="">All Sales Reps</option>';
-            sorted.forEach(id => {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.textContent = id === 'Unassigned' ? 'Unassigned' : (usersMap[id] || id);
-                salesRepFilter.appendChild(opt);
-            });
+            setMultiSelectOptions('rep', sorted.map(id => ({
+                value: id,
+                label: id === 'Unassigned' ? 'Unassigned' : (usersMap[id] || id)
+            })));
         }
 
         // Helper: Check if contact matches current project filter
         function contactMatchesProject(contact) {
-            if (!filterProject) return true;
+            if (!filterProject.length) return true;
             const projectFieldId = selectedLocation.customFieldIds?.project;
             if (!projectFieldId || !contact.customFields) return false;
             const field = contact.customFields.find(cf => cf.id === projectFieldId);
             if (!field || !field.value) return false;
             const values = Array.isArray(field.value) ? field.value : [field.value];
-            return values.some(v => String(v) === filterProject);
+            return values.some(v => filterProject.includes(String(v)));
         }
 
         // Helper: Check if contact matches current source filter
         function contactMatchesSource(contact) {
-            if (!filterSource) return true;
-            return contact.source === filterSource;
+            if (!filterSource.length) return true;
+            return filterSource.includes(contact.source);
         }
 
         // Helper: Check if contact matches current sales rep filter
         function contactMatchesRep(contact) {
-            if (!filterRep) return true;
-            return (contact.assignedTo || 'Unassigned') === filterRep;
+            if (!filterRep.length) return true;
+            return filterRep.includes(contact.assignedTo || 'Unassigned');
         }
 
         // Returns { pipeline, stage } for a contact, falling back to placeholders
@@ -956,9 +1120,9 @@
                 ? dateStart.value
                 : `${dateStart.value} to ${dateEnd.value}`;
             let header = `Date Range,${escapeCSV(dateRange)}\n`;
-            header += `Project,${escapeCSV(filterProject || 'All Projects')}\n`;
-            header += `Source,${escapeCSV(filterSource || 'All Sources')}\n`;
-            header += `Sales Rep,${escapeCSV(filterRep ? (usersMap[filterRep] || filterRep) : 'All Sales Reps')}\n`;
+            header += `Project,${escapeCSV(getMultiSelectLabel('project'))}\n`;
+            header += `Source,${escapeCSV(getMultiSelectLabel('source'))}\n`;
+            header += `Sales Rep,${escapeCSV(getMultiSelectLabel('rep'))}\n`;
             header += `Exported At,${escapeCSV(new Date().toLocaleString())}\n`;
             header += '\n';
             return header;
@@ -998,7 +1162,11 @@
                     const conv = d.total === 0 ? 0 : ((d.attended / d.total) * 100).toFixed(1);
                     csv += `${escapeCSV(d.pipeline)},${escapeCSV(d.stage)},${d.total},${d.attended},${d.unattended},${conv},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
                 });
-            downloadCSV(`Leads_Aging${filterProject ? '_' + filterProject : ''}${filterSource ? '_' + filterSource : ''}${filterRep ? '_' + (usersMap[filterRep] || filterRep) : ''}.csv`, csv);
+            const sanitizeForFilename = (s) => String(s).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
+            const projectSuffix = filterProject.length ? '_' + filterProject.map(sanitizeForFilename).join('-') : '';
+            const sourceSuffix = filterSource.length ? '_' + filterSource.map(sanitizeForFilename).join('-') : '';
+            const repSuffix = filterRep.length ? '_' + filterRep.map(id => sanitizeForFilename(usersMap[id] || id)).join('-') : '';
+            downloadCSV(`Leads_Aging${projectSuffix}${sourceSuffix}${repSuffix}.csv`, csv);
         }
 
         // Modal functions
