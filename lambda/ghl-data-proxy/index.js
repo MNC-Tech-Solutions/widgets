@@ -47,11 +47,11 @@ exports.handler = async (event) => {
 
     // Route dispatch
     if (path.startsWith('/ghl/pipelines')) {
-      return cached(locationId, 'pipelines', () => ghl.fetchPipelines(token, locationId));
+      return await cached(locationId, 'pipelines', () => ghl.fetchPipelines(token, locationId));
     }
 
     if (path.startsWith('/ghl/users')) {
-      return cached(locationId, 'users', () => ghl.fetchUsers(token, locationId));
+      return await cached(locationId, 'users', () => ghl.fetchUsers(token, locationId));
     }
 
     if (path.startsWith('/ghl/opportunities')) {
@@ -91,7 +91,7 @@ exports.handler = async (event) => {
     const messagesMatch = path.match(/\/ghl\/conversations\/([^/]+)\/messages$/);
     if (messagesMatch) {
       const conversationId = messagesMatch[1];
-      return cached(locationId, `conversation-messages#${conversationId}`, () =>
+      return await cached(locationId, `conversation-messages#${conversationId}`, () =>
         ghl.fetchConversationMessages(token, conversationId));
     }
 
@@ -104,7 +104,7 @@ exports.handler = async (event) => {
         const conversations = await ghl.fetchConversations(token, locationId, extra);
         return reply(200, { conversations });
       }
-      return cached(locationId, 'conversations', async () => ({
+      return await cached(locationId, 'conversations', async () => ({
         conversations: await ghl.fetchConversations(token, locationId, extra),
       }));
     }
@@ -139,14 +139,14 @@ exports.handler = async (event) => {
     const notesMatch = path.match(/\/ghl\/contacts\/([^/]+)\/notes/);
     if (notesMatch) {
       const contactId = notesMatch[1];
-      return cached(locationId, `notes#${contactId}`, () =>
+      return await cached(locationId, `notes#${contactId}`, () =>
         ghl.fetchContactNotes(token, contactId));
     }
 
     if (path.startsWith('/ghl/calendars/events')) {
       const { startTime, endTime, userIds } = qs;
       const cacheKey = `calendar#${startTime}#${endTime}`;
-      return cached(locationId, cacheKey, async () => {
+      return await cached(locationId, cacheKey, async () => {
         const ids = userIds ? userIds.split(',').filter(Boolean) : [];
         const batches = await Promise.all(
           ids.map(uid => ghl.fetchCalendarEvents(token, locationId, startTime, endTime, uid).catch(() => []))
