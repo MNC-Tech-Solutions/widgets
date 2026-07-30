@@ -664,7 +664,7 @@
         // messages carry the "source" field (e.g. "workflow", "app") needed to tell
         // a human agent's reply apart from an automated one.
         async function fetchConversationMessages(conversationId) {
-            const response = await lambdaFetch(`/ghl/conversations/${conversationId}/messages`);
+            const response = await lambdaFetch(`/ghl/conversations/${conversationId}/messages?locationId=${selectedLocation.locationId}`);
             if (!response.ok) return [];
             const data = await response.json();
             return data.messages?.messages || [];

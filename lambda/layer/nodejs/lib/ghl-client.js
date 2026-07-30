@@ -137,7 +137,8 @@ async function fetchAllContacts(token, locationId, deadlineMs = null) {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    const batch = (data.contacts || []).map(c => ({
+    const rawBatch = data.contacts || [];
+    const batch = rawBatch.map(c => ({
       id: c.id,
       firstName: c.firstName,
       lastName: c.lastName,
@@ -151,8 +152,11 @@ async function fetchAllContacts(token, locationId, deadlineMs = null) {
       customFields: (c.customFields || []).map(f => ({ id: f.id, value: f.value })),
     }));
     contacts = contacts.concat(batch);
-    if (batch.length < 100) break;
-    searchAfter = batch[batch.length - 1]?.searchAfter;
+    if (rawBatch.length < 100) break;
+    // The pagination cursor lives on the raw GHL contact object — it gets
+    // dropped by the whitelist map above, so it must be read from rawBatch,
+    // not batch, or every fetch silently stops after the first 100 contacts.
+    searchAfter = rawBatch[rawBatch.length - 1]?.searchAfter;
     if (!searchAfter) break;
   }
   return { contacts, isPartial };
