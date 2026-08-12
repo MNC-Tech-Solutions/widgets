@@ -483,9 +483,20 @@
 
         const LAMBDA_BASE_URL = 'https://riedh3l031.execute-api.ap-southeast-1.amazonaws.com';
         const LAMBDA_API_KEY  = '2d291f00-5145-4a2d-b1d8-ff13fd661f28';
-        const lambdaFetch = (path, opts = {}) => fetch(`${LAMBDA_BASE_URL}${path}`, {
-            ...opts, headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
-        });
+        async function lambdaFetch(path, opts = {}, attempt = 0) {
+            const res = await fetch(`${LAMBDA_BASE_URL}${path}`, {
+                ...opts, headers: { 'X-Api-Key': LAMBDA_API_KEY, 'Content-Type': 'application/json', ...opts.headers }
+            });
+            // 503 = cold-cache load in progress; Lambda keeps running in background and
+            // writes to DynamoDB — retry after a delay to hit the cache.
+            if (res.status === 503 && attempt < 3) {
+                const delay = [35000, 25000, 20000][attempt];
+                console.warn(`Lambda 503 at ${path} — retrying in ${delay / 1000}s (attempt ${attempt + 1})`);
+                await new Promise(r => setTimeout(r, delay));
+                return lambdaFetch(path, opts, attempt + 1);
+            }
+            return res;
+        }
 
         // Message types that can count as a genuine agent reply (i.e. a human touch).
         const AGENT_REPLY_TYPES = new Set(['TYPE_WHATSAPP', 'TYPE_CALL']);
