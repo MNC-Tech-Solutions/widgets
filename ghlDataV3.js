@@ -6,7 +6,7 @@
  * SETUP: Set LAMBDA_BASE_URL and LAMBDA_API_KEY below after deploying the Lambda stack.
  */
 
-const GHLDATA_VERSION = '2.1.1';
+const GHLDATA_VERSION = '2.1.2';
 console.log('ghlDataV3.js loaded - version:', GHLDATA_VERSION);
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ const LOCAL_TTL_MS = 20 * 60 * 1000; // 20 minutes
 
 // ── IndexedDB ─────────────────────────────────────────────────────────────────
 const DB_NAME    = 'ghl_funnel_db';
-const DB_VERSION = 4; // bumped from v3 to add search_cache store
+const DB_VERSION = 4;
 
 let dbPromise;
 
@@ -55,10 +55,6 @@ function openDB() {
       // v3: metadata store for TTL tracking
       if (!db.objectStoreNames.contains('cache_meta')) {
         db.createObjectStore('cache_meta', { keyPath: 'key' });
-      }
-      // v4: cache for filtered opportunity searches (keyed by locationId+filter combo)
-      if (!db.objectStoreNames.contains('search_cache')) {
-        db.createObjectStore('search_cache', { keyPath: 'key' });
       }
     };
   });
@@ -105,14 +101,11 @@ async function getCache(storeName, key) {
 }
 
 async function setCache(storeName, key, data) {
-  if (!isValidKey(key) && (storeName === 'pipelines' || storeName === 'search_cache')) return;
+  if (!isValidKey(key) && storeName === 'pipelines') return;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
-    let entry;
-    if (storeName === 'pipelines') entry = { locationId: key, data };
-    else if (storeName === 'search_cache') entry = { key, data };
-    else entry = { ...key, data };
+    const entry = storeName === 'pipelines' ? { locationId: key, data } : { ...key, data };
     const req = tx.objectStore(storeName).put(entry);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
@@ -155,9 +148,8 @@ async function clearOpportunitiesCache(locationId, pipelineId) {
 
 async function clearIndexedDB() {
   const db = await openDB();
-  const stores = ['pipelines', 'users', 'opportunities', 'cache_meta', 'search_cache'];
-  const tx = db.transaction(stores, 'readwrite');
-  stores.forEach(s => tx.objectStore(s).clear());
+  const tx = db.transaction(['pipelines', 'users', 'opportunities', 'cache_meta'], 'readwrite');
+  ['pipelines', 'users', 'opportunities', 'cache_meta'].forEach(s => tx.objectStore(s).clear());
   return new Promise(resolve => { tx.oncomplete = resolve; });
 }
 
@@ -434,35 +426,21 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
 }
 
 // fetchOpportunitiesSearch: filtered opportunity search (adCategory + agentType),
-// spanning all pipelines for the location. Cached per filter combo, same TTL
-// pattern as fetchAllOpportunities.
+// spanning all pipelines for the location. No local caching — result sets are
+// small, so every call goes to the Lambda, which has its own 20-min server-side
+// cache. forceRefresh clears that server cache before fetching.
 async function fetchOpportunitiesSearch(_config, locationId, { adCategory, agentType }, forceRefresh = false) {
-  const filterKey = `${adCategory}#${agentType}`;
-  const cacheKey = `search#${locationId}#${filterKey}`;
-  const metaKey = `opportunities-search#${locationId}#${filterKey}`;
-
   if (forceRefresh) {
-    await clearAllCache(locationId);
-  } else {
-    const fetchedAt = await getMetaFetchedAt(metaKey);
-    if (isFresh(fetchedAt)) {
-      const cached = await getCache('search_cache', cacheKey);
-      if (cached) return cached;
-    }
+    await lambdaFetch(`/ghl/cache?locationId=${locationId}`, { method: 'DELETE' });
   }
-
   try {
-    const opps = await lambdaFetch(`/ghl/opportunities/search?locationId=${locationId}`, {
+    return await lambdaFetch(`/ghl/opportunities/search?locationId=${locationId}`, {
       method: 'POST',
       body: JSON.stringify({ adCategory, agentType }),
     });
-    await setCache('search_cache', cacheKey, opps);
-    await setMetaFetchedAt(metaKey);
-    return opps;
   } catch (err) {
     console.error('fetchOpportunitiesSearch error:', err);
-    const cached = await getCache('search_cache', cacheKey);
-    return cached || [];
+    return [];
   }
 }
 
