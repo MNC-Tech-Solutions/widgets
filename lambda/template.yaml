@@ -104,6 +104,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /ghl/opportunities
             Method: GET
+        OpportunitiesSearch:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ghl/opportunities/search
+            Method: POST
         Conversations:
           Type: HttpApi
           Properties:

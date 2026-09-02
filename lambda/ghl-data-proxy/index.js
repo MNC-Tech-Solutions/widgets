@@ -54,6 +54,17 @@ exports.handler = async (event) => {
       return await cached(locationId, 'users', () => ghl.fetchUsers(token, locationId));
     }
 
+    if (method === 'POST' && path.startsWith('/ghl/opportunities/search')) {
+      let body;
+      try { body = JSON.parse(event.body || '{}'); } catch { return reply(400, { error: 'Invalid JSON body' }); }
+      const { adCategory, agentType } = body;
+      if (!adCategory || !agentType) return reply(400, { error: 'adCategory and agentType required' });
+
+      const sk = `opportunities-search#${adCategory}#${agentType}`;
+      return await cached(locationId, sk, () =>
+        ghl.searchOpportunities(token, locationId, tenant.customFieldIds, { adCategory, agentType }));
+    }
+
     if (path.startsWith('/ghl/opportunities')) {
       const { pipelineId } = qs;
       if (!pipelineId) return reply(400, { error: 'pipelineId required' });

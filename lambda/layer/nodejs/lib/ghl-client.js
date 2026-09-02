@@ -98,9 +98,40 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     sourceCategory: getField(customFieldIds.sourceCategory),
     project: getField(customFieldIds.project),
     team: getField(customFieldIds.team),
+    adSource: getField(customFieldIds.adSource),
+    adCategory: getField(customFieldIds.adCategory),
+    externalSalesStaff: getField(customFieldIds.externalSalesStaff),
+    visitType: getField(customFieldIds.visitType),
     contact: { name: opp.contact?.name, phone: opp.contact?.phone },
     monetaryValue: opp.monetaryValue,
   };
+}
+
+async function searchOpportunities(token, locationId, customFieldIds, { adCategory, agentType }) {
+  const filters = [
+    { field: `custom_fields.${customFieldIds.adCategory}`, operator: 'eq', value: adCategory },
+  ];
+  if (customFieldIds.externalSalesStaff) {
+    filters.push({
+      field: `custom_fields.${customFieldIds.externalSalesStaff}`,
+      operator: agentType === 'Agency' ? 'exists' : 'not_exists',
+    });
+  }
+
+  const results = [];
+  let page = 1;
+  const limit = 100;
+  while (true) {
+    const data = await ghlFetch(token, '/opportunities/search', {
+      method: 'POST',
+      body: JSON.stringify({ locationId, page, limit, filters }),
+    });
+    const opps = data.opportunities || [];
+    for (const opp of opps) results.push(processOpportunity(opp, opp.pipelineId, customFieldIds));
+    if (opps.length < limit) break;
+    page++;
+  }
+  return results;
 }
 
 async function fetchConversations(token, locationId, extraParams = {}) {
@@ -182,6 +213,7 @@ module.exports = {
   fetchPipelines,
   fetchUsers,
   fetchOpportunities,
+  searchOpportunities,
   fetchConversations,
   fetchConversationMessages,
   fetchAllContacts,
