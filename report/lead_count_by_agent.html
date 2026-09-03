@@ -161,6 +161,10 @@
           <option value="Agency">Agency</option>
         </select>
       </div>
+      <div class="control-group" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <button id="refreshBtn" class="btn btn-outline-primary btn-sm" type="button">Refresh</button>
+      </div>
     </div>
 
     <table id="leadsTable" class="leads-table">
@@ -329,12 +333,12 @@
       new bootstrap.Modal(document.getElementById('leadDetailsModal')).show();
     }
 
-    async function loadAndRender() {
+    async function loadAndRender(forceRefresh = false) {
       const adCategory = document.getElementById('adCategory').value;
       const agentType = document.getElementById('agentType').value;
       showSpinner();
       try {
-        currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, agentType });
+        currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, agentType }, forceRefresh);
         updateAdSourceControl();
         updateVisitTypeControl();
         renderTable();
@@ -363,10 +367,11 @@
         const pipelines = await fetchPipelinesV2(CONFIG, locationId);
         pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
 
-        document.getElementById('adCategory').addEventListener('change', loadAndRender);
+        document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
         document.getElementById('adSource').addEventListener('change', renderTable);
         document.getElementById('visitType').addEventListener('change', renderTable);
-        document.getElementById('agentType').addEventListener('change', loadAndRender);
+        document.getElementById('agentType').addEventListener('change', () => loadAndRender());
+        document.getElementById('refreshBtn').addEventListener('click', () => loadAndRender(true));
 
         await loadAndRender();
       } catch (error) {
