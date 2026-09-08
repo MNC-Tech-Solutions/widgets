@@ -86,16 +86,6 @@
     .section-heading:not(:first-child) {
       margin-top: 24px;
     }
-    .visit-badge {
-      display: inline-block;
-      background: #eef2ff;
-      color: #4a6fa5;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-left: 6px;
-    }
     .leads-table tbody tr:not(.total-row) {
       cursor: pointer;
     }
@@ -257,16 +247,6 @@
       return Array.from(grouped.entries()).sort((a, b) => b[1].length - a[1].length);
     }
 
-    function breakdownBadges(opps, adCategory) {
-      const field = adCategory === 'Roadshow' ? 'adSource' : adCategory === 'Sales Gallery' ? 'visitType' : null;
-      if (!field) return '';
-      const counts = new Map();
-      opps.forEach(op => { if (op[field]) counts.set(op[field], (counts.get(op[field]) || 0) + 1); });
-      return Array.from(counts.entries())
-        .map(([val, count]) => `<span class="visit-badge">${val}: ${count}</span>`)
-        .join('');
-    }
-
     function renderGroupTable(tbody, rows, adCategory) {
       tbody.innerHTML = '';
       if (rows.length === 0) {
@@ -278,7 +258,7 @@
       rows.forEach(([name, opps]) => {
         total += opps.length;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${name}${breakdownBadges(opps, adCategory)}</td><td>${opps.length}</td>`;
+        row.innerHTML = `<td>${name}</td><td>${opps.length}</td>`;
         row.addEventListener('click', () => showLeadDetails(name, opps, adCategory));
         tbody.appendChild(row);
       });
