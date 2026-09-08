@@ -219,9 +219,9 @@
                   <th>Name</th>
                   <th>Ad Source</th>
                   <th>Ad Category</th>
+                  <th id="modalVisitTypeHeader" style="display:none;">Visit Type</th>
                   <th>Pipeline</th>
                   <th>Status</th>
-                  <th>Phone</th>
                   <th>Created At</th>
                 </tr>
               </thead>
@@ -279,7 +279,7 @@
         total += opps.length;
         const row = document.createElement('tr');
         row.innerHTML = `<td>${name}${breakdownBadges(opps, adCategory)}</td><td>${opps.length}</td>`;
-        row.addEventListener('click', () => showLeadDetails(name, opps));
+        row.addEventListener('click', () => showLeadDetails(name, opps, adCategory));
         tbody.appendChild(row);
       });
 
@@ -302,17 +302,19 @@
       renderGroupTable(document.querySelector('#externalTable tbody'), externalRows, adCategory);
     }
 
-    function showLeadDetails(name, opps) {
+    function showLeadDetails(name, opps, adCategory) {
       document.getElementById('leadDetailsModalLabel').textContent = `Leads — ${name} (${opps.length})`;
+      const showVisitType = adCategory === 'Sales Gallery';
+      document.getElementById('modalVisitTypeHeader').style.display = showVisitType ? '' : 'none';
       const tbody = document.getElementById('leadDetailsTableBody');
       tbody.innerHTML = opps.map(op => `
         <tr>
           <td>${op.name || op.contact?.name || 'N/A'}</td>
           <td>${op.adSource || 'N/A'}</td>
           <td>${op.adCategory || 'N/A'}</td>
+          ${showVisitType ? `<td>${op.visitType || 'N/A'}</td>` : ''}
           <td>${pipelinesMap.get(op.pipelineId) || 'N/A'}</td>
           <td>${op.status || 'N/A'}</td>
-          <td>${op.contact?.phone || 'N/A'}</td>
           <td>${formatDateTimeWithOffset(op.createdAt)}</td>
         </tr>
       `).join('');
