@@ -162,10 +162,6 @@
           <option value="Roadshow">Roadshow</option>
         </select>
       </div>
-      <div class="control-group" id="adSourceGroup" style="display:none;">
-        <label for="adSource">Ad Source</label>
-        <select id="adSource" class="form-select"></select>
-      </div>
       <div class="control-group">
         <label for="dateFrom">Created From</label>
         <input type="date" id="dateFrom" class="form-control">
@@ -251,35 +247,6 @@
     function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
     function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
 
-    function getDistinctAdSources() {
-      const set = new Set();
-      currentResults.forEach(op => { if (op.adSource) set.add(op.adSource); });
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }
-
-    function updateAdSourceControl() {
-      const adCategory = document.getElementById('adCategory').value;
-      const group = document.getElementById('adSourceGroup');
-      const select = document.getElementById('adSource');
-
-      if (adCategory !== 'Roadshow') {
-        group.style.display = 'none';
-        return;
-      }
-      group.style.display = '';
-
-      const sources = getDistinctAdSources();
-      const prevValue = select.value;
-      select.innerHTML = '';
-      sources.forEach(source => {
-        const option = document.createElement('option');
-        option.value = source;
-        option.textContent = source;
-        select.appendChild(option);
-      });
-      select.value = sources.includes(prevValue) ? prevValue : (sources[0] || '');
-    }
-
     function buildGroups(opps, resolveName) {
       const grouped = new Map(); // name -> opportunities[]
       opps.forEach(op => {
@@ -290,15 +257,17 @@
       return Array.from(grouped.entries()).sort((a, b) => b[1].length - a[1].length);
     }
 
-    function visitTypeBadges(opps) {
+    function breakdownBadges(opps, adCategory) {
+      const field = adCategory === 'Roadshow' ? 'adSource' : adCategory === 'Sales Gallery' ? 'visitType' : null;
+      if (!field) return '';
       const counts = new Map();
-      opps.forEach(op => { if (op.visitType) counts.set(op.visitType, (counts.get(op.visitType) || 0) + 1); });
+      opps.forEach(op => { if (op[field]) counts.set(op[field], (counts.get(op[field]) || 0) + 1); });
       return Array.from(counts.entries())
-        .map(([type, count]) => `<span class="visit-badge">${type}: ${count}</span>`)
+        .map(([val, count]) => `<span class="visit-badge">${val}: ${count}</span>`)
         .join('');
     }
 
-    function renderGroupTable(tbody, rows) {
+    function renderGroupTable(tbody, rows, adCategory) {
       tbody.innerHTML = '';
       if (rows.length === 0) {
         tbody.innerHTML = '<tr><td colspan="2">No leads found</td></tr>';
@@ -309,7 +278,7 @@
       rows.forEach(([name, opps]) => {
         total += opps.length;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${name}${visitTypeBadges(opps)}</td><td>${opps.length}</td>`;
+        row.innerHTML = `<td>${name}${breakdownBadges(opps, adCategory)}</td><td>${opps.length}</td>`;
         row.addEventListener('click', () => showLeadDetails(name, opps));
         tbody.appendChild(row);
       });
@@ -322,21 +291,15 @@
 
     function renderTable() {
       const adCategory = document.getElementById('adCategory').value;
-      const adSource = document.getElementById('adSource').value;
 
-      let filtered = currentResults;
-      if (adCategory === 'Roadshow' && adSource) {
-        filtered = filtered.filter(op => op.adSource === adSource);
-      }
-
-      const internalOpps = filtered.filter(op => !op.externalSalesStaff);
-      const externalOpps = filtered.filter(op => op.externalSalesStaff);
+      const internalOpps = currentResults.filter(op => !op.externalSalesStaff);
+      const externalOpps = currentResults.filter(op => op.externalSalesStaff);
 
       const internalRows = buildGroups(internalOpps, op => usersMap.get(op.assignedTo) || 'Unassigned');
       const externalRows = buildGroups(externalOpps, op => op.externalSalesStaff);
 
-      renderGroupTable(document.querySelector('#internalTable tbody'), internalRows);
-      renderGroupTable(document.querySelector('#externalTable tbody'), externalRows);
+      renderGroupTable(document.querySelector('#internalTable tbody'), internalRows, adCategory);
+      renderGroupTable(document.querySelector('#externalTable tbody'), externalRows, adCategory);
     }
 
     function showLeadDetails(name, opps) {
@@ -373,7 +336,6 @@
       showSpinner();
       try {
         currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, gte, lte }, forceRefresh);
-        updateAdSourceControl();
         renderTable();
       } catch (error) {
         console.error('Error loading opportunities:', error);
@@ -401,7 +363,6 @@
         pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
 
         document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
-        document.getElementById('adSource').addEventListener('change', renderTable);
         document.getElementById('dateFrom').addEventListener('change', () => loadAndRender());
         document.getElementById('dateTo').addEventListener('change', () => loadAndRender());
         document.getElementById('refreshBtn').addEventListener('click', () => loadAndRender(true));
