@@ -107,15 +107,15 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
   };
 }
 
-async function searchOpportunities(token, locationId, customFieldIds, { adCategory, agentType }) {
+async function searchOpportunities(token, locationId, customFieldIds, { adCategory, gte, lte }) {
   const filters = [
     { field: `custom_fields.${customFieldIds.adCategory}`, operator: 'eq', value: adCategory },
   ];
-  if (customFieldIds.externalSalesStaff) {
-    filters.push({
-      field: `custom_fields.${customFieldIds.externalSalesStaff}`,
-      operator: agentType === 'Agency' ? 'exists' : 'not_exists',
-    });
+  if (gte || lte) {
+    const range = {};
+    if (gte) range.gte = gte;
+    if (lte) range.lte = lte;
+    filters.push({ field: 'date_added', operator: 'range', value: range });
   }
 
   const results = [];

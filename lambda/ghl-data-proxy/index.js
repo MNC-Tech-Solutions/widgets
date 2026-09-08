@@ -57,12 +57,12 @@ exports.handler = async (event) => {
     if (method === 'POST' && path.startsWith('/ghl/opportunities/search')) {
       let body;
       try { body = JSON.parse(event.body || '{}'); } catch { return reply(400, { error: 'Invalid JSON body' }); }
-      const { adCategory, agentType } = body;
-      if (!adCategory || !agentType) return reply(400, { error: 'adCategory and agentType required' });
+      const { adCategory, gte, lte } = body;
+      if (!adCategory) return reply(400, { error: 'adCategory required' });
 
-      const sk = `opportunities-search#${adCategory}#${agentType}`;
+      const sk = `opportunities-search#${adCategory}#${gte || ''}#${lte || ''}`;
       return await cached(locationId, sk, () =>
-        ghl.searchOpportunities(token, locationId, tenant.customFieldIds, { adCategory, agentType }));
+        ghl.searchOpportunities(token, locationId, tenant.customFieldIds, { adCategory, gte, lte }));
     }
 
     if (path.startsWith('/ghl/opportunities')) {

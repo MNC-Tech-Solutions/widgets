@@ -6,7 +6,7 @@
  * SETUP: Set LAMBDA_BASE_URL and LAMBDA_API_KEY below after deploying the Lambda stack.
  */
 
-const GHLDATA_VERSION = '2.1.2';
+const GHLDATA_VERSION = '2.1.3';
 console.log('ghlDataV3.js loaded - version:', GHLDATA_VERSION);
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -429,14 +429,14 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
 // spanning all pipelines for the location. No local caching — result sets are
 // small, so every call goes to the Lambda, which has its own 20-min server-side
 // cache. forceRefresh clears that server cache before fetching.
-async function fetchOpportunitiesSearch(_config, locationId, { adCategory, agentType }, forceRefresh = false) {
+async function fetchOpportunitiesSearch(_config, locationId, { adCategory, gte, lte }, forceRefresh = false) {
   if (forceRefresh) {
     await lambdaFetch(`/ghl/cache?locationId=${locationId}`, { method: 'DELETE' });
   }
   try {
     return await lambdaFetch(`/ghl/opportunities/search?locationId=${locationId}`, {
       method: 'POST',
-      body: JSON.stringify({ adCategory, agentType }),
+      body: JSON.stringify({ adCategory, gte, lte }),
     });
   } catch (err) {
     console.error('fetchOpportunitiesSearch error:', err);
