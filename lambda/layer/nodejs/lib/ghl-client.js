@@ -102,6 +102,7 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     adCategory: getField(customFieldIds.adCategory),
     externalSalesStaff: getField(customFieldIds.externalSalesStaff),
     visitType: getField(customFieldIds.visitType),
+    hearAboutUs: getField(customFieldIds.hearAboutUs),
     contact: { name: opp.contact?.name, phone: opp.contact?.phone },
     monetaryValue: opp.monetaryValue,
   };

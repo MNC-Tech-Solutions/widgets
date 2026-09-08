@@ -210,6 +210,7 @@
                   <th>Ad Source</th>
                   <th>Ad Category</th>
                   <th id="modalVisitTypeHeader" style="display:none;">Visit Type</th>
+                  <th id="modalHearAboutUsHeader" style="display:none;">Hear About Us</th>
                   <th>Pipeline</th>
                   <th>Status</th>
                   <th>Created At</th>
@@ -286,13 +287,14 @@
       document.getElementById('leadDetailsModalLabel').textContent = `Leads — ${name} (${opps.length})`;
       const showVisitType = adCategory === 'Sales Gallery';
       document.getElementById('modalVisitTypeHeader').style.display = showVisitType ? '' : 'none';
+      document.getElementById('modalHearAboutUsHeader').style.display = showVisitType ? '' : 'none';
       const tbody = document.getElementById('leadDetailsTableBody');
       tbody.innerHTML = opps.map(op => `
         <tr>
           <td>${op.name || op.contact?.name || 'N/A'}</td>
           <td>${op.adSource || 'N/A'}</td>
           <td>${op.adCategory || 'N/A'}</td>
-          ${showVisitType ? `<td>${op.visitType || 'N/A'}</td>` : ''}
+          ${showVisitType ? `<td>${op.visitType || 'N/A'}</td><td>${op.hearAboutUs || 'N/A'}</td>` : ''}
           <td>${pipelinesMap.get(op.pipelineId) || 'N/A'}</td>
           <td>${op.status || 'N/A'}</td>
           <td>${formatDateTimeWithOffset(op.createdAt)}</td>
