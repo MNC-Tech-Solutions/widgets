@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lead Count by Agent</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
       --primary: #91AEC4;
@@ -153,12 +154,8 @@
         </select>
       </div>
       <div class="control-group">
-        <label for="dateFrom">Created From</label>
-        <input type="date" id="dateFrom" class="form-control">
-      </div>
-      <div class="control-group">
-        <label for="dateTo">Created To</label>
-        <input type="date" id="dateTo" class="form-control">
+        <label for="dateRange">Created Date Range</label>
+        <input type="text" id="dateRange" class="form-control" placeholder="Select date range" autocomplete="off">
       </div>
       <div class="control-group" style="justify-content:flex-end;">
         <label>&nbsp;</label>
@@ -226,6 +223,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module">
     import { loadConfig, fetchAllUsers, fetchPipelinesV2, fetchOpportunitiesSearch, formatDateTimeWithOffset } from '../ghlDataV3.js?v=2.1.3';
 
@@ -234,6 +232,7 @@
     let usersMap = new Map();
     let pipelinesMap = new Map();
     let currentResults = [];
+    let dateRangePicker;
 
     function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
     function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
@@ -315,8 +314,11 @@
 
     async function loadAndRender(forceRefresh = false) {
       const adCategory = document.getElementById('adCategory').value;
-      const gte = toEpochMs(document.getElementById('dateFrom').value, false);
-      const lte = toEpochMs(document.getElementById('dateTo').value, true);
+      const selectedDates = dateRangePicker ? dateRangePicker.selectedDates : [];
+      const startStr = selectedDates[0] ? flatpickr.formatDate(selectedDates[0], 'Y-m-d') : undefined;
+      const endStr = selectedDates[1] ? flatpickr.formatDate(selectedDates[1], 'Y-m-d') : startStr;
+      const gte = toEpochMs(startStr, false);
+      const lte = toEpochMs(endStr, true);
       showSpinner();
       try {
         currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, gte, lte }, forceRefresh);
@@ -346,10 +348,17 @@
         const pipelines = await fetchPipelinesV2(CONFIG, locationId);
         pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
 
+        dateRangePicker = flatpickr('#dateRange', {
+          mode: 'range',
+          dateFormat: 'Y-m-d',
+          onClose: () => loadAndRender()
+        });
+
         document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
-        document.getElementById('dateFrom').addEventListener('change', () => loadAndRender());
-        document.getElementById('dateTo').addEventListener('change', () => loadAndRender());
-        document.getElementById('refreshBtn').addEventListener('click', () => loadAndRender(true));
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+          dateRangePicker.clear();
+          loadAndRender(true);
+        });
 
         await loadAndRender();
       } catch (error) {
