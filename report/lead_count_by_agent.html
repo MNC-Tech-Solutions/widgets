@@ -1,0 +1,366 @@
+<!-- lead count per sales person (agency or internal), filtered by ad category / ad source -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Count by Agent</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <style>
+    :root {
+      --primary: #91AEC4;
+      --primary-dark: #2667cc;
+      --text: #374151;
+      --border: #d1d5db;
+    }
+    body {
+      font-family: 'Cem Seui', Tahoma, sans-serif;
+      margin: 0;
+      padding: 15px;
+      background: #f5f6fa;
+    }
+    .widget {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+    label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .leads-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .leads-table th {
+      background-color: #4a6fa5;
+      color: white;
+      font-weight: 600;
+      padding: 12px 15px;
+      text-align: left;
+    }
+    .leads-table td {
+      padding: 10px 15px;
+      border-bottom: 1px solid #e0e3e7;
+    }
+    .leads-table td:last-child,
+    .leads-table th:last-child {
+      text-align: right;
+    }
+    .leads-table tr:nth-child(even):not(.total-row) {
+      background-color: #f9fafb;
+    }
+    .leads-table tr.total-row {
+      background-color: #e6f0ff;
+      font-weight: bold;
+    }
+    .section-heading {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-heading:not(:first-child) {
+      margin-top: 24px;
+    }
+    .leads-table tbody tr:not(.total-row) {
+      cursor: pointer;
+    }
+    .leads-table tbody tr:not(.total-row):hover {
+      background-color: #eef2ff !important;
+    }
+    .modal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .modal-table th {
+      background: #f8f9fa;
+      color: var(--text);
+      font-weight: 600;
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    .modal-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .modal-table-container {
+      max-height: 60vh;
+      overflow: auto;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="controls">
+      <div class="control-group">
+        <label for="adCategory">Ad Category</label>
+        <select id="adCategory" class="form-select">
+          <option value="Sales Gallery">Sales Gallery</option>
+          <option value="Roadshow">Roadshow</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="dateFrom">Created From</label>
+        <input type="date" id="dateFrom" class="form-control">
+      </div>
+      <div class="control-group">
+        <label for="dateTo">Created To</label>
+        <input type="date" id="dateTo" class="form-control">
+      </div>
+      <div class="control-group" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <button id="refreshBtn" class="btn btn-outline-primary btn-sm" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <h6 class="section-heading">Internal Sales Staff</h6>
+    <table id="internalTable" class="leads-table">
+      <thead>
+        <tr>
+          <th>Sales Person Name</th>
+          <th>Lead Count</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h6 class="section-heading">Agency</h6>
+    <table id="externalTable" class="leads-table">
+      <thead>
+        <tr>
+          <th>Sales Person Name</th>
+          <th>Lead Count</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Lead Details Modal -->
+  <div class="modal fade" id="leadDetailsModal" tabindex="-1" aria-labelledby="leadDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:95vw;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="leadDetailsModalLabel">Leads</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-table-container">
+            <table class="modal-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Ad Source</th>
+                  <th>Ad Category</th>
+                  <th id="modalVisitTypeHeader" style="display:none;">Visit Type</th>
+                  <th id="modalHearAboutUsHeader" style="display:none;">Hear About Us</th>
+                  <th>Pipeline</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody id="leadDetailsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+  <script type="module">
+    import { loadConfig, fetchAllUsers, fetchPipelinesV2, fetchOpportunitiesSearch, formatDateTimeWithOffset } from '../ghlDataV3.js?v=2.1.3';
+
+    let CONFIG = {};
+    let locationId = '';
+    let usersMap = new Map();
+    let pipelinesMap = new Map();
+    let currentResults = [];
+
+    function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+    function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+    function buildGroups(opps, resolveName) {
+      const grouped = new Map(); // name -> opportunities[]
+      opps.forEach(op => {
+        const name = resolveName(op);
+        if (!grouped.has(name)) grouped.set(name, []);
+        grouped.get(name).push(op);
+      });
+      return Array.from(grouped.entries()).sort((a, b) => b[1].length - a[1].length);
+    }
+
+    function renderGroupTable(tbody, rows, adCategory) {
+      tbody.innerHTML = '';
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2">No leads found</td></tr>';
+        return;
+      }
+
+      let total = 0;
+      rows.forEach(([name, opps]) => {
+        total += opps.length;
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${name}</td><td>${opps.length}</td>`;
+        row.addEventListener('click', () => showLeadDetails(name, opps, adCategory));
+        tbody.appendChild(row);
+      });
+
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      totalRow.innerHTML = `<td>Total</td><td>${total}</td>`;
+      tbody.appendChild(totalRow);
+    }
+
+    function renderTable() {
+      const adCategory = document.getElementById('adCategory').value;
+
+      const internalOpps = currentResults.filter(op => !op.externalSalesStaff);
+      const externalOpps = currentResults.filter(op => op.externalSalesStaff);
+
+      const internalRows = buildGroups(internalOpps, op => usersMap.get(op.assignedTo) || 'Unassigned');
+      const externalRows = buildGroups(externalOpps, op => op.externalSalesStaff);
+
+      renderGroupTable(document.querySelector('#internalTable tbody'), internalRows, adCategory);
+      renderGroupTable(document.querySelector('#externalTable tbody'), externalRows, adCategory);
+    }
+
+    function showLeadDetails(name, opps, adCategory) {
+      document.getElementById('leadDetailsModalLabel').textContent = `Leads — ${name} (${opps.length})`;
+      const showVisitType = adCategory === 'Sales Gallery';
+      document.getElementById('modalVisitTypeHeader').style.display = showVisitType ? '' : 'none';
+      document.getElementById('modalHearAboutUsHeader').style.display = showVisitType ? '' : 'none';
+      const tbody = document.getElementById('leadDetailsTableBody');
+      tbody.innerHTML = opps.map(op => `
+        <tr>
+          <td>${op.name || op.contact?.name || 'N/A'}</td>
+          <td>${op.adSource || 'N/A'}</td>
+          <td>${op.adCategory || 'N/A'}</td>
+          ${showVisitType ? `<td>${op.visitType || 'N/A'}</td><td>${op.hearAboutUs || 'N/A'}</td>` : ''}
+          <td>${pipelinesMap.get(op.pipelineId) || 'N/A'}</td>
+          <td>${op.status || 'N/A'}</td>
+          <td>${formatDateTimeWithOffset(op.createdAt)}</td>
+        </tr>
+      `).join('');
+      new bootstrap.Modal(document.getElementById('leadDetailsModal')).show();
+    }
+
+    function showMessage(message) {
+      document.querySelector('#internalTable tbody').innerHTML = `<tr><td colspan="2">${message}</td></tr>`;
+      document.querySelector('#externalTable tbody').innerHTML = `<tr><td colspan="2">${message}</td></tr>`;
+    }
+
+    function toEpochMs(dateStr, endOfDay) {
+      if (!dateStr) return undefined;
+      return new Date(`${dateStr}T${endOfDay ? '23:59:59.999' : '00:00:00'}`).getTime();
+    }
+
+    async function loadAndRender(forceRefresh = false) {
+      const adCategory = document.getElementById('adCategory').value;
+      const gte = toEpochMs(document.getElementById('dateFrom').value, false);
+      const lte = toEpochMs(document.getElementById('dateTo').value, true);
+      showSpinner();
+      try {
+        currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, gte, lte }, forceRefresh);
+        renderTable();
+      } catch (error) {
+        console.error('Error loading opportunities:', error);
+        showMessage('Error loading data');
+      } finally {
+        hideSpinner();
+      }
+    }
+
+    async function initWidget() {
+      showSpinner();
+      try {
+        const { config, locationId: locId } = await loadConfig();
+        if (!config) {
+          showMessage('No configuration available for this location.');
+          return;
+        }
+        CONFIG = config;
+        locationId = locId;
+
+        const users = await fetchAllUsers(CONFIG, locationId);
+        usersMap = new Map(users.map(user => [user.id, user.name]));
+
+        const pipelines = await fetchPipelinesV2(CONFIG, locationId);
+        pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
+
+        document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
+        document.getElementById('dateFrom').addEventListener('change', () => loadAndRender());
+        document.getElementById('dateTo').addEventListener('change', () => loadAndRender());
+        document.getElementById('refreshBtn').addEventListener('click', () => loadAndRender(true));
+
+        await loadAndRender();
+      } catch (error) {
+        console.error('Error initializing widget:', error);
+        showMessage('Error loading data');
+      } finally {
+        hideSpinner();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initWidget);
+  </script>
+</body>
+</html>

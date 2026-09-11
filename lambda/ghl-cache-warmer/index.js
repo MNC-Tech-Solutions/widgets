@@ -49,7 +49,7 @@ async function warmContacts(locationId) {
   try {
     const token = await getTenantToken(locationId);
     const { contacts } = await ghl.fetchAllContacts(token, locationId); // no deadline
-    await setCached(`${locationId}#ghl`, 'contacts', { contacts });
+    await setCached(`${locationId}#ghl`, 'contacts', { contacts, complete: true });
     console.log(`warmContacts: ${locationId} — ${contacts.length} contacts`);
   } catch (err) {
     console.error(`warmContacts failed ${locationId}: ${err.message}`);
@@ -89,9 +89,10 @@ async function warmTenant(tenant) {
       }
     }));
 
-    // Contacts — 20min TTL, always refresh
+    // Contacts — 20min TTL, always refresh. A cached-but-incomplete entry
+    // (partial result from a deadline-hit request) must not block re-warming.
     const contactsCached = await getCached(pk, 'contacts');
-    if (!contactsCached) {
+    if (contactsCached?.complete !== true) {
       await warmContacts(locationId);
     }
 

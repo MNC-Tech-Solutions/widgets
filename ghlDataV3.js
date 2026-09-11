@@ -6,7 +6,7 @@
  * SETUP: Set LAMBDA_BASE_URL and LAMBDA_API_KEY below after deploying the Lambda stack.
  */
 
-const GHLDATA_VERSION = '2.0.0';
+const GHLDATA_VERSION = '2.1.3';
 console.log('ghlDataV3.js loaded - version:', GHLDATA_VERSION);
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ const LOCAL_TTL_MS = 20 * 60 * 1000; // 20 minutes
 
 // ── IndexedDB ─────────────────────────────────────────────────────────────────
 const DB_NAME    = 'ghl_funnel_db';
-const DB_VERSION = 3; // bumped from v2 to add cache_meta store
+const DB_VERSION = 4;
 
 let dbPromise;
 
@@ -29,6 +29,14 @@ function openDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
+    // A version bump can hang indefinitely (no timeout) if another tab still
+    // holds an open connection to the old DB version — surface it instead of
+    // leaving the caller stuck forever with no feedback.
+    request.onblocked = () => {
+      console.warn('IndexedDB upgrade blocked — close other tabs with this site open, then reload.');
+      dbPromise = null;
+      reject(new Error('IndexedDB upgrade blocked by another open tab. Close other tabs with this widget open, then reload.'));
+    };
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('pipelines')) {
@@ -417,6 +425,25 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
   }
 }
 
+// fetchOpportunitiesSearch: filtered opportunity search (adCategory + agentType),
+// spanning all pipelines for the location. No local caching — result sets are
+// small, so every call goes to the Lambda, which has its own 20-min server-side
+// cache. forceRefresh clears that server cache before fetching.
+async function fetchOpportunitiesSearch(_config, locationId, { adCategory, gte, lte }, forceRefresh = false) {
+  if (forceRefresh) {
+    await lambdaFetch(`/ghl/cache?locationId=${locationId}`, { method: 'DELETE' });
+  }
+  try {
+    return await lambdaFetch(`/ghl/opportunities/search?locationId=${locationId}`, {
+      method: 'POST',
+      body: JSON.stringify({ adCategory, gte, lte }),
+    });
+  } catch (err) {
+    console.error('fetchOpportunitiesSearch error:', err);
+    return [];
+  }
+}
+
 // fetchNewOpportunities: simplified — Lambda handles freshness via cache warmer.
 // Returns newly available opps (those not yet in local IndexedDB).
 async function fetchNewOpportunities(_config, locationId, pipelineId) {
@@ -444,5 +471,5 @@ export {
   openDB, getCache, setCache, getAllByIndex, clearOpportunitiesCache,
   getLocationId, loadConfig, fetchPipelinesV2, fetchAllOpportunities,
   formatDateTimeWithOffset, applyFilters, clearIndexedDB, clearAllCache, progressManager,
-  fetchNewOpportunities, fetchAllUsers,
+  fetchNewOpportunities, fetchAllUsers, fetchOpportunitiesSearch,
 };

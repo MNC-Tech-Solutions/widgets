@@ -98,9 +98,41 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     sourceCategory: getField(customFieldIds.sourceCategory),
     project: getField(customFieldIds.project),
     team: getField(customFieldIds.team),
+    adSource: getField(customFieldIds.adSource),
+    adCategory: getField(customFieldIds.adCategory),
+    externalSalesStaff: getField(customFieldIds.externalSalesStaff),
+    visitType: getField(customFieldIds.visitType),
+    hearAboutUs: getField(customFieldIds.hearAboutUs),
     contact: { name: opp.contact?.name, phone: opp.contact?.phone },
     monetaryValue: opp.monetaryValue,
   };
+}
+
+async function searchOpportunities(token, locationId, customFieldIds, { adCategory, gte, lte }) {
+  const filters = [
+    { field: `custom_fields.${customFieldIds.adCategory}`, operator: 'eq', value: adCategory },
+  ];
+  if (gte || lte) {
+    const range = {};
+    if (gte) range.gte = gte;
+    if (lte) range.lte = lte;
+    filters.push({ field: 'date_added', operator: 'range', value: range });
+  }
+
+  const results = [];
+  let page = 1;
+  const limit = 100;
+  while (true) {
+    const data = await ghlFetch(token, '/opportunities/search', {
+      method: 'POST',
+      body: JSON.stringify({ locationId, page, limit, filters }),
+    });
+    const opps = data.opportunities || [];
+    for (const opp of opps) results.push(processOpportunity(opp, opp.pipelineId, customFieldIds));
+    if (opps.length < limit) break;
+    page++;
+  }
+  return results;
 }
 
 async function fetchConversations(token, locationId, extraParams = {}) {
@@ -137,7 +169,8 @@ async function fetchAllContacts(token, locationId, deadlineMs = null) {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    const batch = (data.contacts || []).map(c => ({
+    const rawBatch = data.contacts || [];
+    const batch = rawBatch.map(c => ({
       id: c.id,
       firstName: c.firstName,
       lastName: c.lastName,
@@ -151,11 +184,18 @@ async function fetchAllContacts(token, locationId, deadlineMs = null) {
       customFields: (c.customFields || []).map(f => ({ id: f.id, value: f.value })),
     }));
     contacts = contacts.concat(batch);
-    if (batch.length < 100) break;
-    searchAfter = batch[batch.length - 1]?.searchAfter;
+    if (rawBatch.length < 100) break;
+    // The pagination cursor lives on the raw GHL contact object — it gets
+    // dropped by the whitelist map above, so it must be read from rawBatch,
+    // not batch, or every fetch silently stops after the first 100 contacts.
+    searchAfter = rawBatch[rawBatch.length - 1]?.searchAfter;
     if (!searchAfter) break;
   }
   return { contacts, isPartial };
+}
+
+async function fetchConversationMessages(token, conversationId) {
+  return ghlFetch(token, `/conversations/${conversationId}/messages`);
 }
 
 async function fetchContactNotes(token, contactId) {
@@ -174,7 +214,9 @@ module.exports = {
   fetchPipelines,
   fetchUsers,
   fetchOpportunities,
+  searchOpportunities,
   fetchConversations,
+  fetchConversationMessages,
   fetchAllContacts,
   fetchContactNotes,
   fetchCalendarEvents,

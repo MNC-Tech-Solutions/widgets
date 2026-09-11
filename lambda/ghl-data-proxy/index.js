@@ -5,7 +5,11 @@ const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 
 const lambdaClient = new LambdaClient({});
 
-const CORS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const CORS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Expose-Headers': 'X-Cache, X-Partial',
+};
 
 exports.handler = async (event) => {
   try {
@@ -43,11 +47,22 @@ exports.handler = async (event) => {
 
     // Route dispatch
     if (path.startsWith('/ghl/pipelines')) {
-      return cached(locationId, 'pipelines', () => ghl.fetchPipelines(token, locationId));
+      return await cached(locationId, 'pipelines', () => ghl.fetchPipelines(token, locationId));
     }
 
     if (path.startsWith('/ghl/users')) {
-      return cached(locationId, 'users', () => ghl.fetchUsers(token, locationId));
+      return await cached(locationId, 'users', () => ghl.fetchUsers(token, locationId));
+    }
+
+    if (method === 'POST' && path.startsWith('/ghl/opportunities/search')) {
+      let body;
+      try { body = JSON.parse(event.body || '{}'); } catch { return reply(400, { error: 'Invalid JSON body' }); }
+      const { adCategory, gte, lte } = body;
+      if (!adCategory) return reply(400, { error: 'adCategory required' });
+
+      const sk = `opportunities-search#${adCategory}#${gte || ''}#${lte || ''}`;
+      return await cached(locationId, sk, () =>
+        ghl.searchOpportunities(token, locationId, tenant.customFieldIds, { adCategory, gte, lte }));
     }
 
     if (path.startsWith('/ghl/opportunities')) {
@@ -84,7 +99,14 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(opps) };
     }
 
-    if (path.startsWith('/ghl/conversations')) {
+    const messagesMatch = path.match(/\/ghl\/conversations\/([^/]+)\/messages$/);
+    if (messagesMatch) {
+      const conversationId = messagesMatch[1];
+      return await cached(locationId, `conversation-messages#${conversationId}`, () =>
+        ghl.fetchConversationMessages(token, conversationId));
+    }
+
+    if (path === '/ghl/conversations') {
       const extra = { ...qs };
       delete extra.locationId;
       // Paginated requests (startAfterDate present) must bypass cache —
@@ -93,7 +115,7 @@ exports.handler = async (event) => {
         const conversations = await ghl.fetchConversations(token, locationId, extra);
         return reply(200, { conversations });
       }
-      return cached(locationId, 'conversations', async () => ({
+      return await cached(locationId, 'conversations', async () => ({
         conversations: await ghl.fetchConversations(token, locationId, extra),
       }));
     }
@@ -102,12 +124,17 @@ exports.handler = async (event) => {
       const pk = `${locationId}#ghl`;
       const sk = 'contacts';
       const hit = await getCached(pk, sk);
-      if (hit !== null) {
+      // Only trust the cache once it holds a complete contact list — a partial
+      // result (deadline hit mid-pagination) must never be served as a HIT, or
+      // callers get stuck on the first ~100 contacts forever.
+      if (hit?.complete === true && Array.isArray(hit.contacts)) {
         return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
       }
       const deadline = Date.now() + 24000;
       const { contacts, isPartial } = await ghl.fetchAllContacts(token, locationId, deadline);
-      await setCached(pk, sk, { contacts });
+      if (!isPartial) {
+        await setCached(pk, sk, { contacts, complete: true });
+      }
       if (isPartial) {
         const warmerFn = process.env.WARMER_FUNCTION_NAME || 'ghl-cache-warmer';
         lambdaClient.send(new InvokeCommand({
@@ -123,14 +150,14 @@ exports.handler = async (event) => {
     const notesMatch = path.match(/\/ghl\/contacts\/([^/]+)\/notes/);
     if (notesMatch) {
       const contactId = notesMatch[1];
-      return cached(locationId, `notes#${contactId}`, () =>
+      return await cached(locationId, `notes#${contactId}`, () =>
         ghl.fetchContactNotes(token, contactId));
     }
 
     if (path.startsWith('/ghl/calendars/events')) {
       const { startTime, endTime, userIds } = qs;
       const cacheKey = `calendar#${startTime}#${endTime}`;
-      return cached(locationId, cacheKey, async () => {
+      return await cached(locationId, cacheKey, async () => {
         const ids = userIds ? userIds.split(',').filter(Boolean) : [];
         const batches = await Promise.all(
           ids.map(uid => ghl.fetchCalendarEvents(token, locationId, startTime, endTime, uid).catch(() => []))
