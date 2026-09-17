@@ -270,18 +270,11 @@
       tbody.appendChild(totalRow);
     }
 
-    // internalExternal is the source of truth ('Agent' = agency, 'Internal Sales Staff' = internal).
-    // Falls back to the old externalSalesStaff-presence heuristic for leads that predate this field.
-    function isAgency(op) {
-      if (op.internalExternal) return op.internalExternal === 'Agent';
-      return !!op.externalSalesStaff;
-    }
-
     function renderTable() {
       const adCategory = document.getElementById('adCategory').value;
 
-      const internalOpps = currentResults.filter(op => !isAgency(op));
-      const externalOpps = currentResults.filter(op => isAgency(op));
+      const internalOpps = currentResults.filter(op => !op.externalSalesStaff);
+      const externalOpps = currentResults.filter(op => op.externalSalesStaff);
 
       const internalRows = buildGroups(internalOpps, op => usersMap.get(op.assignedTo) || 'Unassigned');
       const externalRows = buildGroups(externalOpps, op => op.externalSalesStaff);
