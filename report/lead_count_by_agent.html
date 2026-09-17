@@ -155,10 +155,7 @@
       </div>
       <div class="control-group">
         <label for="dateRange">Created Date Range</label>
-        <div style="display:flex; gap:6px;">
-          <input type="text" id="dateRange" class="form-control" placeholder="Select date range">
-          <button id="clearDateRange" class="btn btn-outline-secondary btn-sm" type="button" title="Clear date range">&times;</button>
-        </div>
+        <input type="text" id="dateRange" class="form-control" placeholder="Select date range">
       </div>
       <div class="control-group" style="justify-content:flex-end;">
         <label>&nbsp;</label>
@@ -368,7 +365,12 @@
         pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
 
         document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
-        document.getElementById('refreshBtn').addEventListener('click', () => loadAndRender(true));
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+          dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
+          loadAndRender(true);
+        });
 
         dateRangePicker = flatpickr('#dateRange', {
           mode: 'range',
@@ -380,13 +382,6 @@
               loadAndRender();
             }
           },
-        });
-
-        document.getElementById('clearDateRange').addEventListener('click', () => {
-          dateRangePicker.clear();
-          selectedStartDate = null;
-          selectedEndDate = null;
-          loadAndRender();
         });
 
         await loadAndRender();
