@@ -504,6 +504,48 @@
         // from "attended", no matter its direction or type.
         const AUTOMATION_SOURCES = new Set(['workflow', 'campaign', 'bulk_actions', 'api', 'public_api', 'integration']);
 
+        // Stages hidden entirely (row + underlying leads excluded from counts) for
+        // specific locations.
+        const HIDDEN_STAGES_BY_LOCATION = {
+            'qLPm5qIyPYPRC2ZvjXm1': new Set(['Drop Lead', 'Not Interested'])
+        };
+
+        // Fixed stage display order for specific locations. Stages not listed here
+        // fall back to alphabetical (by pipeline, then stage) and sort after the
+        // listed ones.
+        const STAGE_ORDER_BY_LOCATION = {
+            'qLPm5qIyPYPRC2ZvjXm1': [
+                'No Pipeline',
+                'Prequalified',
+                'Hot Leads (Uncontacted)',
+                '1st Follow Up (Contacted)',
+                '2nd Follow Up (Contacted)',
+                '3rd Follow Up (Contacted)',
+                'Potential Lead',
+                'Interested Registration (Pre-Launch Projects)',
+                'Appointment',
+                'Reservation'
+            ]
+        };
+
+        function isHiddenStage(stage) {
+            return Boolean(HIDDEN_STAGES_BY_LOCATION[locationId]?.has(stage));
+        }
+
+        function compareStages(a, b) {
+            const order = STAGE_ORDER_BY_LOCATION[locationId];
+            if (order) {
+                const ai = order.indexOf(a.stage);
+                const bi = order.indexOf(b.stage);
+                if (ai !== -1 || bi !== -1) {
+                    if (ai === -1) return 1;
+                    if (bi === -1) return -1;
+                    return ai - bi;
+                }
+            }
+            return a.pipeline.localeCompare(b.pipeline) || a.stage.localeCompare(b.stage);
+        }
+
         let CONFIG = {};
         let locationId = '';
         let selectedLocation = null;
@@ -1036,6 +1078,7 @@
                 if (filterEndDate && addedDate > filterEndDate) continue;
 
                 const { pipeline, stage } = getContactStage(contact);
+                if (isHiddenStage(stage)) continue;
                 const key = `${pipeline}||${stage}`;
 
                 const isAttended = isContactAttended(contact);
@@ -1064,9 +1107,7 @@
                 }
             }
 
-            const sortedStages = Object.values(stageData).sort((a, b) =>
-                a.pipeline.localeCompare(b.pipeline) || a.stage.localeCompare(b.stage)
-            );
+            const sortedStages = Object.values(stageData).sort(compareStages);
             window.stageIndexCache = sortedStages;
 
             const tbody = document.getElementById('agingTableBody');
@@ -1145,6 +1186,7 @@
                 if (filterEndDate && addedDate > filterEndDate) continue;
 
                 const { pipeline, stage } = getContactStage(contact);
+                if (isHiddenStage(stage)) continue;
                 const key = `${pipeline}||${stage}`;
                 const hasConv = isContactAttended(contact);
                 const days = Math.floor((Date.now() - addedDate) / 86400000);
@@ -1163,7 +1205,7 @@
             let csv = getFilterHeader();
             csv += 'Pipeline,Pipeline Stage,Total Leads,Attended,Unattended,Conversion %,0-5d,5-10d,10-15d,15-30d,>30d\n';
             Object.values(stageData)
-                .sort((a, b) => a.pipeline.localeCompare(b.pipeline) || a.stage.localeCompare(b.stage))
+                .sort(compareStages)
                 .forEach(d => {
                     const conv = d.total === 0 ? 0 : ((d.attended / d.total) * 100).toFixed(1);
                     csv += `${escapeCSV(d.pipeline)},${escapeCSV(d.stage)},${d.total},${d.attended},${d.unattended},${conv},${d.a5},${d.a10},${d.a15},${d.a30},${d.a30p}\n`;
