@@ -543,16 +543,9 @@
       showSpinner();
       try {
         if (pipelineId !== currentPipelineId || opportunitiesData.length === 0) {
-          // Try cache first
-          opportunitiesData = await getAllByIndex('opportunities', 'pipelineId', pipelineId);
-          
-          // Only fetch from API if cache is empty
-          if (opportunitiesData.length === 0) {
-            console.log('Cache empty, fetching from API');
-            opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
-          } else {
-            console.log('Using cached data:', opportunitiesData.length, 'opportunities');
-          }
+          // fetchAllOpportunities owns the cache: it honors the 20-min TTL and
+          // re-fetches when a prior fetch only returned partial data.
+          opportunitiesData = await fetchAllOpportunities(CONFIG, locationId, pipelineId, false);
           currentPipelineId = pipelineId;
         }
 
