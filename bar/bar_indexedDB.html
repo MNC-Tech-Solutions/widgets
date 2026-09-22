@@ -556,9 +556,17 @@
           currentPipelineId = pipelineId;
         }
 
+        const excludedSourceCategories = locationId === 'qLPm5qIyPYPRC2ZvjXm1'
+          ? ['PropertyTalk', 'Website WhatsApp', 'WhatsApp Blast']
+          : [];
+
         allProjects = [...new Set(opportunitiesData.map(op => op.project).filter(p => p !== 'N/A'))].sort();
-        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc !== 'N/A'))].sort();
-        allSources = [...new Set(opportunitiesData.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
+        allSourceCategories = [...new Set(opportunitiesData.map(op => op.sourceCategory).filter(sc => sc !== 'N/A' && !excludedSourceCategories.includes(sc)))].sort();
+
+        const sourcePool = sourceCategory
+          ? opportunitiesData.filter(op => op.sourceCategory === sourceCategory)
+          : opportunitiesData;
+        allSources = [...new Set(sourcePool.map(op => op.source).filter(s => s && s !== 'N/A' && s.trim() !== ''))].sort();
         console.log('All sources:', allSources);
 
         let startDate = null;
