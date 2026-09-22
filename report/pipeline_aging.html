@@ -435,9 +435,7 @@
                             <tr>
                                 <th>Pipeline / Stage</th>
                                 <th>Total Leads</th>
-                                <th class="col-hidden">Attended</th>
                                 <th class="col-hidden">Unattended</th>
-                                <th class="col-hidden">Conversion</th>
                                 <th>0-5d</th>
                                 <th>5-10d</th>
                                 <th>10-15d</th>
@@ -1076,13 +1074,10 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center">No data for selected filters.</td></tr>';
             } else {
                 const rows = sortedStages.map((data, i) => {
-                    const conversion = data.totalLeads === 0 ? 0 : (data.attendedLeads.length / data.totalLeads * 100).toFixed(1);
                     return `<tr>
                         <td><span class="pipeline-name">${escapeHtml(data.pipeline)}</span><strong>${escapeHtml(data.stage)}</strong></td>
                         <td><strong>${data.totalLeads}</strong></td>
-                        <td class="col-hidden"><span class="badge bg-success clickable-badge" onclick="showLeadsList(${i}, 'Attended')">${data.attendedLeads.length}</span></td>
                         <td class="col-hidden"><span class="badge bg-danger clickable-badge" onclick="showLeadsList(${i}, 'Unattended')">${data.unattendedLeads.length}</span></td>
-                        <td class="col-hidden"><strong>${conversion}%</strong></td>
                         <td><span class="badge badge-aging-5 clickable-badge" onclick="showLeadsList(${i}, 'Aging 0-5d')">${data.aging0to5.length}</span></td>
                         <td><span class="badge badge-aging-10 clickable-badge" onclick="showLeadsList(${i}, 'Aging 5-10d')">${data.aging5to10.length}</span></td>
                         <td><span class="badge badge-aging-15 clickable-badge" onclick="showLeadsList(${i}, 'Aging 10-15d')">${data.aging10to15.length}</span></td>
