@@ -776,8 +776,8 @@
                     (pipelines || []).map(p => fetchAllOpportunities(CONFIG, locationId, p.id, false))
                 );
                 allFetchedOpportunities = opportunityBatches.flat();
-                const phoneStageMap = buildPhoneStageMap(allFetchedOpportunities, stagesMap);
-                contactStageMap = buildContactStageMap(allFetchedContacts, phoneStageMap);
+                const stageLookupMaps = buildStageLookupMaps(allFetchedOpportunities, stagesMap);
+                contactStageMap = buildContactStageMap(allFetchedContacts, stageLookupMaps);
 
                 populateSourceCategoryFilter();
                 populateSourceFilter();
@@ -1032,34 +1032,49 @@
             return stagesMap;
         }
 
-        // Opportunities from fetchAllOpportunities() don't carry the contact's actual ID
-        // (only a minimal { name, phone } object) — phone number is the only reliable
-        // link back to the full contact record, so match on that.
+        // Opportunities are matched back to full contact records by id when
+        // available, falling back to phone (digits-only) and then email. id is
+        // the only unambiguous key — phone/email matches can silently fail when
+        // a contact's phone/email was edited after the opportunity was created,
+        // or the two records were entered slightly differently (e.g. missing a
+        // leading 60/0 on phone).
         function normalizePhone(phone) {
             return phone ? String(phone).replace(/\D/g, '') : '';
         }
 
-        // Maps normalized phone -> { pipeline, stage }
-        function buildPhoneStageMap(opportunities, stagesMap) {
-            const map = {};
+        function normalizeEmail(email) {
+            return email ? String(email).trim().toLowerCase() : '';
+        }
+
+        // Maps contact id / normalized phone / normalized email -> { pipeline, stage }
+        function buildStageLookupMaps(opportunities, stagesMap) {
+            const byId = {};
+            const byPhone = {};
+            const byEmail = {};
             const sorted = [...(opportunities || [])].sort((a, b) =>
                 new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
             );
             sorted.forEach(opp => {
+                const stage = stagesMap[opp.pipelineStageId] || { pipeline: 'Unknown Pipeline', stage: 'Unknown Stage' };
+                const id = opp.contact?.id;
                 const phone = normalizePhone(opp.contact?.phone);
-                if (!phone || map[phone]) return; // keep most recently updated opportunity per phone
-                map[phone] = stagesMap[opp.pipelineStageId] || { pipeline: 'Unknown Pipeline', stage: 'Unknown Stage' };
+                const email = normalizeEmail(opp.contact?.email);
+                // keep the most recently updated opportunity per key
+                if (id && !byId[id]) byId[id] = stage;
+                if (phone && !byPhone[phone]) byPhone[phone] = stage;
+                if (email && !byEmail[email]) byEmail[email] = stage;
             });
-            return map;
+            return { byId, byPhone, byEmail };
         }
 
-        function buildContactStageMap(contacts, phoneStageMap) {
+        function buildContactStageMap(contacts, stageLookupMaps) {
+            const { byId, byPhone, byEmail } = stageLookupMaps;
             const map = {};
             (contacts || []).forEach(contact => {
                 const phone = normalizePhone(contact.phone);
-                if (phone && phoneStageMap[phone]) {
-                    map[contact.id] = phoneStageMap[phone];
-                }
+                const email = normalizeEmail(contact.email);
+                const match = byId[contact.id] || (phone && byPhone[phone]) || (email && byEmail[email]);
+                if (match) map[contact.id] = match;
             });
             return map;
         }

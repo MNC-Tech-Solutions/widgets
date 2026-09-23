@@ -104,7 +104,7 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     visitType: getField(customFieldIds.visitType),
     hearAboutUs: getField(customFieldIds.hearAboutUs),
     internalExternal: getField(customFieldIds.internalExternal),
-    contact: { name: opp.contact?.name, phone: opp.contact?.phone },
+    contact: { id: opp.contact?.id, name: opp.contact?.name, phone: opp.contact?.phone, email: opp.contact?.email },
     monetaryValue: opp.monetaryValue,
   };
 }
