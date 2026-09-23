@@ -795,15 +795,18 @@
             }
         }
 
-        // Reads the sourceCategory custom field off a contact (same pattern the
-        // "project" filter used to follow before it was removed).
+        // Reads sourceCategory for a contact: prefer the Contact-level custom
+        // field, but fall back to the matched Opportunity's sourceCategory (via
+        // contactStageMap) — for this location the field is defined at the
+        // Opportunity level, so the Contact-level lookup always comes up empty.
         function getContactSourceCategory(contact) {
             const fieldId = selectedLocation.customFieldIds?.sourceCategory;
-            if (!fieldId || !contact.customFields) return null;
-            const field = contact.customFields.find(cf => cf.id === fieldId);
-            if (!field || !field.value) return null;
-            const val = Array.isArray(field.value) ? field.value[0] : field.value;
-            return val ? String(val) : null;
+            if (fieldId && contact.customFields) {
+                const field = contact.customFields.find(cf => cf.id === fieldId);
+                const val = field?.value ? (Array.isArray(field.value) ? field.value[0] : field.value) : null;
+                if (val) return String(val);
+            }
+            return contactStageMap[contact.id]?.sourceCategory || null;
         }
 
         function populateSourceCategoryFilter() {
@@ -1056,13 +1059,18 @@
             );
             sorted.forEach(opp => {
                 const stage = stagesMap[opp.pipelineStageId] || { pipeline: 'Unknown Pipeline', stage: 'Unknown Stage' };
+                // sourceCategory rides along here because for some locations it's an
+                // Opportunity-level custom field, not a Contact-level one — the
+                // contact.customFields lookup in getContactSourceCategory() comes up
+                // empty there, so this is the fallback source of truth.
+                const match = { ...stage, sourceCategory: opp.sourceCategory || null };
                 const id = opp.contact?.id;
                 const phone = normalizePhone(opp.contact?.phone);
                 const email = normalizeEmail(opp.contact?.email);
                 // keep the most recently updated opportunity per key
-                if (id && !byId[id]) byId[id] = stage;
-                if (phone && !byPhone[phone]) byPhone[phone] = stage;
-                if (email && !byEmail[email]) byEmail[email] = stage;
+                if (id && !byId[id]) byId[id] = match;
+                if (phone && !byPhone[phone]) byPhone[phone] = match;
+                if (email && !byEmail[email]) byEmail[email] = match;
             });
             return { byId, byPhone, byEmail };
         }
