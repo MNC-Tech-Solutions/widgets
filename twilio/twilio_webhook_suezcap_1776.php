@@ -78,12 +78,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 4. Extract Answer Info (simplified for clarity)
         $answeredBy = null;
         if ($callEvents && isset($callEvents['events'])) {
+            $lastDialedNumber = null;
             foreach ($callEvents['events'] as $e) {
                 if (($e['request']['parameters']['dial_bridged'] ?? '') === 'true') {
-                    // Logic to find the number from the TwiML response in events
-                    if (preg_match('/<Number>([^<]+)<\/Number>/', $e['response']['response_body'] ?? '', $m)) {
-                        $answeredBy = $m[1];
-                    }
+                    // The number that answered was dialed in the PREVIOUS event's
+                    // response TwiML — by the time dial_bridged=true comes back,
+                    // this event's own response is just <Hangup/>.
+                    $answeredBy = $lastDialedNumber;
+                }
+
+                // Track the number this event's response TwiML dialed, for the
+                // next iteration to use if it turns out to be the bridged one.
+                if (preg_match('/<Number>([^<]+)<\/Number>/', $e['response']['response_body'] ?? '', $m)) {
+                    $lastDialedNumber = $m[1];
                 }
             }
         }
