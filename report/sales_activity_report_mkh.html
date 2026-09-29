@@ -989,11 +989,17 @@
         }
 
         async function fetchAllContacts() {
-            let contacts = [], searchAfter = null;
-            const limit = 100;
+            // The server paginates the full contact list itself and ignores this
+            // request's searchAfter/pageLimit — it always returns everything it has
+            // in one response (or, on a cold cache, a partial batch capped by its own
+            // 24s deadline). Never render an undercounted contact list — poll until
+            // the background warmer (no deadline) finishes the full fetch, however
+            // long that takes.
+            const POLL_INTERVAL_MS = 8000;
+            const MAX_WAIT_MS = 5 * 60 * 1000;
+            const startedAt = Date.now();
             while (true) {
-                const body = { pageLimit: limit };
-                if (searchAfter) body.searchAfter = searchAfter;
+                const body = { pageLimit: 100 };
                 if (filterStartDate) body.startDate = filterStartDate.toISOString();
                 if (filterEndDate)   body.endDate   = filterEndDate.toISOString();
                 const res = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
@@ -1002,14 +1008,13 @@
                 });
                 if (!res.ok) throw new Error(`Contacts API error: ${res.status}`);
                 const data = await res.json();
-                const batch = data.contacts || [];
-                if (!batch.length) break;
-                contacts = contacts.concat(batch);
-                if (batch.length < limit) break;
-                searchAfter = batch[batch.length - 1].searchAfter;
-                if (!searchAfter) break;
+                if (res.headers.get('X-Partial') !== 'true') return data.contacts || [];
+                if (Date.now() - startedAt > MAX_WAIT_MS) {
+                    throw new Error(`Contact list did not finish loading within ${MAX_WAIT_MS / 60000} minutes`);
+                }
+                showConfigStatus(`Loading full contact list (large account) — please wait...`, 'info');
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
             }
-            return contacts;
         }
 
         async function fetchAllConversations() {

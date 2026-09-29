@@ -951,24 +951,28 @@
         }
 
         async function fetchAllContacts() {
-            const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
-                method: 'POST',
-                body: JSON.stringify({ pageLimit: 100 })
-            });
-            if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
-            const data = await response.json();
             // Server paginates the full contact list itself; a 24s Lambda deadline can
-            // still cut it short (X-Partial: true). When that happens, the background
-            // cache warmer finishes the job — reload once so the page picks up the
-            // complete set instead of silently under-counting.
-            if (response.headers.get('X-Partial') === 'true') {
-                console.warn(`fetchAllContacts: partial data (${(data.contacts || []).length} contacts) — auto-reload in 95s`);
-                if (!window.__ghlContactsPartialReloadScheduled) {
-                    window.__ghlContactsPartialReloadScheduled = true;
-                    setTimeout(() => window.location.reload(), 95_000);
+            // still cut it short (X-Partial: true). Never render an undercounted list —
+            // poll until the background warmer (no deadline) finishes the full fetch,
+            // however long that takes, instead of showing partial data and hoping a
+            // timed reload catches up.
+            const POLL_INTERVAL_MS = 8000;
+            const MAX_WAIT_MS = 5 * 60 * 1000;
+            const startedAt = Date.now();
+            while (true) {
+                const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ pageLimit: 100 })
+                });
+                if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+                const data = await response.json();
+                if (response.headers.get('X-Partial') !== 'true') return data.contacts || [];
+                if (Date.now() - startedAt > MAX_WAIT_MS) {
+                    throw new Error(`Contact list did not finish loading within ${MAX_WAIT_MS / 60000} minutes`);
                 }
+                showConfigStatus(`Loading full contact list (large account) — please wait...`, 'info');
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
             }
-            return data.contacts || [];
         }
 
         async function fetchAllConversations() {

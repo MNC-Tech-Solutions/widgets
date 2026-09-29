@@ -2,6 +2,7 @@ const { getTenantToken, getApiKey } = require('/opt/nodejs/lib/secrets');
 const { getCached, setCached, deleteCached, deleteAllCached, getTenant } = require('/opt/nodejs/lib/dynamo');
 const ghl = require('/opt/nodejs/lib/ghl-client');
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
+const { gzipSync } = require('zlib');
 
 const lambdaClient = new LambdaClient({});
 
@@ -11,8 +12,21 @@ const CORS = {
   'Access-Control-Expose-Headers': 'X-Cache, X-Partial',
 };
 
+// Lambda rejects any response payload over 6MB with RequestEntityTooLarge,
+// which surfaces to the browser as an opaque 500. Big tenants blow past it —
+// 16k contacts serialise to ~6.6MB — so large bodies go out gzipped, which
+// brings that same payload down to ~1.4MB once base64-encoded.
+const LAMBDA_PAYLOAD_LIMIT = 6 * 1024 * 1024;
+const GZIP_THRESHOLD = 512 * 1024;
+
+// Set per invocation. Lambda serves one request at a time per container, so a
+// module-scoped value can't leak between concurrent requests.
+let acceptsGzip = false;
+
 exports.handler = async (event) => {
   try {
+    acceptsGzip = /\bgzip\b/i.test((event.headers || {})['accept-encoding'] || '');
+
     // Auth check
     const apiKey = await getApiKey();
     const requestKey = (event.headers || {})['x-api-key'] || (event.headers || {})['X-Api-Key'];
@@ -74,17 +88,24 @@ exports.handler = async (event) => {
 
       const hit = await getCached(pk, sk);
       if (hit !== null) {
-        return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
+        return ok(hit, { 'X-Cache': 'HIT' });
       }
 
       // Cache miss — 24s deadline to stay within API Gateway's 29s hard limit.
-      // If we hit the deadline, we cache partial results and immediately trigger
-      // the warmer async (fire-and-forget) to finish the job in the background.
+      // If we hit the deadline, we do NOT cache the partial result — a partial
+      // write here would get served back as a plain X-Cache: HIT later (this
+      // route carries no completeness marker the way /contacts/search does),
+      // silently masquerading as complete. Instead we leave the cache empty
+      // and immediately trigger the warmer (no deadline) to finish the job;
+      // every request until then re-attempts its own 24s fetch and reports
+      // X-Partial so the client knows to keep asking rather than render it.
       const deadline = Date.now() + 24000;
       const { opps, isPartial } = await ghl.fetchOpportunities(
         token, locationId, pipelineId, tenant.customFieldIds, deadline
       );
-      await setCached(pk, sk, opps);
+      if (!isPartial) {
+        await setCached(pk, sk, opps);
+      }
 
       if (isPartial) {
         const warmerFn = process.env.WARMER_FUNCTION_NAME || 'ghl-cache-warmer';
@@ -95,8 +116,7 @@ exports.handler = async (event) => {
         })).catch(e => console.error('Failed to invoke warmer:', e.message));
       }
 
-      const headers = { ...CORS, 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) };
-      return { statusCode: 200, headers, body: JSON.stringify(opps) };
+      return ok(opps, { 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) });
     }
 
     const messagesMatch = path.match(/\/ghl\/conversations\/([^/]+)\/messages$/);
@@ -128,7 +148,7 @@ exports.handler = async (event) => {
       // result (deadline hit mid-pagination) must never be served as a HIT, or
       // callers get stuck on the first ~100 contacts forever.
       if (hit?.complete === true && Array.isArray(hit.contacts)) {
-        return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
+        return ok(hit, { 'X-Cache': 'HIT' });
       }
       const deadline = Date.now() + 24000;
       const { contacts, isPartial } = await ghl.fetchAllContacts(token, locationId, deadline);
@@ -143,8 +163,7 @@ exports.handler = async (event) => {
           Payload: JSON.stringify({ locationId, resource: 'contacts' }),
         })).catch(e => console.error('Failed to invoke warmer for contacts:', e.message));
       }
-      const headers = { ...CORS, 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) };
-      return { statusCode: 200, headers, body: JSON.stringify({ contacts }) };
+      return ok({ contacts }, { 'X-Cache': 'MISS', ...(isPartial && { 'X-Partial': 'true' }) });
     }
 
     const notesMatch = path.match(/\/ghl\/contacts\/([^/]+)\/notes/);
@@ -177,13 +196,35 @@ async function cached(locationId, sk, fetcher) {
   const pk = `${locationId}#ghl`;
   const hit = await getCached(pk, sk);
   if (hit !== null) {
-    return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'HIT' }, body: JSON.stringify(hit) };
+    return ok(hit, { 'X-Cache': 'HIT' });
   }
   const data = await fetcher();
   await setCached(pk, sk, data);
-  return { statusCode: 200, headers: { ...CORS, 'X-Cache': 'MISS' }, body: JSON.stringify(data) };
+  return ok(data, { 'X-Cache': 'MISS' });
+}
+
+// 200 responses go through here so every route gets the size handling.
+function ok(body, extraHeaders = {}) {
+  const json = JSON.stringify(body);
+  const size = Buffer.byteLength(json, 'utf8');
+  const headers = { ...CORS, ...extraHeaders };
+
+  // Compress above the threshold, and unconditionally when the raw body would
+  // be rejected outright — a client that didn't ask for gzip is still better
+  // served by a compressed body than by a failed request.
+  if (size < GZIP_THRESHOLD || (!acceptsGzip && size < LAMBDA_PAYLOAD_LIMIT)) {
+    return { statusCode: 200, headers, body: json };
+  }
+
+  return {
+    statusCode: 200,
+    headers: { ...headers, 'Content-Encoding': 'gzip' },
+    body: gzipSync(json).toString('base64'),
+    isBase64Encoded: true,
+  };
 }
 
 function reply(statusCode, body) {
+  if (statusCode === 200) return ok(body);
   return { statusCode, headers: CORS, body: JSON.stringify(body) };
 }

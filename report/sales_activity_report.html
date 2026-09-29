@@ -910,13 +910,27 @@
         }
 
         async function fetchAllContacts() {
-            const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
-                method: 'POST',
-                body: JSON.stringify({ pageLimit: 100 })
-            });
-            if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
-            const data = await response.json();
-            return data.contacts || [];
+            // The Lambda enforces a 24s per-request deadline (API Gateway's hard limit
+            // is 29s), so a cold cache on a large account can come back partial. Never
+            // render an undercounted contact list — poll until the background warmer
+            // (no deadline) finishes the full fetch, however long that takes.
+            const POLL_INTERVAL_MS = 8000;
+            const MAX_WAIT_MS = 5 * 60 * 1000;
+            const startedAt = Date.now();
+            while (true) {
+                const response = await lambdaFetch(`/ghl/contacts/search?locationId=${selectedLocation.locationId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ pageLimit: 100 })
+                });
+                if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
+                const data = await response.json();
+                if (response.headers.get('X-Partial') !== 'true') return data.contacts || [];
+                if (Date.now() - startedAt > MAX_WAIT_MS) {
+                    throw new Error(`Contact list did not finish loading within ${MAX_WAIT_MS / 60000} minutes`);
+                }
+                showConfigStatus(`Loading full contact list (large account) — please wait...`, 'info');
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+            }
         }
 
         async function fetchAllConversations() {

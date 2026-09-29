@@ -384,11 +384,32 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
 
   if (showProgress) progressManager.show('Loading opportunities...');
 
+  // The Lambda enforces a 24s per-request deadline to stay under API Gateway's
+  // 29s hard limit, so one call can come back partial on a cold cache. Never
+  // render an undercounted opportunity list — poll until the background
+  // warmer (which runs with no deadline) finishes the full fetch, however
+  // long that takes, and only return once the server reports it as complete.
+  const POLL_INTERVAL_MS = 8000;
+  const MAX_WAIT_MS = 5 * 60 * 1000;
+  const startedAt = Date.now();
+
   try {
-    if (showProgress) progressManager.setProgress(20, 'Fetching from server...');
-    const { data: opps, isPartial } = await lambdaFetchWithHeaders(
-      `/ghl/opportunities?locationId=${locationId}&pipelineId=${pipelineId}`
-    );
+    let opps, isPartial;
+    while (true) {
+      if (showProgress) progressManager.setProgress(20, 'Fetching from server...');
+      ({ data: opps, isPartial } = await lambdaFetchWithHeaders(
+        `/ghl/opportunities?locationId=${locationId}&pipelineId=${pipelineId}`
+      ));
+      if (!isPartial) break;
+      if (Date.now() - startedAt > MAX_WAIT_MS) {
+        throw new Error(`Opportunities for pipeline ${pipelineId} did not finish loading within ${MAX_WAIT_MS / 60000} minutes`);
+      }
+      const waitedSec = Math.round((Date.now() - startedAt) / 1000);
+      console.warn(`fetchAllOpportunities: partial data for ${pipelineId} (${opps.length} so far) — waiting for full set (${waitedSec}s)`);
+      if (showProgress) progressManager.setProgress(40, `Large pipeline — loading full data (${waitedSec}s)...`);
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    }
+
     if (showProgress) progressManager.setProgress(70, 'Caching locally...');
 
     const db = await openDB();
@@ -396,24 +417,10 @@ async function fetchAllOpportunities(_config, locationId, pipelineId, forceRefre
     const store = tx.objectStore('opportunities');
     opps.forEach(op => store.put({ locationId, pipelineId: op.pipelineId, id: op.id, data: op }));
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
-
-    if (isPartial) {
-      // Store with a 90s TTL so IndexedDB expires before the background warmer finishes.
-      // The warmer Lambda was already triggered server-side; after ~90s DynamoDB will have
-      // the full dataset. The scheduled reload picks it up without user action.
-      const shortTs = Date.now() - LOCAL_TTL_MS + 90_000;
-      await setMetaFetchedAt(metaKey, shortTs);
-      console.warn(`fetchAllOpportunities: partial data for ${pipelineId} (${opps.length} records) — auto-reload in 95s`);
-      if (!window.__ghlPartialReloadScheduled) {
-        window.__ghlPartialReloadScheduled = true;
-        setTimeout(() => { window.__ghlPartialReloadScheduled = false; window.location.reload(); }, 95_000);
-      }
-    } else {
-      await setMetaFetchedAt(metaKey);
-    }
+    await setMetaFetchedAt(metaKey);
 
     if (showProgress) {
-      progressManager.setProgress(100, isPartial ? 'Loading (partial)...' : 'Complete!');
+      progressManager.setProgress(100, 'Complete!');
       localStorage.setItem('ghl_last_refresh', Date.now().toString());
       setTimeout(() => progressManager.hide(), 800);
     }
