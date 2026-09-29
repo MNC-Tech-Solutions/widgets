@@ -395,6 +395,13 @@
                     </div>
                 </div>
                 <div class="col-md-2">
+                    <label for="sourceCategoryFilterBtn"><i class="fas fa-layer-group me-2"></i>Source Category</label>
+                    <div class="multi-select" id="sourceCategoryFilterWrap">
+                        <button type="button" class="form-control multi-select-btn" id="sourceCategoryFilterBtn">All Categories</button>
+                        <div class="multi-select-panel" id="sourceCategoryFilterPanel"></div>
+                    </div>
+                </div>
+                <div class="col-md-2">
                     <label for="sourceFilterBtn"><i class="fas fa-filter me-2"></i>Source</label>
                     <div class="multi-select" id="sourceFilterWrap">
                         <button type="button" class="form-control multi-select-btn" id="sourceFilterBtn">All Sources</button>
@@ -562,6 +569,7 @@
         let filterStartDate = null;
         let filterEndDate = null;
         let filterProject = [];
+        let filterSourceCategory = [];
         let filterSource = [];
         let filterRep = [];
 
@@ -571,9 +579,21 @@
         const leadDetailsModal = new bootstrap.Modal(document.getElementById('leadDetailsModal'));
 
         // ---- Generic multi-select checkbox dropdown ----
-        // Each entry: { options: [{value,label}], selected: Set, allLabel }
+        // Each entry: { options: [{value,label}], selected: Set, allLabel, onChange? }
+        // Project → Source Category → Source form a cascade: picking a value at one
+        // level immediately re-scopes the options offered at the level(s) below it
+        // (via onChange, fired on every selection change — not just on Apply Filters).
         const multiSelects = {
-            project: { btn: document.getElementById('projectFilterBtn'), panel: document.getElementById('projectFilterPanel'), options: [], selected: new Set(), allLabel: 'All Projects' },
+            project: {
+                btn: document.getElementById('projectFilterBtn'), panel: document.getElementById('projectFilterPanel'),
+                options: [], selected: new Set(), allLabel: 'All Projects',
+                onChange: () => { populateSourceCategoryFilter(); populateSourceFilter(); }
+            },
+            category: {
+                btn: document.getElementById('sourceCategoryFilterBtn'), panel: document.getElementById('sourceCategoryFilterPanel'),
+                options: [], selected: new Set(), allLabel: 'All Categories',
+                onChange: () => populateSourceFilter()
+            },
             source: { btn: document.getElementById('sourceFilterBtn'), panel: document.getElementById('sourceFilterPanel'), options: [], selected: new Set(), allLabel: 'All Sources' },
             rep: { btn: document.getElementById('salesRepFilterBtn'), panel: document.getElementById('salesRepFilterPanel'), options: [], selected: new Set(), allLabel: 'All Sales Reps' }
         };
@@ -612,17 +632,20 @@
                 ms.options.forEach(o => ms.selected.add(o.value));
                 renderMultiSelectPanel(key);
                 updateMultiSelectButtonLabel(key);
+                ms.onChange?.();
             });
             ms.panel.querySelector('[data-action="clear"]').addEventListener('click', () => {
                 ms.selected.clear();
                 renderMultiSelectPanel(key);
                 updateMultiSelectButtonLabel(key);
+                ms.onChange?.();
             });
             ms.panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                 cb.addEventListener('change', () => {
                     if (cb.checked) ms.selected.add(cb.dataset.value);
                     else ms.selected.delete(cb.dataset.value);
                     updateMultiSelectButtonLabel(key);
+                    ms.onChange?.();
                 });
             });
         }
@@ -648,6 +671,7 @@
             multiSelects[key].selected.clear();
             renderMultiSelectPanel(key);
             updateMultiSelectButtonLabel(key);
+            multiSelects[key].onChange?.();
         }
 
         function getMultiSelectValues(key) {
@@ -699,6 +723,7 @@
             }
 
             filterProject = getMultiSelectValues('project');
+            filterSourceCategory = getMultiSelectValues('category');
             filterSource = getMultiSelectValues('source');
             filterRep = getMultiSelectValues('rep');
 
@@ -716,12 +741,14 @@
             dateStart.value = todayStr;
             dateEnd.value = todayStr;
             clearMultiSelect('project');
+            clearMultiSelect('category'); // cascade — options are re-scoped by project's onChange, but selection still needs an explicit clear
             clearMultiSelect('source');
             clearMultiSelect('rep');
 
             filterStartDate = new Date(y, today.getMonth(), today.getDate(), 0, 0, 0, 0);
             filterEndDate = new Date(y, today.getMonth(), today.getDate(), 23, 59, 59, 999);
             filterProject = [];
+            filterSourceCategory = [];
             filterSource = [];
             filterRep = [];
 
@@ -782,6 +809,7 @@
                 contactStageMap = buildContactStageMap(allFetchedContacts, stageLookupMaps);
 
                 populateProjectFilter();
+                populateSourceCategoryFilter();
                 populateSourceFilter();
                 populateSalesRepFilter();
 
@@ -815,9 +843,31 @@
             setMultiSelectOptions('project', sorted.map(p => ({ value: p, label: p })));
         }
 
+        // Source Category options are scoped to the Project checkboxes currently
+        // checked (live selection, not yet "applied") — pick a project and only
+        // that project's categories show up here.
+        function populateSourceCategoryFilter() {
+            const projectSet = multiSelects.project.selected;
+            const categories = new Set();
+            allFetchedContacts.forEach(contact => {
+                if (!contactMatchesProjectSet(contact, projectSet)) return;
+                const cat = getContactSourceCategory(contact);
+                if (cat) categories.add(cat);
+            });
+            const sorted = Array.from(categories).sort();
+            setMultiSelectOptions('category', sorted.map(c => ({ value: c, label: c })));
+        }
+
+        // Source options are scoped to both the Project and Source Category
+        // checkboxes currently checked — pick a category and only that
+        // category's sources show up here.
         function populateSourceFilter() {
+            const projectSet = multiSelects.project.selected;
+            const categorySet = multiSelects.category.selected;
             const sources = new Set();
             allFetchedContacts.forEach(contact => {
+                if (!contactMatchesProjectSet(contact, projectSet)) return;
+                if (!contactMatchesCategorySet(contact, categorySet)) return;
                 if (contact.source) sources.add(contact.source);
             });
             const sorted = Array.from(sources).sort();
@@ -840,15 +890,53 @@
             })));
         }
 
+        // Returns a contact's project custom-field values (usually 0 or 1, but the
+        // field can be multi-value), as strings.
+        function getContactProjects(contact) {
+            const projectFieldId = selectedLocation.customFieldIds?.project;
+            if (!projectFieldId || !contact.customFields) return [];
+            const field = contact.customFields.find(cf => cf.id === projectFieldId);
+            if (!field || !field.value) return [];
+            const values = Array.isArray(field.value) ? field.value : [field.value];
+            return values.filter(Boolean).map(String);
+        }
+
+        // Reads sourceCategory for a contact: prefer the Contact-level custom
+        // field, but fall back to the matched Opportunity's sourceCategory (via
+        // contactStageMap) — for some locations the field is defined at the
+        // Opportunity level, so the Contact-level lookup always comes up empty.
+        function getContactSourceCategory(contact) {
+            const fieldId = selectedLocation.customFieldIds?.sourceCategory;
+            if (fieldId && contact.customFields) {
+                const field = contact.customFields.find(cf => cf.id === fieldId);
+                const val = field?.value ? (Array.isArray(field.value) ? field.value[0] : field.value) : null;
+                if (val) return String(val);
+            }
+            return contactStageMap[contact.id]?.sourceCategory || null;
+        }
+
         // Helper: Check if contact matches current project filter
         function contactMatchesProject(contact) {
-            if (!filterProject.length) return true;
-            const projectFieldId = selectedLocation.customFieldIds?.project;
-            if (!projectFieldId || !contact.customFields) return false;
-            const field = contact.customFields.find(cf => cf.id === projectFieldId);
-            if (!field || !field.value) return false;
-            const values = Array.isArray(field.value) ? field.value : [field.value];
-            return values.some(v => filterProject.includes(String(v)));
+            return contactMatchesProjectSet(contact, new Set(filterProject));
+        }
+
+        // Same check against an arbitrary set — used by populateSourceCategoryFilter/
+        // populateSourceFilter to scope options by the live (not-yet-applied)
+        // checkbox selection, ahead of the user clicking "Apply Filters".
+        function contactMatchesProjectSet(contact, projectSet) {
+            if (!projectSet.size) return true;
+            return getContactProjects(contact).some(v => projectSet.has(v));
+        }
+
+        // Helper: Check if contact matches current source category filter
+        function contactMatchesSourceCategory(contact) {
+            return contactMatchesCategorySet(contact, new Set(filterSourceCategory));
+        }
+
+        function contactMatchesCategorySet(contact, categorySet) {
+            if (!categorySet.size) return true;
+            const cat = getContactSourceCategory(contact);
+            return cat != null && categorySet.has(cat);
         }
 
         // Helper: Check if contact matches current source filter
@@ -1052,13 +1140,18 @@
             );
             sorted.forEach(opp => {
                 const stage = stagesMap[opp.pipelineStageId] || { pipeline: 'Unknown Pipeline', stage: 'Unknown Stage' };
+                // sourceCategory rides along here because for some locations it's an
+                // Opportunity-level custom field, not a Contact-level one — the
+                // contact.customFields lookup in getContactSourceCategory() comes up
+                // empty there, so this is the fallback source of truth.
+                const match = { ...stage, sourceCategory: opp.sourceCategory || null };
                 const id = opp.contact?.id;
                 const phone = normalizePhone(opp.contact?.phone);
                 const email = normalizeEmail(opp.contact?.email);
                 // keep the most recently updated opportunity per key
-                if (id && !byId[id]) byId[id] = stage;
-                if (phone && !byPhone[phone]) byPhone[phone] = stage;
-                if (email && !byEmail[email]) byEmail[email] = stage;
+                if (id && !byId[id]) byId[id] = match;
+                if (phone && !byPhone[phone]) byPhone[phone] = match;
+                if (email && !byEmail[email]) byEmail[email] = match;
             });
             return { byId, byPhone, byEmail };
         }
@@ -1089,6 +1182,7 @@
 
             for (const contact of allFetchedContacts) {
                 if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSourceCategory(contact)) continue;
                 if (!contactMatchesSource(contact)) continue;
                 if (!contactMatchesRep(contact)) continue;
 
@@ -1187,6 +1281,7 @@
                 : `${dateStart.value} to ${dateEnd.value}`;
             let header = `Date Range,${escapeCSV(dateRange)}\n`;
             header += `Project,${escapeCSV(getMultiSelectLabel('project'))}\n`;
+            header += `Source Category,${escapeCSV(getMultiSelectLabel('category'))}\n`;
             header += `Source,${escapeCSV(getMultiSelectLabel('source'))}\n`;
             header += `Sales Rep,${escapeCSV(getMultiSelectLabel('rep'))}\n`;
             header += `Exported At,${escapeCSV(new Date().toLocaleString())}\n`;
@@ -1198,6 +1293,7 @@
             const stageData = {};
             for (const contact of allFetchedContacts) {
                 if (!contactMatchesProject(contact)) continue;
+                if (!contactMatchesSourceCategory(contact)) continue;
                 if (!contactMatchesSource(contact)) continue;
                 if (!contactMatchesRep(contact)) continue;
                 const addedDate = new Date(contact.dateAdded);
