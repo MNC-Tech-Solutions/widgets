@@ -844,7 +844,7 @@
 
         function populateProjectFilter() {
             allProjects.clear();
-            const projectFieldId = selectedLocation.customFieldIds?.project;
+            const projectFieldId = selectedLocation.customFieldIds?.project_contact ?? selectedLocation.customFieldIds?.project;
 
             allFetchedContacts.forEach(contact => {
                 if (projectFieldId && contact.customFields) {
@@ -884,7 +884,7 @@
         // Helper: Check if contact matches current project filter
         function contactMatchesProject(contact) {
             if (!filterProject) return true;
-            const projectFieldId = selectedLocation.customFieldIds?.project;
+            const projectFieldId = selectedLocation.customFieldIds?.project_contact ?? selectedLocation.customFieldIds?.project;
             if (!projectFieldId || !contact.customFields) return false;
             const field = contact.customFields.find(cf => cf.id === projectFieldId);
             if (!field || !field.value) return false;

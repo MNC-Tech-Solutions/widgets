@@ -95,8 +95,12 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     status: opp.status,
     source: opp.source,
     createdAt: opp.createdAt,
-    sourceCategory: getField(customFieldIds.sourceCategory),
-    project: getField(customFieldIds.project),
+    // Tenants can define separate custom fields for the Opportunity vs Contact
+    // side (project_opp/sourceCategory_opp here; the _contact pair is read against
+    // contact.customFields by the frontend widgets instead). A handful of tenants
+    // predate that split and still only have the unsuffixed legacy key.
+    sourceCategory: getField(customFieldIds.sourceCategory_opp ?? customFieldIds.sourceCategory),
+    project: getField(customFieldIds.project_opp ?? customFieldIds.project),
     team: getField(customFieldIds.team),
     adSource: getField(customFieldIds.adSource),
     adCategory: getField(customFieldIds.adCategory),

@@ -827,16 +827,8 @@
 
         function populateProjectFilter() {
             allProjects.clear();
-            const projectFieldId = selectedLocation.customFieldIds?.project;
-
             allFetchedContacts.forEach(contact => {
-                if (projectFieldId && contact.customFields) {
-                    const field = contact.customFields.find(cf => cf.id === projectFieldId);
-                    if (field && field.value) {
-                        const vals = Array.isArray(field.value) ? field.value : [field.value];
-                        vals.forEach(v => v && allProjects.add(String(v)));
-                    }
-                }
+                getContactProjects(contact).forEach(v => allProjects.add(v));
             });
 
             const sorted = Array.from(allProjects).sort();
@@ -893,7 +885,7 @@
         // Returns a contact's project custom-field values (usually 0 or 1, but the
         // field can be multi-value), as strings.
         function getContactProjects(contact) {
-            const projectFieldId = selectedLocation.customFieldIds?.project;
+            const projectFieldId = selectedLocation.customFieldIds?.project_contact ?? selectedLocation.customFieldIds?.project;
             if (!projectFieldId || !contact.customFields) return [];
             const field = contact.customFields.find(cf => cf.id === projectFieldId);
             if (!field || !field.value) return [];
@@ -906,7 +898,7 @@
         // contactStageMap) — for some locations the field is defined at the
         // Opportunity level, so the Contact-level lookup always comes up empty.
         function getContactSourceCategory(contact) {
-            const fieldId = selectedLocation.customFieldIds?.sourceCategory;
+            const fieldId = selectedLocation.customFieldIds?.sourceCategory_contact ?? selectedLocation.customFieldIds?.sourceCategory;
             if (fieldId && contact.customFields) {
                 const field = contact.customFields.find(cf => cf.id === fieldId);
                 const val = field?.value ? (Array.isArray(field.value) ? field.value[0] : field.value) : null;

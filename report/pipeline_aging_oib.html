@@ -800,7 +800,7 @@
         // contactStageMap) — for this location the field is defined at the
         // Opportunity level, so the Contact-level lookup always comes up empty.
         function getContactSourceCategory(contact) {
-            const fieldId = selectedLocation.customFieldIds?.sourceCategory;
+            const fieldId = selectedLocation.customFieldIds?.sourceCategory_contact ?? selectedLocation.customFieldIds?.sourceCategory;
             if (fieldId && contact.customFields) {
                 const field = contact.customFields.find(cf => cf.id === fieldId);
                 const val = field?.value ? (Array.isArray(field.value) ? field.value[0] : field.value) : null;

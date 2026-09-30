@@ -1777,7 +1777,7 @@
         // ═══════════════════════════════════════════════════
         function populateProjectFilter() {
             allProjects.clear();
-            const pid = selectedLocation.customFieldIds?.project;
+            const pid = selectedLocation.customFieldIds?.project_contact ?? selectedLocation.customFieldIds?.project;
             allFetchedContacts.forEach(c => {
                 if (pid && c.customFields) {
                     const f = c.customFields.find(cf => cf.id === pid);
@@ -1808,7 +1808,7 @@
 
         function contactMatchesProject(contact) {
             if (!filterProject) return true;
-            const pid = selectedLocation.customFieldIds?.project;
+            const pid = selectedLocation.customFieldIds?.project_contact ?? selectedLocation.customFieldIds?.project;
             if (!pid || !contact.customFields) return false;
             const f = contact.customFields.find(cf => cf.id === pid);
             if (!f || !f.value) return false;
