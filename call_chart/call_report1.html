@@ -32,6 +32,10 @@
             gap: 10px;
             margin-top: 10px;
         }
+        .call-audio {
+            width: 240px;
+            height: 32px;
+        }
         .btn-sm {
             height: 38px;
             font-size: 14px;
@@ -91,6 +95,7 @@
                     <th scope="col">Answer Number</th>
                     <th scope="col">Duration (s)</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Recording</th>
                 </tr>
             </thead>
             <tbody id="table-body"></tbody>
@@ -429,6 +434,18 @@
             displayPage(1);
         }
 
+        // Return the record's audio URL if a recording exists, else null
+        function getAudioUrl(record) {
+            const url = record.audioUrl || record.audioURL || (typeof record.audio === 'string' && /^https?:\/\//i.test(record.audio) ? record.audio : '');
+            if (!url || !/^https?:\/\//i.test(url)) return null;
+            if (record.audio !== undefined && record.audio !== url && /^(no|n|0|false)?$/i.test(String(record.audio).trim())) return null;
+            return url;
+        }
+
+        function escapeAttr(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         // Display paginated data
         function displayPage(page) {
             const table = document.getElementById('data-table');
@@ -443,6 +460,7 @@
             tableBody.innerHTML = '';
             paginatedData.forEach(record => {
                 const row = document.createElement('tr');
+                const audioUrl = getAudioUrl(record);
                 row.innerHTML = `
                     <td>${record.id || 'N/A'}</td>
                     <td>${record.date || 'N/A'}</td>
@@ -453,6 +471,9 @@
                     <td>${record.answer_number || 'N/A'}</td>
                     <td>${record.duration || 'N/A'}</td>
                     <td>${record.status_name || 'N/A'}</td>
+                    <td>${audioUrl
+                        ? `<audio class="call-audio" controls preload="none" src="${escapeAttr(audioUrl)}"></audio>`
+                        : '<span class="text-muted">—</span>'}</td>
                 `;
                 tableBody.appendChild(row);
             });
