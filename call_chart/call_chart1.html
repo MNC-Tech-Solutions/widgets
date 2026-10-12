@@ -211,6 +211,7 @@
         <div id="loading" class="spinner-container d-none">
             <div class="spinner"></div>
         </div>
+        <div id="errorMessage" class="alert alert-warning d-none" role="alert"></div>
         <div class="filter-container">
             <div class="row g-3">
                 <div class="col-md-3">
@@ -338,11 +339,18 @@
         const callsPerPage = 10;
         let modalCurrentPage = 1;
 
+        // Show an error/warning message to the user (the loading spinner is hidden)
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.classList.remove('d-none');
+        }
+
         async function loadConfig() {
             const urlParams = new URLSearchParams(window.location.search);
             const locationId = urlParams.get('locationId');
             if (!locationId) {
-                document.getElementById('loading').textContent = 'Error: No locationId provided in URL.';
+                showError('Error: No locationId provided in URL.');
                 return;
             }
             try {
@@ -354,14 +362,14 @@
                 initializeWithLocationId(configData);
             } catch (error) {
                 console.error('Error loading config:', error);
-                document.getElementById('loading').textContent = 'Error: Unable to load config.';
+                showError('Error: Unable to load config.');
             }
         }
 
         function initializeWithLocationId(client) {
             const accounts = client.callClientIds || [];
             if (!accounts.length) {
-                document.getElementById('loading').textContent = 'Error: No call accounts configured for this location.';
+                showError('Error: No call accounts configured for this location.');
                 return;
             }
 
@@ -372,7 +380,7 @@
             }, null);
 
             if (!minDate || isNaN(minDate)) {
-                document.getElementById('loading').textContent = 'Error: Invalid date_from in client accounts.';
+                showError('Error: Invalid date_from in client accounts.');
                 return;
             }
 
@@ -491,7 +499,7 @@
                     updateDateRangeButton();
                     applyFilters();
                 } else {
-                    document.getElementById('loading').textContent = 'Error: Invalid date_from in client accounts.';
+                    showError('Error: Invalid date_from in client accounts.');
                 }
             }
         }
@@ -514,7 +522,7 @@
                 callData = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
                 filteredData = callData;
                 if (callData.length === 0) {
-                    document.getElementById('loading').textContent = 'Warning: No data retrieved from any accounts. Check authentication credentials or client IDs.';
+                    showError('Warning: No data retrieved from any accounts. Check authentication credentials or client IDs.');
                 } else {
                     populateStatusFilter();
                     populateAnswerNameFilter();
@@ -522,7 +530,7 @@
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
-                document.getElementById('loading').textContent = 'Error: Unable to fetch data. Ensure the PHP proxy (proxy.php) is correctly set up on your server.';
+                showError('Error: Unable to fetch call data. Please try again later.');
             } finally {
                 loading.classList.add('d-none');
             }
@@ -802,6 +810,7 @@
 
             $('.quick-selections button').each(function() {
                 $(this).on('click', function() {
+                    if (!dateRangePicker) return;
                     const range = this.dataset.range;
                     const dates = getDateRange(range);
                     dateRangePicker.setDate([dates.start, dates.end]);
@@ -814,6 +823,7 @@
             });
 
             $('#clearFilter').on('click', () => {
+                if (!dateRangePicker) return;
                 dateRangePicker.clear();
                 selectedStartDate = null;
                 selectedEndDate = null;
