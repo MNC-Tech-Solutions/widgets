@@ -195,6 +195,10 @@
             width: 90%;
             margin: 1.75rem auto;
         }
+        .call-audio {
+            width: 240px;
+            height: 32px;
+        }
         .clear-filter-btn {
             height: 38px;
             align-self: flex-end;
@@ -298,6 +302,7 @@
                                         <th>Answer Number</th>
                                         <th>Duration (s)</th>
                                         <th>Status</th>
+                                        <th>Recording</th>
                                     </tr>
                                 </thead>
                                 <tbody id="callsTableBody"></tbody>
@@ -597,6 +602,18 @@
             return date.toLocaleString('default', { year: 'numeric', month: 'short' });
         }
 
+        // Return the record's audio URL if a recording exists, else null
+        function getAudioUrl(record) {
+            const url = record.audioUrl || record.audioURL || (typeof record.audio === 'string' && /^https?:\/\//i.test(record.audio) ? record.audio : '');
+            if (!url || !/^https?:\/\//i.test(url)) return null;
+            if (record.audio !== undefined && record.audio !== url && /^(no|n|0|false)?$/i.test(String(record.audio).trim())) return null;
+            return url;
+        }
+
+        function escapeAttr(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         function displayCallsInModal(calls, month, status) {
             const modalTitle = month ? `Calls for ${status} in ${month}` : `Calls for ${status}`;
             document.getElementById('callsModalLabel').textContent = modalTitle;
@@ -615,6 +632,7 @@
 
                 paginatedCalls.forEach(call => {
                     const row = document.createElement('tr');
+                    const audioUrl = getAudioUrl(call);
                     row.innerHTML = `
                         <td>${call.id || 'N/A'}</td>
                         <td>${call.date || 'N/A'}</td>
@@ -625,6 +643,9 @@
                         <td>${call.answer_number || 'N/A'}</td>
                         <td>${call.duration || 'N/A'}</td>
                         <td>${call.status_name || 'N/A'}</td>
+                        <td>${audioUrl
+                            ? `<audio class="call-audio" controls preload="none" src="${escapeAttr(audioUrl)}"></audio>`
+                            : '<span class="text-muted">—</span>'}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -811,6 +832,11 @@
             $('#applyFilters').on('click', applyFilters);
             $('#clearFilters').on('click', clearFilters);
             $('#chartType').on('change', updateChart);
+        });
+
+        // Stop any playing recording when the calls modal closes
+        document.getElementById('callsModal').addEventListener('hidden.bs.modal', () => {
+            document.querySelectorAll('#callsTableBody audio').forEach(a => a.pause());
         });
 
         loadConfig();
