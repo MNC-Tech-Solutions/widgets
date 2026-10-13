@@ -34,3 +34,8 @@ visitor_qr/
 
 # Bukku logs
 bukku/logs/
+# Concord (GHL → Engage) secrets, token cache, logs, spec with credentials
+concord/.env
+concord/token_cache.json
+concord/logs/
+concord/concord.txt
