@@ -113,9 +113,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="modalDateRange" class="form-label">Date Range</label>
-                        <input type="text" id="modalDateRange" class="form-control" placeholder="Select date range">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="modalDateRange" class="form-label">From</label>
+                            <input type="text" id="modalDateRange" class="form-control" placeholder="Start date">
+                        </div>
+                        <div class="col-6">
+                            <label for="modalDateTo" class="form-label">To</label>
+                            <input type="text" id="modalDateTo" class="form-control" placeholder="End date">
+                        </div>
                     </div>
                     <div class="quick-selections">
                         <button class="btn btn-outline-primary btn-sm" data-range="thisWeek">This Week</button>
@@ -136,6 +142,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/rangePlugin.js"></script>
     <script>
         // Define constants and global variables
         const recordsPerPage = 10;
@@ -149,6 +156,45 @@
         let selectedStartDate = null;
         let selectedEndDate = null;
         let dateRangePicker;
+
+        // Default load only fetches the latest N months of calls (override with ?months=6).
+        // Older dates (back to the account's date_from) stay selectable and are fetched on demand.
+        const FETCH_LOOKBACK_MONTHS = parseInt(new URLSearchParams(window.location.search).get('months'), 10) || 12;
+        let minSelectableDate = null; // earliest account date_from: the earliest date the client can choose
+        let fetchedFromDate = null;   // earliest date currently loaded into callData
+
+        // Local YYYY-MM-DD (toISOString would shift the day back in UTC+ timezones)
+        function toYmd(date) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        }
+
+        function toLocalMidnight(value) {
+            const d = new Date(value);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        // Earliest date_from across all accounts
+        function getMinAccountDate(accounts) {
+            return accounts
+                .map(account => toLocalMidnight(account.date_from))
+                .filter(d => !isNaN(d))
+                .reduce((earliest, d) => (!earliest || d < earliest ? d : earliest), null);
+        }
+
+        // Default range start: the lookback start, but never before the earliest selectable date
+        function getDefaultStartDate() {
+            const lookback = toLocalMidnight(new Date());
+            lookback.setMonth(lookback.getMonth() - FETCH_LOOKBACK_MONTHS);
+            return minSelectableDate && lookback < minSelectableDate ? minSelectableDate : lookback;
+        }
+
+        // Fetch start for one account: the requested date, but never before that account's own date_from
+        function getAccountFetchFrom(account, fromDate) {
+            const accountDate = toLocalMidnight(account.date_from);
+            return !isNaN(accountDate) && accountDate > fromDate ? accountDate : fromDate;
+        }
 
         // Normalize string for consistent comparison
         function normalizeString(str) {
@@ -192,16 +238,12 @@
                 return;
             }
 
-            // Set earliest date_from as minDate for date picker
-            const minDate = accounts.reduce((earliest, account) => {
-                const accountDate = new Date(account.date_from);
-                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
-            }, null);
-            selectedStartDate = minDate;
+            minSelectableDate = getMinAccountDate(accounts);
+            selectedStartDate = getDefaultStartDate();
             selectedEndDate = new Date();
             updateDateRangeButton();
-            initializeDatePicker(minDate);
-            fetchAllClientData(client);
+            initializeDatePicker(minSelectableDate);
+            fetchAllClientData(client, selectedStartDate);
 
             // Background refresh every 5 minutes
             // const BACKGROUND_REFRESH_INTERVAL = 5 * 60 * 1000;
@@ -222,6 +264,8 @@
                 dateFormat: "Y/m/d",
                 minDate: minDate,
                 defaultDate: [selectedStartDate, selectedEndDate],
+                // From / To inputs share this one calendar
+                plugins: [new rangePlugin({ input: '#modalDateTo' })],
                 onClose: (dates) => {
                     if (dates.length === 2) {
                         selectedStartDate = dates[0];
@@ -288,14 +332,9 @@
                     start = null;
                     end = null;
             }
-            // Ensure start date is not before minDate
-            const accounts = configData.callClientIds || [];
-            const minDate = accounts.reduce((earliest, account) => {
-                const accountDate = new Date(account.date_from);
-                return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
-            }, null);
-            if (start && start < minDate) {
-                start = minDate;
+            // Ensure start date is not before the earliest selectable date
+            if (start && minSelectableDate && start < minSelectableDate) {
+                start = minSelectableDate;
             }
             return { start, end };
         }
@@ -304,11 +343,7 @@
         function clearFilters() {
             const accounts = configData.callClientIds || [];
             if (accounts.length) {
-                const minDate = accounts.reduce((earliest, account) => {
-                    const accountDate = new Date(account.date_from);
-                    return earliest ? (accountDate < earliest ? accountDate : earliest) : accountDate;
-                }, null);
-                selectedStartDate = minDate;
+                selectedStartDate = getDefaultStartDate();
                 selectedEndDate = new Date();
                 dateRangePicker.setDate([selectedStartDate, selectedEndDate]);
                 document.getElementById('statusFilter').value = '';
@@ -320,23 +355,26 @@
         }
 
         // Fetch data for all client IDs associated with the client
-        async function fetchAllClientData(client) {
+        async function fetchAllClientData(client, fromDate) {
             const loading = document.getElementById('loading');
             loading.classList.remove('d-none');
             callData = [];
+            fetchedFromDate = fromDate;
 
             const accounts = client.callClientIds || [];
             const promises = accounts.map(account =>
-                fetchDataForClientId(client.locationId, account.clientid, account.date_from)
+                fetchDataForClientId(client.locationId, account.clientid, toYmd(getAccountFetchFrom(account, fromDate)))
             );
 
             try {
                 const results = await Promise.all(promises);
                 callData = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
                 filteredData = callData;
+                const kept = ['statusFilter', 'answerNameFilter', 'targetNameFilter'].map(id => [id, document.getElementById(id).value]);
                 populateStatusFilter();
                 populateAnswerNameFilter();
                 populateTargetNameFilter();
+                kept.forEach(([id, value]) => { document.getElementById(id).value = value; });
                 applyFilters();
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -414,6 +452,10 @@
 
         // Apply filters to data
         function applyFilters() {
+            if (selectedStartDate && fetchedFromDate && selectedStartDate < fetchedFromDate) {
+                fetchAllClientData(configData, toLocalMidnight(selectedStartDate)); // re-applies filters when loaded
+                return;
+            }
             const statusFilter = document.getElementById('statusFilter').value;
             const answerNameFilter = document.getElementById('answerNameFilter').value;
             const targetNameFilter = document.getElementById('targetNameFilter').value;
