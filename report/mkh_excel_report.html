@@ -173,34 +173,31 @@
   // 4. Fetch Contacts
   // -------------------------------------------------
   async function fetchAllContacts(config, locationId) {
-    let contacts = [];
-    let searchAfter = null;
-    const limit = 100;
-
+    // The server paginates the full contact list itself; a 24s Lambda deadline can
+    // still cut it short (X-Partial: true) on a cold cache. Never render an
+    // undercounted contact list — poll until the background warmer (no deadline)
+    // finishes the full fetch, however long that takes.
+    const POLL_INTERVAL_MS = 8000;
+    const MAX_WAIT_MS = 5 * 60 * 1000;
+    const startedAt = Date.now();
     while (true) {
-      const body = { pageLimit: limit };
-      if (searchAfter) body.searchAfter = searchAfter;
-
       const response = await lambdaFetch(`/ghl/contacts/search?locationId=${locationId}`, {
         method: 'POST',
-        body: JSON.stringify(body)
+        body: JSON.stringify({ pageLimit: 100 })
       });
-
       if (!response.ok) throw new Error(`Contacts API error: ${response.status}`);
-
       const data = await response.json();
-      const batch = data.contacts || [];
-      if (batch.length === 0) break;
-
-      contacts = contacts.concat(batch);
-      if (batch.length < limit) break;
-
-      const last = batch[batch.length - 1];
-      if (!last.searchAfter) break;
-      searchAfter = last.searchAfter;
+      const contacts = data.contacts || [];
+      if (response.headers.get('X-Partial') !== 'true') {
+        console.log(`Fetched ${contacts.length} contacts.`);
+        return contacts;
+      }
+      if (Date.now() - startedAt > MAX_WAIT_MS) {
+        throw new Error(`Contact list did not finish loading within ${MAX_WAIT_MS / 60000} minutes`);
+      }
+      console.warn(`fetchAllContacts: partial data (${contacts.length} so far) — waiting for full set (${Math.round((Date.now() - startedAt) / 1000)}s)`);
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     }
-    console.log(`Fetched ${contacts.length} contacts.`);
-    return contacts;
   }
 
   // -------------------------------------------------

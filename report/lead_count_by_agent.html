@@ -151,11 +151,12 @@
         <select id="adCategory" class="form-select">
           <option value="Sales Gallery">Sales Gallery</option>
           <option value="Roadshow">Roadshow</option>
+          <option value="Event">Event</option>
         </select>
       </div>
       <div class="control-group">
         <label for="dateRange">Created Date Range</label>
-        <input type="text" id="dateRange" class="form-control" placeholder="Select date range" autocomplete="off">
+        <input type="text" id="dateRange" class="form-control" placeholder="Select date range">
       </div>
       <div class="control-group" style="justify-content:flex-end;">
         <label>&nbsp;</label>
@@ -232,7 +233,6 @@
     let usersMap = new Map();
     let pipelinesMap = new Map();
     let currentResults = [];
-    let dateRangePicker;
 
     function showSpinner() { document.getElementById('loadingOverlay').style.display = 'flex'; }
     function hideSpinner() { document.getElementById('loadingOverlay').style.display = 'none'; }
@@ -269,11 +269,18 @@
       tbody.appendChild(totalRow);
     }
 
+    // internalExternal is the source of truth ('Agent' = agency, 'Internal Sales Staff' = internal).
+    // Falls back to the old externalSalesStaff-presence heuristic for leads that predate this field.
+    function isAgency(op) {
+      if (op.internalExternal) return op.internalExternal === 'Agent';
+      return !!op.externalSalesStaff;
+    }
+
     function renderTable() {
       const adCategory = document.getElementById('adCategory').value;
 
-      const internalOpps = currentResults.filter(op => !op.externalSalesStaff);
-      const externalOpps = currentResults.filter(op => op.externalSalesStaff);
+      const internalOpps = currentResults.filter(op => !isAgency(op));
+      const externalOpps = currentResults.filter(op => isAgency(op));
 
       const internalRows = buildGroups(internalOpps, op => usersMap.get(op.assignedTo) || 'Unassigned');
       const externalRows = buildGroups(externalOpps, op => op.externalSalesStaff);
@@ -307,18 +314,28 @@
       document.querySelector('#externalTable tbody').innerHTML = `<tr><td colspan="2">${message}</td></tr>`;
     }
 
-    function toEpochMs(dateStr, endOfDay) {
-      if (!dateStr) return undefined;
-      return new Date(`${dateStr}T${endOfDay ? '23:59:59.999' : '00:00:00'}`).getTime();
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    let dateRangePicker;
+
+    function startOfDayMs(date) {
+      if (!date) return undefined;
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    }
+
+    function endOfDayMs(date) {
+      if (!date) return undefined;
+      const d = new Date(date);
+      d.setHours(23, 59, 59, 999);
+      return d.getTime();
     }
 
     async function loadAndRender(forceRefresh = false) {
       const adCategory = document.getElementById('adCategory').value;
-      const selectedDates = dateRangePicker ? dateRangePicker.selectedDates : [];
-      const startStr = selectedDates[0] ? flatpickr.formatDate(selectedDates[0], 'Y-m-d') : undefined;
-      const endStr = selectedDates[1] ? flatpickr.formatDate(selectedDates[1], 'Y-m-d') : startStr;
-      const gte = toEpochMs(startStr, false);
-      const lte = toEpochMs(endStr, true);
+      const gte = startOfDayMs(selectedStartDate);
+      const lte = endOfDayMs(selectedEndDate);
       showSpinner();
       try {
         currentResults = await fetchOpportunitiesSearch(CONFIG, locationId, { adCategory, gte, lte }, forceRefresh);
@@ -348,16 +365,24 @@
         const pipelines = await fetchPipelinesV2(CONFIG, locationId);
         pipelinesMap = new Map(pipelines.map(p => [p.id, p.name]));
 
-        dateRangePicker = flatpickr('#dateRange', {
-          mode: 'range',
-          dateFormat: 'Y-m-d',
-          onClose: () => loadAndRender()
-        });
-
         document.getElementById('adCategory').addEventListener('change', () => loadAndRender());
         document.getElementById('refreshBtn').addEventListener('click', () => {
           dateRangePicker.clear();
+          selectedStartDate = null;
+          selectedEndDate = null;
           loadAndRender(true);
+        });
+
+        dateRangePicker = flatpickr('#dateRange', {
+          mode: 'range',
+          dateFormat: 'Y-m-d',
+          onChange: (dates) => {
+            if (dates.length === 2) {
+              selectedStartDate = dates[0];
+              selectedEndDate = dates[1];
+              loadAndRender();
+            }
+          },
         });
 
         await loadAndRender();

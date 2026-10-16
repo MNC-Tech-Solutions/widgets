@@ -95,15 +95,19 @@ function processOpportunity(opp, pipelineId, customFieldIds) {
     status: opp.status,
     source: opp.source,
     createdAt: opp.createdAt,
-    sourceCategory: getField(customFieldIds.sourceCategory),
-    project: getField(customFieldIds.project),
+    // Every tenant defines separate custom fields for the Opportunity vs Contact
+    // side; project_opp/sourceCategory_opp here, the _contact pair is read against
+    // contact.customFields by the frontend widgets instead.
+    sourceCategory: getField(customFieldIds.sourceCategory_opp),
+    project: getField(customFieldIds.project_opp),
     team: getField(customFieldIds.team),
     adSource: getField(customFieldIds.adSource),
     adCategory: getField(customFieldIds.adCategory),
     externalSalesStaff: getField(customFieldIds.externalSalesStaff),
     visitType: getField(customFieldIds.visitType),
     hearAboutUs: getField(customFieldIds.hearAboutUs),
-    contact: { name: opp.contact?.name, phone: opp.contact?.phone },
+    internalExternal: getField(customFieldIds.internalExternal),
+    contact: { id: opp.contact?.id, name: opp.contact?.name, phone: opp.contact?.phone, email: opp.contact?.email },
     monetaryValue: opp.monetaryValue,
   };
 }

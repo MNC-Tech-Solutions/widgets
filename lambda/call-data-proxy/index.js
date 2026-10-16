@@ -39,7 +39,7 @@ exports.handler = async (event) => {
     const { username, password } = await getCallCredentials();
     const creds = Buffer.from(`${username}:${password}`).toString('base64');
 
-    const url = `${AVANSER_API}?action=getCDR&client_id=${clientId}&date_from=${encodeURIComponent(dateFrom)}&limit=${limit}`;
+    const url = `${AVANSER_API}?action=getCDR&client_id=${clientId}&date_from=${encodeURIComponent(dateFrom)}&limit=${limit}&wav=yes`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Basic ${creds}`,
