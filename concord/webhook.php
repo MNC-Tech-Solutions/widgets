@@ -73,7 +73,10 @@ const DEFAULT_CONTACT_TYPES = [
 const DEFAULT_RELATIONSHIP_ID = 'PARE';  // Parents
 
 // Admission stage for the dummy pupil; real pupils use Engage's default stage
-const DUMMY_PUPIL_STAGE_ID = 'CL1-121';
+const DUMMY_PUPIL_STAGE_IDS = [
+    'sandbox'    => 'CL1-121',
+    'production' => 'CL1-120',  // Profiler
+];
 
 // Token cache file (sits next to this file)
 define('TOKEN_CACHE_FILE', __DIR__ . '/token_cache.json');
@@ -541,7 +544,7 @@ $admission = compact_payload([
 // Always sent so the pupil gets an admission stage
 $path = "AddAdmissionDetails/$schoolId/$pupilId";
 if ($isDummyPupil) {
-    $admission['currentAdmissionStageId'] = DUMMY_PUPIL_STAGE_ID;
+    $admission['currentAdmissionStageId'] = DUMMY_PUPIL_STAGE_IDS[$env];
 } else {
     $path .= '?usedefaultstage=true';
 }

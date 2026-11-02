@@ -39,3 +39,5 @@ concord/.env
 concord/token_cache.json
 concord/logs/
 concord/concord.txt
+concord/real_test_contacts.json
+concord/real_test_contacts_mapped.json
